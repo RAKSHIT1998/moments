@@ -1,0 +1,8 @@
+build/
+build-release/
+build-device/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+Moment.xcodeproj/project.xcworkspace/xcuserdata/

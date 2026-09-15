@@ -1,0 +1,122 @@
+name: Moment
+options:
+  bundleIdPrefix: com.rakshitbargotra
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.2"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    DEVELOPMENT_TEAM: 48TGY734WW
+    CODE_SIGN_STYLE: Automatic
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+targets:
+  Moment:
+    type: application
+    platform: iOS
+    sources:
+      - path: Moment
+        excludes:
+          - "Resources/Moment.storekit"
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rakshitbargotra.moment
+        PRODUCT_NAME: MOMENT
+        INFOPLIST_FILE: Moment/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Moment/Resources/Moment.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+        ENABLE_PREVIEWS: YES
+    dependencies:
+      - target: MomentShareExtension
+      - target: MomentWidget
+      - sdk: SwiftData.framework
+      - sdk: Vision.framework
+      - sdk: VisionKit.framework
+      - sdk: NaturalLanguage.framework
+      - sdk: Speech.framework
+      - sdk: PDFKit.framework
+      - sdk: AVFoundation.framework
+      - sdk: UserNotifications.framework
+      - sdk: WidgetKit.framework
+      - sdk: AppIntents.framework
+      - sdk: StoreKit.framework
+      - sdk: CryptoKit.framework
+      - sdk: LocalAuthentication.framework
+      - sdk: EventKit.framework
+      - sdk: Contacts.framework
+      - sdk: ContactsUI.framework
+    scheme:
+      storeKitConfiguration: Moment/Resources/Moment.storekit
+      testTargets:
+        - MomentTests
+        - MomentUITests
+      gatherCoverageData: true
+  MomentShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Extensions/ShareExtension
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rakshitbargotra.moment.share
+        INFOPLIST_FILE: Extensions/ShareExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extensions/ShareExtension/MomentShareExtension.entitlements
+        PRODUCT_NAME: MomentShare
+        SKIP_INSTALL: YES
+  MomentWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets/MomentWidget
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rakshitbargotra.moment.widget
+        INFOPLIST_FILE: Widgets/MomentWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Widgets/MomentWidget/MomentWidget.entitlements
+        PRODUCT_NAME: MomentWidget
+        SKIP_INSTALL: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+  MomentTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/Unit
+    dependencies:
+      - target: Moment
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rakshitbargotra.moment.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/MOMENT.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MOMENT"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+  MomentUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/UI
+    dependencies:
+      - target: Moment
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rakshitbargotra.moment.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Moment

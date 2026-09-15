@@ -1,0 +1,1366 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "— %@" : {
+
+    },
+    "…" : {
+
+    },
+    "·" : {
+
+    },
+    "· %@" : {
+
+    },
+    "· birthday in %lld days" : {
+
+    },
+    "· shared %lld×" : {
+
+    },
+    "“" : {
+
+    },
+    "“%@”" : {
+
+    },
+    "“I really want these New Balance 530 😍”" : {
+
+    },
+    "“Useful” and “Not useful” quietly tune which kinds of Moments show up first." : {
+
+    },
+    "%@" : {
+
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@ there too. Send it so they can add their side." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ there too. Send it so they can add their side."
+          }
+        }
+      }
+    },
+    "%@ is coming together." : {
+
+    },
+    "%@ memor%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ memor%2$@"
+          }
+        }
+      }
+    },
+    "%@ wants %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ wants %2$@"
+          }
+        }
+      }
+    },
+    "%@ was there too. Send it to them?" : {
+
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %lld open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld open"
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@: %@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@. %3$@"
+          }
+        }
+      }
+    },
+    "%@: %lld memories worth remembering." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$lld memories worth remembering."
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld all time" : {
+
+    },
+    "%lld Moment%@ remembered for you this month." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld Moment%2$@ remembered for you this month."
+          }
+        }
+      }
+    },
+    "%lld new Moment%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld new Moment%2$@"
+          }
+        }
+      }
+    },
+    "%lld new Moments to review" : {
+
+    },
+    "%lld open" : {
+
+    },
+    "%lld selected" : {
+
+    },
+    "%lld shared moments · make it a Moment" : {
+
+    },
+    "%lld side%@ added." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld side%2$@ added."
+          }
+        }
+      }
+    },
+    "+%lld more" : {
+
+    },
+    "1 new Moment to review" : {
+
+    },
+    "About" : {
+
+    },
+    "About MOMENT" : {
+
+    },
+    "Active" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add “%@” to your calendar?" : {
+
+    },
+    "Add a photo" : {
+
+    },
+    "Add another memory" : {
+
+    },
+    "Add my side" : {
+
+    },
+    "Add person" : {
+
+    },
+    "Add to Calendar" : {
+
+    },
+    "Add your side" : {
+
+    },
+    "Add your side of the memory — a photo, a line, your version of what happened. %@ will see it when you send it back." : {
+
+    },
+    "Adding…" : {
+
+    },
+    "AI" : {
+
+    },
+    "AI processing" : {
+
+    },
+    "All data deleted" : {
+
+    },
+    "Allow notifications" : {
+
+    },
+    "Already understood. Save the ones that matter." : {
+
+    },
+    "Analytics" : {
+
+    },
+    "Answer" : {
+
+    },
+    "Anything you want to remember" : {
+
+    },
+    "Appearance" : {
+
+    },
+    "Archive" : {
+
+    },
+    "Ask MOMENT a question about what you've saved." : {
+
+    },
+    "Ask your memory anything." : {
+
+    },
+    "At the right time" : {
+
+    },
+    "Back" : {
+
+    },
+    "Balanced shows up to 6 things. Minimal shows 3. Detailed shows 10." : {
+
+    },
+    "Based on: “%@”" : {
+
+    },
+    "Before %@" : {
+
+    },
+    "Birthday" : {
+
+    },
+    "Birthday · %@" : {
+
+    },
+    "Calendar" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Capture a Moment" : {
+
+    },
+    "Capture something else" : {
+
+    },
+    "Capture something real — a plan, a promise, something a friend wants. Watch MOMENT understand it." : {
+
+    },
+    "Change" : {
+
+    },
+    "Change dates" : {
+
+    },
+    "Choose photos" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear imported media (%@)" : {
+
+    },
+    "Clear imported media?" : {
+
+    },
+    "Clear media" : {
+
+    },
+    "Clear search history" : {
+
+    },
+    "Close" : {
+
+    },
+    "Cloud AI" : {
+
+    },
+    "Cloud AI can improve understanding of messy screenshots and long voice notes, but requires sending the selected content to our AI provider (Anthropic). Off by default. Search and the rest of your memory always stay on this iPhone." : {
+
+    },
+    "Cloud AI is on — captures are sent to your provider." : {
+
+    },
+    "Confidence: %@" : {
+
+    },
+    "Confirm" : {
+
+    },
+    "Confirmed for %@." : {
+
+    },
+    "Connections" : {
+
+    },
+    "Contacts" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Controls" : {
+
+    },
+    "Couldn't export" : {
+
+    },
+    "Couldn't open that Moment" : {
+
+    },
+    "Counts events like “capture completed” locally so you can see them here. Nothing is sent anywhere, and never your content." : {
+
+    },
+    "Daily brief" : {
+
+    },
+    "Dark" : {
+
+    },
+    "Data" : {
+
+    },
+    "Date" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete All Data" : {
+
+    },
+    "Delete everything?" : {
+
+    },
+    "Delete Moment" : {
+
+    },
+    "Delete this Moment?" : {
+
+    },
+    "Demo (DEBUG)" : {
+
+    },
+    "Density" : {
+
+    },
+    "Discard" : {
+
+    },
+    "Dismiss" : {
+
+    },
+    "Don't remind me about this" : {
+
+    },
+    "Done" : {
+
+    },
+    "Drop in photos from a trip or a night out and MOMENT turns them into a story you can send to the people who were there." : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit Moment" : {
+
+    },
+    "Edit person" : {
+
+    },
+    "Every Moment lands here with its source, in the order it happened." : {
+
+    },
+    "Everything about %@" : {
+
+    },
+    "Everything is understood on this iPhone." : {
+
+    },
+    "Exact date" : {
+
+    },
+    "Example" : {
+
+    },
+    "Export" : {
+
+    },
+    "Export as %@" : {
+
+    },
+    "Export failed" : {
+
+    },
+    "Export, clear media, delete everything" : {
+
+    },
+    "Export, media & delete" : {
+
+    },
+    "First came up %@." : {
+
+    },
+    "Format" : {
+
+    },
+    "Free" : {
+
+    },
+    "Free keeps %lld memories, capture, search, reminders and %lld shared Moments a month. Pro removes the limits." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Free keeps %1$lld memories, capture, search, reminders and %2$lld shared Moments a month. Pro removes the limits."
+          }
+        }
+      }
+    },
+    "from %@" : {
+
+    },
+    "From %@" : {
+
+    },
+    "From %lld memor%@ on this iPhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From %1$lld memor%2$@ on this iPhone"
+          }
+        }
+      }
+    },
+    "Gift actions" : {
+
+    },
+    "Gift ideas" : {
+
+    },
+    "Gift Ideas" : {
+
+    },
+    "Given" : {
+
+    },
+    "Got it" : {
+
+    },
+    "Got it." : {
+
+    },
+    "Here's exactly where they live and what leaves this iPhone." : {
+
+    },
+    "Home" : {
+
+    },
+    "How do you remember it?" : {
+
+    },
+    "How it came together" : {
+
+    },
+    "https://" : {
+
+    },
+    "I couldn't read those." : {
+
+    },
+    "I couldn't understand that." : {
+
+    },
+    "I don't have that yet." : {
+
+    },
+    "I found a story in these." : {
+
+    },
+    "I only answer from what you've given me. Try a person's name, a place, or a topic — or tell me something to remember." : {
+
+    },
+    "Ignore" : {
+
+    },
+    "Imagine Sarah texts you:" : {
+
+    },
+    "Important" : {
+
+    },
+    "Intelligence" : {
+
+    },
+    "It happened" : {
+
+    },
+    "It lands in your Inbox, already understood." : {
+
+    },
+    "Keep" : {
+
+    },
+    "Keep separate" : {
+
+    },
+    "Keep usage counts on this iPhone" : {
+
+    },
+    "Key saved in Keychain" : {
+
+    },
+    "Known" : {
+
+    },
+    "Last meaningful Moment · %@" : {
+
+    },
+    "Last seen %@" : {
+
+    },
+    "Let it go" : {
+
+    },
+    "Light" : {
+
+    },
+    "Link per person" : {
+
+    },
+    "Link to a contact" : {
+
+    },
+    "Listening" : {
+
+    },
+    "Load demo data" : {
+
+    },
+    "Load demo data (DEBUG)" : {
+
+    },
+    "Loading photos…" : {
+
+    },
+    "Lock MOMENT with %@" : {
+
+    },
+    "Look around first" : {
+
+    },
+    "Made with MOMENT" : {
+
+    },
+    "Make something worth sharing." : {
+
+    },
+    "Make this a Moment" : {
+
+    },
+    "Make this a plan" : {
+
+    },
+    "Make this shareable" : {
+
+    },
+    "Make your own" : {
+
+    },
+    "Make yours" : {
+
+    },
+    "Making your video…" : {
+
+    },
+    "Mark a memory important and it will live here." : {
+
+    },
+    "Mark done" : {
+
+    },
+    "Mark important" : {
+
+    },
+    "Media" : {
+
+    },
+    "Memories from the past" : {
+
+    },
+    "Memories remembered" : {
+
+    },
+    "Memory Drop" : {
+
+    },
+    "Mentioned %@" : {
+
+    },
+    "Merge" : {
+
+    },
+    "Merge %@" : {
+
+    },
+    "Merge into %@" : {
+
+    },
+    "Merge into another person…" : {
+
+    },
+    "Model: %@. Stored only in this device's Keychain." : {
+
+    },
+    "MOMENT" : {
+
+    },
+    "MOMENT is locked" : {
+
+    },
+    "MOMENT is running without saving. Restart the app; if this keeps happening, please contact support." : {
+
+    },
+    "MOMENT isn't ready yet. Open the app once." : {
+
+    },
+    "MOMENT never imports your address book. Link a person from their profile." : {
+
+    },
+    "MOMENT Pro" : {
+
+    },
+    "MOMENT reads text with Vision, transcribes with Speech, and understands people, plans, promises and gift ideas with an on-device engine built on NaturalLanguage. It never guesses: uncertain items are marked “Needs review”." : {
+
+    },
+    "Moment text" : {
+
+    },
+    "Moments" : {
+
+    },
+    "Moments MOMENT brought back this month that you acted on." : {
+
+    },
+    "More" : {
+
+    },
+    "More actions" : {
+
+    },
+    "More options" : {
+
+    },
+    "Name" : {
+
+    },
+    "Needs review" : {
+
+    },
+    "Never forget what matters." : {
+
+    },
+    "New name" : {
+
+    },
+    "Next" : {
+
+    },
+    "No categories. Just give it to me." : {
+
+    },
+    "No date yet." : {
+
+    },
+    "No gift ideas saved." : {
+
+    },
+    "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
+
+    },
+    "No pending promises." : {
+
+    },
+    "No plans yet." : {
+
+    },
+    "No plans yet. Say “let's go to Goa in December” and MOMENT will keep it as an intention." : {
+
+    },
+    "No saved memories yet." : {
+
+    },
+    "Nobody — remove person" : {
+
+    },
+    "Not connected" : {
+
+    },
+    "Not important" : {
+
+    },
+    "Not now" : {
+
+    },
+    "Not saved yet" : {
+
+    },
+    "Not the right person?" : {
+
+    },
+    "Not useful" : {
+
+    },
+    "Notes" : {
+
+    },
+    "Nothing here yet." : {
+
+    },
+    "Nothing left to save." : {
+
+    },
+    "Nothing linked yet." : {
+
+    },
+    "Nothing made yet." : {
+
+    },
+    "Nothing needs you yet." : {
+
+    },
+    "Nothing open. When someone says “I'll send you…”, MOMENT keeps track." : {
+
+    },
+    "Nothing to tidy up." : {
+
+    },
+    "Notifications" : {
+
+    },
+    "Notify me" : {
+
+    },
+    "Now give me something from your life." : {
+
+    },
+    "Off by default so nothing personal shows before you unlock." : {
+
+    },
+    "Off by default: notifications only say that something matters. Turn on to see the name and what it's about, e.g. “Sarah's birthday is in 7 days”." : {
+
+    },
+    "OK" : {
+
+    },
+    "On-device understanding" : {
+
+    },
+    "Only genuinely useful ones — a birthday coming up with a gift idea saved, a promise going stale, a plan whose time is near. Never “come back to MOMENT”." : {
+
+    },
+    "Open" : {
+
+    },
+    "Open it" : {
+
+    },
+    "Open memory" : {
+
+    },
+    "Open plan" : {
+
+    },
+    "Optional. Used as context only; MOMENT never adds events without asking." : {
+
+    },
+    "Or share to MOMENT from any app" : {
+
+    },
+    "Original" : {
+
+    },
+    "Original screenshot" : {
+
+    },
+    "Paste a link" : {
+
+    },
+    "Paste your key" : {
+
+    },
+    "Payment is charged to your Apple Account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period, and you can manage or cancel them in your Apple Account settings. Lifetime is a one-time purchase." : {
+
+    },
+    "Pending Promises" : {
+
+    },
+    "People" : {
+
+    },
+    "People you know" : {
+
+    },
+    "People, places, the plans you made and the ones that happened. Yours to keep or share." : {
+
+    },
+    "Person" : {
+
+    },
+    "Photo added" : {
+
+    },
+    "Pick 5–10 photos from a trip or a night out. MOMENT turns them into your first Moment — on your iPhone, in seconds." : {
+
+    },
+    "Pick dates" : {
+
+    },
+    "Pick the photos. I'll find the story." : {
+
+    },
+    "Plan · %@" : {
+
+    },
+    "Plans" : {
+
+    },
+    "Privacy" : {
+
+    },
+    "Privacy Center" : {
+
+    },
+    "Privacy Policy" : {
+
+    },
+    "Promises" : {
+
+    },
+    "Question" : {
+
+    },
+    "Re-link contact" : {
+
+    },
+    "Reading %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading %1$lld of %2$lld…"
+          }
+        }
+      }
+    },
+    "Relationship (optional, e.g. brother)" : {
+
+    },
+    "Remember more. Forget less." : {
+
+    },
+    "Remember this" : {
+
+    },
+    "Remembered: %@" : {
+
+    },
+    "Remind me" : {
+
+    },
+    "Remind me later" : {
+
+    },
+    "Reminders" : {
+
+    },
+    "Remixed from %@" : {
+
+    },
+    "Remove demo data" : {
+
+    },
+    "Remove key" : {
+
+    },
+    "Remove link" : {
+
+    },
+    "Removes stored screenshots, audio and files. Text memories stay." : {
+
+    },
+    "Rename" : {
+
+    },
+    "Reopen" : {
+
+    },
+    "Reset what MOMENT learned from your feedback" : {
+
+    },
+    "Restore purchases" : {
+
+    },
+    "Review" : {
+
+    },
+    "Right now" : {
+
+    },
+    "Same template, your memories." : {
+
+    },
+    "Save" : {
+
+    },
+    "Save all" : {
+
+    },
+    "Save all %lld" : {
+
+    },
+    "Save anyway" : {
+
+    },
+    "Save as a Moment" : {
+
+    },
+    "Save key" : {
+
+    },
+    "Save Moment" : {
+
+    },
+    "Save something to MOMENT. It will be understood and remembered." : {
+
+    },
+    "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
+
+    },
+    "Search" : {
+
+    },
+    "Search Memories" : {
+
+    },
+    "Search My Memories" : {
+
+    },
+    "See it" : {
+
+    },
+    "See what MOMENT understands" : {
+
+    },
+    "Send as a Moment" : {
+
+    },
+    "Send as a Moment (opens in MOMENT)" : {
+
+    },
+    "Send it back to %@" : {
+
+    },
+    "Set" : {
+
+    },
+    "Set reminder" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share anything to MOMENT" : {
+
+    },
+    "Share as images" : {
+
+    },
+    "Share as video" : {
+
+    },
+    "Share with %@" : {
+
+    },
+    "Shared with you" : {
+
+    },
+    "Shop" : {
+
+    },
+    "Show content in Lock Screen widget" : {
+
+    },
+    "Show details in notifications" : {
+
+    },
+    "Show done" : {
+
+    },
+    "Show finished" : {
+
+    },
+    "Show Gift Ideas" : {
+
+    },
+    "Show on Home" : {
+
+    },
+    "Show Pending Promises" : {
+
+    },
+    "Show Today's Moments" : {
+
+    },
+    "Show Upcoming Plans" : {
+
+    },
+    "Since %@" : {
+
+    },
+    "Sounds like something to remember" : {
+
+    },
+    "Source: %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Source: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Sources" : {
+
+    },
+    "Start with photos" : {
+
+    },
+    "Status" : {
+
+    },
+    "Summary" : {
+
+    },
+    "Support & feedback" : {
+
+    },
+    "System" : {
+
+    },
+    "System permission: %@" : {
+
+    },
+    "Terms of Use" : {
+
+    },
+    "Thank you. Everything is unlocked." : {
+
+    },
+    "That's a good thing. When a promise goes stale, a birthday gets close, or a plan's time is near, it shows up here." : {
+
+    },
+    "That's the Moment." : {
+
+    },
+    "The only number MOMENT cares about: times it brought something back at the right moment and you acted on it." : {
+
+    },
+    "The story" : {
+
+    },
+    "Things I owe people" : {
+
+    },
+    "Things people owe me" : {
+
+    },
+    "This cannot be undone. Export first if you want a copy." : {
+
+    },
+    "This looks like a core memory." : {
+
+    },
+    "This permanently deletes your MOMENT memories and stored media from this device. There is no hidden copy." : {
+
+    },
+    "This removes the memory and its stored source from this iPhone." : {
+
+    },
+    "This was useful" : {
+
+    },
+    "Throw something at me — a screenshot, a voice note, a thought. I'll bring it back when it matters." : {
+
+    },
+    "Tidy up" : {
+
+    },
+    "Timeline" : {
+
+    },
+    "Title" : {
+
+    },
+    "Transcribed on this iPhone" : {
+
+    },
+    "Try again" : {
+
+    },
+    "Try again or save the original." : {
+
+    },
+    "Try asking" : {
+
+    },
+    "Try it now." : {
+
+    },
+    "Try photos with faces, places or messages in them." : {
+
+    },
+    "Try this" : {
+
+    },
+    "Try: “Sarah wants to try Tosaka” or “Remind me to call Rahul tomorrow about the property.”" : {
+
+    },
+    "Turn into a plan" : {
+
+    },
+    "Type" : {
+
+    },
+    "Type: %@. Double-tap to change." : {
+
+    },
+    "Unarchive" : {
+
+    },
+    "Understanding what's in them. This happens on your iPhone." : {
+
+    },
+    "Understanding…" : {
+
+    },
+    "Understood on this iPhone" : {
+
+    },
+    "Understood with Cloud AI" : {
+
+    },
+    "Unlock with %@" : {
+
+    },
+    "Unmark important" : {
+
+    },
+    "Up to %lld a day" : {
+
+    },
+    "Upcoming Plans" : {
+
+    },
+    "Use “%@”" : {
+
+    },
+    "Use Cloud AI" : {
+
+    },
+    "Use this date" : {
+
+    },
+    "Use this when MOMENT created two people for the same person." : {
+
+    },
+    "Vault" : {
+
+    },
+    "Version %@" : {
+
+    },
+    "View" : {
+
+    },
+    "View gift idea" : {
+
+    },
+    "Want me to tell you when one of these becomes urgent? At most %lld a day, never “come back to the app”. Details stay hidden unless you turn them on." : {
+
+    },
+    "Want to finish this plan?" : {
+
+    },
+    "wants" : {
+
+    },
+    "What are you trying to remember?" : {
+
+    },
+    "What do you want to remember?" : {
+
+    },
+    "What is this?" : {
+
+    },
+    "What MOMENT remembers" : {
+
+    },
+    "What should I remember?" : {
+
+    },
+    "What to remember" : {
+
+    },
+    "What's worth remembering?" : {
+
+    },
+    "When" : {
+
+    },
+    "When is this?" : {
+
+    },
+    "When should I bring this back?" : {
+
+    },
+    "When?" : {
+
+    },
+    "Who is this about?" : {
+
+    },
+    "Why am I seeing this?" : {
+
+    },
+    "Why MOMENT thinks this matters" : {
+
+    },
+    "Why this?" : {
+
+    },
+    "Why?" : {
+
+    },
+    "With" : {
+
+    },
+    "You + %@" : {
+
+    },
+    "You can also tell me things: “Remember that Rahul likes Japanese food.”" : {
+
+    },
+    "You mentioned %@." : {
+
+    },
+    "You own your data. %lld memories." : {
+
+    },
+    "You were there too." : {
+
+    },
+    "You're on MOMENT Pro." : {
+
+    },
+    "Your API key" : {
+
+    },
+    "Your archive fills in as you capture." : {
+
+    },
+    "Your life, remembered." : {
+
+    },
+    "Your memories are always yours: viewing, exporting and deleting never require a subscription." : {
+
+    },
+    "Your memories belong to you." : {
+
+    },
+    "Your memories stay private." : {
+
+    },
+    "Your memory" : {
+
+    },
+    "Your memory store couldn't be opened" : {
+
+    },
+    "Your Moment" : {
+
+    },
+    "Your month in Moments" : {
+
+    },
+    "Your name (shown as “…'s side”)" : {
+
+    },
+    "Your numbers" : {
+
+    },
+    "Your side" : {
+
+    },
+    "Yours" : {
+
+    }
+  },
+  "version" : "1.0"
+}

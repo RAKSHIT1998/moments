@@ -1,0 +1,56 @@
+{
+  "identifier" : "MOMENT-STOREKIT",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "moment_pro_lifetime",
+      "localizations" : [ { "description" : "Everything, forever.", "displayName" : "Pro — Lifetime", "locale" : "en_US" } ],
+      "productID" : "moment_pro_lifetime",
+      "referenceName" : "Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : { "_applicationInternalID" : "0", "_developerTeamID" : "48TGY734WW" },
+  "subscriptionGroups" : [
+    {
+      "id" : "moment_pro",
+      "localizations" : [ ],
+      "name" : "MOMENT Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [ ],
+          "codeOffers" : [ ],
+          "displayPrice" : "3.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "moment_pro_monthly",
+          "introductoryOffer" : null,
+          "localizations" : [ { "description" : "Unlimited memories, advanced understanding.", "displayName" : "Pro — Monthly", "locale" : "en_US" } ],
+          "productID" : "moment_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "subscriptionGroupID" : "moment_pro",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [ ],
+          "codeOffers" : [ ],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "moment_pro_yearly",
+          "introductoryOffer" : null,
+          "localizations" : [ { "description" : "Unlimited memories, advanced understanding. Best value.", "displayName" : "Pro — Yearly", "locale" : "en_US" } ],
+          "productID" : "moment_pro_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro Yearly",
+          "subscriptionGroupID" : "moment_pro",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : { "major" : 3, "minor" : 0 }
+}
