@@ -3,6 +3,7 @@ import SwiftData
 import UserNotifications
 import BackgroundTasks
 import CoreSpotlight
+import CloudKit
 
 @main
 struct MomentApp: App {
@@ -35,6 +36,13 @@ struct MomentApp: App {
                     if phase == .background { AppDelegate.scheduleRefresh() }
                 }
         }
+    }
+}
+
+/// Scene-based apps receive CloudKit share acceptance here, not on the app delegate.
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    func windowScene(_ windowScene: UIWindowScene, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
+        AppDelegate.acceptShare(cloudKitShareMetadata)
     }
 }
 
@@ -73,11 +81,52 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         do { try BGTaskScheduler.shared.submit(request) } catch { Log.app.debug("BG refresh not scheduled: \(error.localizedDescription)") }
     }
 
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Log.app.debug("APNs registered")
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        Log.app.debug("APNs unavailable: \(error.localizedDescription)")
+    }
+
+    /// Silent CloudKit push: something changed in a Moment I'm part of.
+    nonisolated func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        let isCloudKit = CKNotification(fromRemoteNotificationDictionary: userInfo) != nil
+        Task { @MainActor in
+            guard isCloudKit else { completionHandler(.noData); return }
+            await Self.environment?.social.handleRemoteChange()
+            completionHandler(.newData)
+        }
+    }
+
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
+
+    /// The system hands us accepted CloudKit share invitations (tapped in Messages, AirDrop…).
+    static func acceptShare(_ metadata: CKShare.Metadata) {
+        Task { @MainActor in
+            guard let env = Self.environment, let ck = env.social.backend as? CloudKitBackend else { return }
+            do {
+                let m = try await ck.accept(metadata)
+                env.social.pendingMomentID = m.id
+                env.analytics.track(.sharedMomentOpened)
+                await env.social.refreshFeed()
+            } catch { env.social.pendingInviteError = error.localizedDescription }
+        }
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .sound]
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if let momentID = response.notification.request.content.userInfo["momentID"] as? String {
+            await MainActor.run { Self.environment?.social.pendingMomentID = momentID; Self.environment?.pendingTab = .home }
+            return
+        }
         guard let idString = response.notification.request.content.userInfo["memoryID"] as? String, let id = UUID(uuidString: idString) else { return }
         await MainActor.run {
             guard let env = Self.environment else { return }
@@ -109,6 +158,9 @@ extension AppEnvironment {
         if ProcessInfo.processInfo.arguments.contains("-reset") { try? await lifecycle.deleteEverything(); settings.onboardingCompleted = true }
         if ProcessInfo.processInfo.arguments.contains("-demo") { await DemoData.seedAsync(into: self) }
         #endif
+        // Social first: the feed is the first screen, and this is cheap (cached session + one fetch).
+        await social.start()
+        UIApplication.shared.registerForRemoteNotifications()
         LocalIntelligenceProvider.warmUp()
         await shareInbox.drain()
         await surface.refresh()
@@ -127,8 +179,15 @@ extension AppEnvironment {
             Task { await stories.importPackage(at: url) }
             return
         }
+        if SocialService.isInviteURL(url) {
+            Task { await social.acceptInvite(url) }
+            return
+        }
         guard url.scheme == AppGroup.urlScheme else { return }
         switch url.host() {
+        case "moment":
+            social.pendingMomentID = url.lastPathComponent
+            pendingTab = .home
         case "memory":
             if let id = UUID(uuidString: url.lastPathComponent) { openMemory(id) }
         case "capture":

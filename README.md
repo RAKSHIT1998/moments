@@ -1,8 +1,30 @@
 # MOMENT
 
-**Never forget what matters.**
+**Be there. Remember it.**
 
-MOMENT is a private, on-device AI memory for a person's real life. Throw in a screenshot, a voice note, a link or a thought; MOMENT understands who/what/when, keeps provenance, and brings it back when it becomes useful.
+A Moment is an experience shared by the people who were there. You make it, they add their side — one place, everyone's photos, nothing lost in a group chat. NOW is what's happening right now (gone in 24 hours unless you keep it). Underneath sits the original private, on-device memory layer (screenshots → people, plans, promises), reachable from your profile and never synced.
+
+## Social layer (backend: CloudKit)
+
+```
+Moment/Social/
+  SocialModels.swift      value types that cross the backend boundary (SocialMoment, Contribution, NowPost, …)
+  SocialBackend.swift     protocol + FeedRanker, RelationshipGraph, MomentTimeline, ContentModeration
+  CloudKitBackend.swift   production: private DB custom zone for Moments, CKShare for group Moments/invites
+                          (system UICloudSharingController → real share links), shared DB for others' Moments,
+                          public DB for profiles / follows / public Moments / NOW / reports, CKAssets for media,
+                          CKDatabaseSubscription → silent push → local "N new additions" notification
+  InMemoryBackend.swift   DEBUG: same contract, in-process, seeded fictional people (-uitest / -demo / unit tests)
+  SocialService.swift     what the UI talks to: session, ranked feed, caches, invites, engagement, NOW, safety, inbox
+  UploadQueue.swift       offline-first, disk-persisted queue with backoff; contributions show as "uploading"
+  MediaPipeline.swift     ≤2048px JPEG with EXIF stripped (capture date kept separately), 1080p H.264 transcode
+Moment/Features/Social/   Home (NOW strip + feed), Moment page (timeline of sides, ADD YOUR SIDE, comments,
+                          reactions, invite), New Moment, Add Side, NOW composer/viewer, Discover, Inbox
+                          (activity / invites / DMs), Profile + friendship pages, safety (block/mute/report/private),
+                          onboarding, "Add to a Moment" from the share sheet
+```
+
+Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the app uses `CloudKitBackend` with container `iCloud.com.rakshitbargotra.moment`. Nothing social is faked with local-only data in Release: if iCloud is unavailable the UI says so and keeps private Moments working.
 
 ## Requirements
 
@@ -19,7 +41,7 @@ xcodebuild -project Moment.xcodeproj -scheme Moment -destination 'platform=iOS S
 
 **Running on a device (one-time):** open the project in Xcode, select the `Moment`, `MomentShareExtension` and `MomentWidget` targets → Signing & Capabilities, and confirm the *App Groups* capability with `group.com.rakshitbargotra.moment` (Xcode registers the group on your developer account; `xcodebuild -allowProvisioningUpdates` cannot create App Groups). After that, `xcodebuild -sdk iphoneos build -allowProvisioningUpdates` works from the command line.
 
-Launch arguments (DEBUG only): `-demo` seeds clearly-labelled demo data through the real pipeline, `-uitest` skips onboarding, `-reset` wipes the store first, `-reset-onboarding` shows onboarding again.
+Launch arguments (DEBUG only): `-demo` seeds clearly-labelled demo data through the real pipeline and the in-memory social backend, `-uitest` skips onboarding and uses the in-memory social backend, `-reset` wipes the store first, `-reset-onboarding` shows onboarding again.
 
 ## Architecture
 

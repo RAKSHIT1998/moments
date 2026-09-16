@@ -39,6 +39,23 @@ extension View {
             case .friendship(let id): FriendshipView(personID: id)
             }
         }
+        .navigationDestination(for: SocialRoute.self) { route in
+            switch route {
+            case .moment(let id): MomentPageView(momentID: id)
+            case .newMoment: NewMomentView()
+            case .addSide(let id): AddSideView(momentID: id)
+            case .profile(let id): SocialProfileView(userID: id)
+            case .friendship(let id): FriendshipPageView(userID: id)
+            case .conversation(let id): ConversationView(conversationID: id)
+            case .editMoment(let id): EditMomentView(momentID: id)
+            case .members(let id): MembersView(momentID: id)
+            case .safety: SafetySettingsView()
+            case .blockedUsers: BlockedUsersView()
+            case .followers(let id, let followers): FollowListView(userID: id, followers: followers)
+            case .editProfile: EditProfileView()
+            case .myMemories: PrivateMemoryHubView()
+            }
+        }
     }
 }
 

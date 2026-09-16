@@ -29,7 +29,20 @@ final class AnalyticsService {
         case memoryDropCreated = "memory_drop_created"
         case contextualInviteShown = "contextual_invite_shown"
         case contextualInviteAccepted = "contextual_invite_accepted"
+        // Social platform (north star: shared Moments — Moments with more than one member)
+        case sharedMomentCreated = "shared_moment_created"
+        case inviteSent = "invite_sent"
+        case momentJoined = "moment_joined"
+        case nowPosted = "now_posted"
+        case nowSaved = "now_saved"
+        case commentAdded = "comment_added"
+        case messageSent = "message_sent"
+        case userBlocked = "user_blocked"
+        case reportSent = "report_sent"
     }
+
+    /// Number of Moments this person made that became shared (someone else was invited).
+    var sharedMomentsCreated: Int { count(.sharedMomentCreated) }
 
     /// "Moments shared per activated user" — the primary growth metric, computed locally.
     var momentsSharedPerActivatedUser: Double {
@@ -44,7 +57,7 @@ final class AnalyticsService {
 
     /// Only the event name and an optional *category* string are recorded. Never text, names, URLs.
     func track(_ event: Event, category: String? = nil) {
-        let growth: Set<Event> = [.usefulMemoryResurfaced, .firstMomentCreated, .momentCreated, .momentShared, .sharedMomentOpened, .sideAdded, .momentRemixed]
+        let growth: Set<Event> = [.usefulMemoryResurfaced, .firstMomentCreated, .momentCreated, .momentShared, .sharedMomentOpened, .sideAdded, .momentRemixed, .sharedMomentCreated, .inviteSent, .momentJoined]
         guard settings.analyticsEnabled || growth.contains(event) else { return }
         let key = "analytics.\(event.rawValue)"
         defaults.set(defaults.integer(forKey: key) + 1, forKey: key)
@@ -54,7 +67,7 @@ final class AnalyticsService {
     func count(_ event: Event) -> Int { defaults.integer(forKey: "analytics.\(event.rawValue)") }
 
     func reset() {
-        for e in [Event.captureStarted, .captureCompleted, .memoryCreated, .memoryEdited, .memoryDeleted, .searchUsed, .insightOpened, .notificationOpened, .subscriptionStarted, .subscriptionCancelled, .usefulMemoryResurfaced, .firstMomentCreated, .momentCreated, .momentShared, .momentExportedVideo, .sharedMomentOpened, .sideAdded, .reactionAdded, .momentRemixed, .recapViewed, .memoryDropCreated, .contextualInviteShown, .contextualInviteAccepted] {
+        for e in [Event.captureStarted, .captureCompleted, .memoryCreated, .memoryEdited, .memoryDeleted, .searchUsed, .insightOpened, .notificationOpened, .subscriptionStarted, .subscriptionCancelled, .usefulMemoryResurfaced, .firstMomentCreated, .momentCreated, .momentShared, .momentExportedVideo, .sharedMomentOpened, .sideAdded, .reactionAdded, .momentRemixed, .recapViewed, .memoryDropCreated, .contextualInviteShown, .contextualInviteAccepted, .sharedMomentCreated, .inviteSent, .momentJoined, .nowPosted, .nowSaved, .commentAdded, .messageSent, .userBlocked, .reportSent] {
             defaults.removeObject(forKey: "analytics.\(e.rawValue)")
         }
     }

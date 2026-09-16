@@ -23,16 +23,24 @@ final class ShareViewController: UIViewController {
         ])
         hosting.didMove(toParent: self)
         host = hosting
-        Task { await ingest() }
+        status.onChoose = { [weak self] intent in Task { await self?.ingest(intent: intent) } }
+        let providers = (extensionContext?.inputItems as? [NSExtensionItem])?.flatMap { $0.attachments ?? [] } ?? []
+        // Photos and videos can go to a shared Moment; everything else is private memory.
+        if providers.contains(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.movie.identifier) }) {
+            status.needsChoice = true
+        } else {
+            Task { await ingest(intent: .remember) }
+        }
     }
 
-    private func ingest() async {
+    private func ingest(intent: SharedCaptureItem.Intent) async {
+        status.needsChoice = false
         guard let items = extensionContext?.inputItems as? [NSExtensionItem] else { status.fail("Nothing to share."); return }
         // NSItemProvider is thread-safe by contract but not marked Sendable; hand the array over explicitly.
         let providers = ProviderBox(items.flatMap { $0.attachments ?? [] })
         let sourceApp = Bundle.main.object(forInfoDictionaryKey: "NSExtensionHostBundleIdentifier") as? String
-        let outcome = await ShareIngestor.ingest(providers, sourceApp: sourceApp)
-        if outcome.count > 0 { status.succeed(outcome.count) } else { status.fail(outcome.failed ? "Couldn't read this item." : "Nothing MOMENT can read yet.") }
+        let outcome = await ShareIngestor.ingest(providers, sourceApp: sourceApp, intent: intent)
+        if outcome.count > 0 { status.succeed(outcome.count, intent: intent) } else { status.fail(outcome.failed ? "Couldn't read this item." : "Nothing MOMENT can read yet.") }
     }
 
     private func finish() {
@@ -46,19 +54,24 @@ struct ProviderBox: @unchecked Sendable { let providers: [NSItemProvider]; init(
 enum ShareIngestor {
     struct Outcome: Sendable { var count = 0; var failed = false }
 
-    nonisolated static func ingest(_ box: ProviderBox, sourceApp: String?) async -> Outcome {
+    nonisolated static func ingest(_ box: ProviderBox, sourceApp: String?, intent: SharedCaptureItem.Intent = .remember) async -> Outcome {
         var out = Outcome()
         for provider in box.providers {
-            do { if try await ingest(provider, sourceApp: sourceApp) { out.count += 1 } }
+            do { if try await ingest(provider, sourceApp: sourceApp, intent: intent) { out.count += 1 } }
             catch { out.failed = true }
         }
         return out
     }
 
-    private static func ingest(_ provider: NSItemProvider, sourceApp: String?) async throws -> Bool {
+    private static func ingest(_ provider: NSItemProvider, sourceApp: String?, intent: SharedCaptureItem.Intent) async throws -> Bool {
+        if intent == .addToMoment, provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+            let data = try await loadData(provider, type: .movie)
+            try ShareInbox.enqueue(SharedCaptureItem(kind: .file, fileName: "\(UUID().uuidString).mov", sourceApp: sourceApp, intent: .addToMoment), payload: data)
+            return true
+        }
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
             let data = try await loadData(provider, type: .image)
-            try ShareInbox.enqueue(SharedCaptureItem(kind: .image, fileName: "\(UUID().uuidString).img", sourceApp: sourceApp), payload: data)
+            try ShareInbox.enqueue(SharedCaptureItem(kind: .image, fileName: "\(UUID().uuidString).img", sourceApp: sourceApp, intent: intent), payload: data)
             return true
         }
         if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
@@ -115,7 +128,13 @@ final class ShareStatus {
     var message = ""
     var isDone = false
     var succeeded = false
-    func succeed(_ count: Int) { message = count == 1 ? "Saved to MOMENT." : "Saved \(count) items to MOMENT."; succeeded = true; isDone = true }
+    var needsChoice = false
+    var onChoose: (SharedCaptureItem.Intent) -> Void = { _ in }
+    func succeed(_ count: Int, intent: SharedCaptureItem.Intent = .remember) {
+        if intent == .addToMoment { message = count == 1 ? "Ready to add to a Moment." : "\(count) items ready to add to a Moment." }
+        else { message = count == 1 ? "Saved to MOMENT." : "Saved \(count) items to MOMENT." }
+        succeeded = true; isDone = true
+    }
     func fail(_ m: String) { message = m; succeeded = false; isDone = true }
 }
 
@@ -126,10 +145,16 @@ struct ShareConfirmationView: View {
         VStack {
             Spacer()
             VStack(spacing: 14) {
-                if status.isDone {
+                if status.needsChoice {
+                    Text("Where does this go?").font(.headline)
+                    Button { status.onChoose(.addToMoment) } label: { Label("Add to a Moment", systemImage: "person.3").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent)
+                    Button { status.onChoose(.remember) } label: { Label("Remember privately", systemImage: "lock").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+                    Text("Moments are shared with the people who were there. Private memory never leaves your iPhone.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button("Cancel", action: done).font(.footnote)
+                } else if status.isDone {
                     Image(systemName: status.succeeded ? "checkmark.circle.fill" : "exclamationmark.circle").font(.system(size: 36)).foregroundStyle(status.succeeded ? Color.green : Color.orange)
                     Text(status.message).font(.headline).multilineTextAlignment(.center)
-                    if status.succeeded { Text("MOMENT will understand it the next time you open the app.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center) }
+                    if status.succeeded { Text(status.message.contains("Moment") ? "Open MOMENT to pick the Moment." : "MOMENT will understand it the next time you open the app.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center) }
                     Button("Done", action: done).buttonStyle(.borderedProminent)
                 } else {
                     ProgressView()

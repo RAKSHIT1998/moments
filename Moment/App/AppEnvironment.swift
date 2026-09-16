@@ -25,6 +25,7 @@ final class AppEnvironment {
     let speech: SpeechService
     let stories: StoryService
     let flags: FeatureFlags
+    let social: SocialService
 
     /// Deep-link / notification navigation target.
     var pendingMemoryID: UUID?
@@ -43,7 +44,7 @@ final class AppEnvironment {
         toastTask = Task { try? await Task.sleep(for: .seconds(1.6)); if !Task.isCancelled { toastText = nil } }
     }
 
-    init(storage: StorageService, settings: SettingsStore? = nil, provider: (any IntelligenceProvider)? = nil, mediaDirectory: URL? = nil) {
+    init(storage: StorageService, settings: SettingsStore? = nil, provider: (any IntelligenceProvider)? = nil, mediaDirectory: URL? = nil, backend: (any SocialBackend)? = nil) {
         self.storage = storage
         let settings = settings ?? SettingsStore()
         self.settings = settings
@@ -65,6 +66,7 @@ final class AppEnvironment {
         self.speech = SpeechService()
         self.stories = StoryService(storage: storage, media: media, importer: importer, settings: settings, analytics: analytics, subscriptions: subscriptions)
         self.flags = FeatureFlags()
+        self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
         actions.onChange = { [weak self] in self?.surface.noteDataChanged() }
         search.changeToken = { [weak self] in self?.surface.changeToken ?? 0 }
         importer.onChange = { [weak self] in self?.surface.noteDataChanged() }
@@ -72,6 +74,20 @@ final class AppEnvironment {
             guard let self else { return false }
             return self.subscriptions.canCreateMemory(currentCount: self.storage.memoryCount)
         }
+    }
+
+    /// CloudKit in production. In DEBUG, `-uitest`/`-demo` runs use the in-process backend so the
+    /// simulator (no iCloud) exercises every social flow against fictional people.
+    static func defaultBackend(media: MediaStore) -> any SocialBackend {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-uitest") || args.contains("-demo") || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            let b = InMemoryBackend(displayName: "Rakshit")
+            Task { await b.seedDemo() }
+            return b
+        }
+        #endif
+        return CloudKitBackend(media: media)
     }
 
     static func live() -> AppEnvironment {
@@ -90,8 +106,9 @@ final class AppEnvironment {
     #if DEBUG
     /// For previews and tests.
     static func preview(seed: Bool = true) -> AppEnvironment {
-        let env = AppEnvironment(storage: StorageService.unavailable(), settings: SettingsStore(defaults: UserDefaults(suiteName: "preview-\(UUID().uuidString)") ?? .standard), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "preview-media-\(UUID().uuidString)"))
-        if seed { DemoData.seed(into: env) }
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        let env = AppEnvironment(storage: StorageService.unavailable(), settings: SettingsStore(defaults: UserDefaults(suiteName: "preview-\(UUID().uuidString)") ?? .standard), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "preview-media-\(UUID().uuidString)"), backend: backend)
+        if seed { DemoData.seed(into: env); Task { await backend.seedDemo(); await env.social.start() } }
         return env
     }
     #endif
@@ -100,8 +117,12 @@ final class AppEnvironment {
 }
 
 enum RootTab: String, CaseIterable, Identifiable {
-    case home, search, people, vault
+    case home, discover, create, inbox, profile
     var id: String { rawValue }
-    var label: String { switch self { case .home: "Home"; case .search: "Search"; case .people: "People"; case .vault: "Vault" } }
-    var symbol: String { switch self { case .home: "house"; case .search: "magnifyingglass"; case .people: "person.2"; case .vault: "archivebox" } }
+    var label: String { switch self { case .home: "Home"; case .discover: "Discover"; case .create: "New"; case .inbox: "Inbox"; case .profile: "You" } }
+    var symbol: String { switch self { case .home: "house"; case .discover: "safari"; case .create: "plus"; case .inbox: "tray"; case .profile: "person.crop.circle" } }
+    /// Old deep links (`moment://search`, `vault`) still land somewhere sensible.
+    static let search = RootTab.profile
+    static let vault = RootTab.profile
+    static let people = RootTab.profile
 }

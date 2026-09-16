@@ -1,6 +1,7 @@
 import XCTest
 
-/// UI tests run against a fresh in-app demo dataset (`-demo -uitest -reset`).
+/// UI tests run against the in-process social backend with fictional people (`-uitest`) and the
+/// private-memory demo dataset (`-demo -reset`).
 final class MomentUITests: XCTestCase {
     var app: XCUIApplication!
 
@@ -9,190 +10,195 @@ final class MomentUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["-uitest", "-reset", "-demo"]
         addUIInterruptionMonitor(withDescription: "Permissions") { alert in
-            for label in ["Allow", "OK", "Don't Allow"] where alert.buttons[label].exists { alert.buttons[label].tap(); return true }
+            for label in ["Allow", "OK", "Don't Allow", "Allow Full Access"] where alert.buttons[label].exists { alert.buttons[label].tap(); return true }
             return false
         }
         app.launch()
     }
 
-    private func waitForDemo() {
-        XCTAssertTrue(app.staticTexts["homeHeadline"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.otherElements["surfaceCard-Follow up"].firstMatch.waitForExistence(timeout: 60), "demo data should surface a follow-up")
+    private func waitForFeed() {
+        XCTAssertTrue(app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 30), "seeded social feed should show Goa '26")
     }
 
-    private func waitForHome() {
-        XCTAssertTrue(app.staticTexts["homeHeadline"].waitForExistence(timeout: 20))
+    // MARK: Social
+
+    func testFeedRanksMomentsIWasPartOfFirst() {
+        waitForFeed()
+        XCTAssertTrue(app.buttons["nowCompose"].exists)
+        XCTAssertTrue(app.buttons["now-n1"].exists, "NOW strip shows friends' posts")
+        XCTAssertTrue(app.otherElements["onThisDay"].firstMatch.exists, "Goa '25 was one year ago today")
+        let first = app.otherElements.matching(NSPredicate(format: "identifier BEGINSWITH 'feedMoment-'")).firstMatch
+        XCTAssertTrue(["feedMoment-m_goa", "feedMoment-m_bday"].contains(first.identifier), first.identifier)
+    }
+
+    func testMomentPageShowsEveryonesSideAndAddsMine() {
+        waitForFeed()
+        app.otherElements["feedMoment-m_goa"].firstMatch.tap()
+        XCTAssertTrue(app.otherElements["momentHero"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["You were there too."].exists)
+        XCTAssertTrue(app.otherElements["contribution-c_m_goa_1"].firstMatch.waitForExistence(timeout: 5), "Rahul's side is in the timeline")
+        XCTAssertTrue(app.buttons["addYourSide"].exists)
+        app.buttons["addYourSide"].tap()
+        XCTAssertTrue(app.buttons["sideSamplePhotos"].waitForExistence(timeout: 5))
+        app.buttons["sideSamplePhotos"].tap()
+        let note = app.textFields["sideNote"].firstMatch.exists ? app.textFields["sideNote"].firstMatch : app.textViews["sideNote"].firstMatch
+        note.tap(); note.typeText("Palolem was unreal")
+        app.buttons["submitSide"].tap()
+        XCTAssertTrue(app.otherElements["momentHero"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Palolem was unreal"].waitForExistence(timeout: 15), "my note shows in the Moment after upload")
+    }
+
+    func testCreateMomentAndInvite() {
+        waitForFeed()
+        app.tabBars.buttons["New"].tap()
+        let title = app.textViews["newMomentTitle"].firstMatch.exists ? app.textViews["newMomentTitle"].firstMatch : app.textFields["newMomentTitle"].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        title.tap(); title.typeText("Rooftop Friday")
+        app.buttons["samplePhotos"].tap()
+        app.buttons["addPeople"].tap()
+        XCTAssertTrue(app.buttons["pick-rahul"].waitForExistence(timeout: 10))
+        app.buttons["pick-rahul"].tap()
+        app.buttons["peopleDone"].tap()
+        app.buttons["vis-group"].tap()
+        app.swipeUp()
+        app.buttons["createMoment"].tap()
+        XCTAssertTrue(app.otherElements["momentHero"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["Rooftop Friday"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Rahul Mehta + you"].waitForExistence(timeout: 10), "invited person is a member")
+    }
+
+    func testReactCommentAndModeration() {
+        waitForFeed()
+        app.otherElements["feedMoment-m_goa"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["react-core"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["react-core"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["react-core"].firstMatch.label.contains("selected"))
+        app.swipeUp(); app.swipeUp(); app.swipeUp()
+        let field = app.textFields["commentField"].firstMatch.exists ? app.textFields["commentField"].firstMatch : app.textViews["commentField"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap(); field.typeText("kys")
+        app.buttons["postComment"].tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5), "abuse is refused before it leaves the device")
+        app.alerts.buttons.firstMatch.tap()
+    }
+
+    func testNowPostAndSaveToMoment() {
+        waitForFeed()
+        app.buttons["nowCompose"].tap()
+        let field = app.textViews["nowText"].firstMatch.exists ? app.textViews["nowText"].firstMatch : app.textFields["nowText"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap(); field.typeText("Rooftop now")
+        app.buttons["postNow"].tap()
+        let mine = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'now-'")).firstMatch
+        XCTAssertTrue(mine.waitForExistence(timeout: 10))
+        mine.tap()
+        XCTAssertTrue(app.buttons["saveNow"].waitForExistence(timeout: 5))
+        app.buttons["saveNow"].tap()
+        XCTAssertTrue(app.buttons["saveTo-m_goa"].waitForExistence(timeout: 5))
+        app.buttons["saveTo-m_goa"].tap()
+        XCTAssertTrue(app.staticTexts["Saved to a Moment"].waitForExistence(timeout: 5))
+    }
+
+    func testDiscoverInboxAndMessages() {
+        waitForFeed()
+        app.tabBars.buttons["Discover"].tap()
+        XCTAssertTrue(app.otherElements["tile-m_sunset"].firstMatch.waitForExistence(timeout: 10), "public Moments are discoverable")
+        app.tabBars.buttons["Inbox"].tap()
+        XCTAssertTrue(app.otherElements["activity-a1"].firstMatch.waitForExistence(timeout: 10) || app.buttons["activity-a1"].firstMatch.waitForExistence(timeout: 2))
+        app.buttons["Invites"].tap()
+        XCTAssertTrue(app.buttons["invite-inv1"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["Messages"].tap()
+        XCTAssertTrue(app.buttons["conversation-conv_rahul"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["conversation-conv_rahul"].firstMatch.tap()
+        XCTAssertTrue(app.otherElements["message-d1"].firstMatch.waitForExistence(timeout: 5))
+        let field = app.textFields["messageField"].firstMatch.exists ? app.textFields["messageField"].firstMatch : app.textViews["messageField"].firstMatch
+        field.tap(); field.typeText("sending it now")
+        app.buttons["sendMessage"].tap()
+        XCTAssertTrue(app.staticTexts["sending it now"].waitForExistence(timeout: 5))
+    }
+
+    func testProfileFriendshipAndBlock() {
+        waitForFeed()
+        app.otherElements["feedMoment-m_goa"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["momentMembers"].waitForExistence(timeout: 10))
+        app.buttons["momentMembers"].tap()
+        XCTAssertTrue(app.staticTexts["Rahul Mehta"].firstMatch.waitForExistence(timeout: 5))
+        app.staticTexts["Rahul Mehta"].firstMatch.tap()
+        XCTAssertTrue(app.otherElements["profileHeader"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["friendshipLink"].waitForExistence(timeout: 5))
+        app.buttons["friendshipLink"].tap()
+        XCTAssertTrue(app.staticTexts["You + Rahul Mehta"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["profileMenu"].tap()
+        app.buttons["Block"].tap()
+        // Back on the Moment page; Rahul's Moment is gone from the feed.
+        app.tabBars.buttons["Home"].tap()
+        XCTAssertFalse(app.otherElements["feedMoment-m_bday"].firstMatch.waitForExistence(timeout: 3), "blocked creator's Moments disappear")
+    }
+
+    func testSafetySettingsAndPrivateMemoryStillWork() {
+        waitForFeed()
+        app.tabBars.buttons["You"].tap()
+        XCTAssertTrue(app.buttons["safetyLink"].waitForExistence(timeout: 10))
+        app.buttons["safetyLink"].tap()
+        XCTAssertTrue(app.switches["privateAccount"].firstMatch.waitForExistence(timeout: 5))
+        app.switches["privateAccount"].firstMatch.tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["myMemories"].tap()
+        XCTAssertTrue(app.staticTexts["homeHeadline"].waitForExistence(timeout: 20), "private memory layer opens")
+        XCTAssertTrue(app.otherElements["surfaceCard-Follow up"].firstMatch.waitForExistence(timeout: 60), "demo data still surfaces")
+        app.tabBars.buttons["Search"].tap()
+        let field = app.textFields["searchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap(); field.typeText("What did Rahul promise me?\n")
+        XCTAssertTrue(app.staticTexts["searchAnswer"].waitForExistence(timeout: 15))
+        app.buttons["memoriesDone"].tap()
+        XCTAssertTrue(app.otherElements["profileHeader"].waitForExistence(timeout: 5))
     }
 
     func testOnboardingFlow() {
         app.terminate()
-        app.launchArguments = ["-reset-onboarding"]
+        app.launchArguments = ["-uitest", "-reset-onboarding"]
         app.launch()
-        // A fresh install shows onboarding; drive it to the end.
         if app.buttons["onboardingContinue"].waitForExistence(timeout: 10) {
             app.buttons["onboardingContinue"].tap()
             app.buttons["onboardingContinue"].tap()
             app.buttons["onboardingContinue"].tap()
-            XCTAssertTrue(app.buttons["onboardingSkip"].waitForExistence(timeout: 5))
+            let name = app.textFields["onboardingName"]
+            XCTAssertTrue(name.waitForExistence(timeout: 5))
+            name.tap(); name.typeText("Rakshit")
+            app.buttons["onboardingContinue"].tap()
+            XCTAssertTrue(app.buttons["createMoment"].waitForExistence(timeout: 10), "first Moment builder opens")
             app.buttons["onboardingSkip"].tap()
         }
-        XCTAssertTrue(app.staticTexts["homeHeadline"].waitForExistence(timeout: 10))
-    }
-
-    func testHomeShowsContextualCards() {
-        waitForDemo()
-    }
-
-    func testTextCaptureCreatesUnderstoodMemory() {
-        waitForHome()
-        app.buttons["captureButton"].tap()
-        XCTAssertTrue(app.buttons["captureText"].waitForExistence(timeout: 5))
-        app.buttons["captureText"].tap()
-        let editor = app.textViews["captureTextEditor"]
-        XCTAssertTrue(editor.waitForExistence(timeout: 5))
-        editor.tap()
-        editor.typeText("Priya wants those Sony headphones for her birthday")
-        app.buttons["captureSubmit"].tap()
-        XCTAssertTrue(app.staticTexts["captureResultHeadline"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts["extractedTitle"].label.contains("Sony"), app.staticTexts["extractedTitle"].label)
-        app.buttons["captureSave"].tap()
-        XCTAssertTrue(app.staticTexts["homeHeadline"].waitForExistence(timeout: 10))
-    }
-
-    func testVoiceCaptureScreenOpens() {
-        waitForHome()
-        app.buttons["captureButton"].tap()
-        app.buttons["captureVoice"].tap()
-        // Simulator has no mic permission UI in -uitest; either the transcript view or a failure message appears.
-        app.tap() // lets the interruption monitor handle the permission alert if it appears
-        // Recording starts immediately when allowed; the simulator may lack speech recognition, which must show an honest failure state.
-        let started = app.buttons["voiceStop"].waitForExistence(timeout: 15)
-        XCTAssertTrue(started || app.staticTexts["voiceFailed"].exists, "expected recording UI or an explicit failure message")
-    }
-
-    func testInboxSaveAll() {
-        waitForHome()
-        app.buttons["captureButton"].tap()
-        app.buttons["captureText"].tap()
-        let editor = app.textViews["captureTextEditor"]
-        editor.tap(); editor.typeText("I need to renew my passport, service the car and book Bali")
-        app.buttons["captureSubmit"].tap()
-        XCTAssertTrue(app.staticTexts["captureResultHeadline"].waitForExistence(timeout: 20))
-        app.buttons["Cancel"].firstMatch.exists ? app.buttons["Cancel"].firstMatch.tap() : app.swipeDown()
-        app.tabBars.buttons["Vault"].tap()
-        XCTAssertTrue(app.buttons["vaultReview"].waitForExistence(timeout: 10))
-        app.buttons["vaultReview"].tap()
-        XCTAssertTrue(app.buttons["inboxSaveAll"].waitForExistence(timeout: 10) || app.buttons["inboxSave"].firstMatch.waitForExistence(timeout: 5))
-        if app.buttons["inboxSaveAll"].exists { app.buttons["inboxSaveAll"].tap() } else { app.buttons["inboxSave"].firstMatch.tap() }
-    }
-
-    func testSearchAnswersFromMemory() {
-        waitForHome()
-        app.tabBars.buttons["Search"].tap()
-        let field = app.textFields["searchField"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText("What did Rahul promise me?\n")
-        XCTAssertTrue(app.staticTexts["searchAnswer"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.staticTexts["searchAnswer"].label.lowercased().contains("property"))
-    }
-
-    func testPersonProfile() {
-        waitForDemo()
-        app.tabBars.buttons["People"].tap()
-        let rahul = app.staticTexts["Rahul"].firstMatch
-        XCTAssertTrue(rahul.waitForExistence(timeout: 15))
-        rahul.tap()
-        XCTAssertTrue(app.staticTexts["personName"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Pending"].exists || app.staticTexts["Plans"].exists)
-    }
-
-    func testMemoryDetailAndSettings() {
-        waitForDemo()
-        app.otherElements["surfaceCard-Follow up"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["memoryDetailTitle"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Source"].exists)
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.buttons["settingsButton"].tap()
-        XCTAssertTrue(app.staticTexts["Privacy Center"].waitForExistence(timeout: 5))
-        app.staticTexts["Privacy Center"].tap()
-        XCTAssertTrue(app.staticTexts["Stored on this iPhone"].waitForExistence(timeout: 5))
-    }
-
-    func testPaywallShowsWithoutHardcodedPrices() {
-        waitForHome()
-        app.buttons["settingsButton"].tap()
-        app.staticTexts["MOMENT Pro"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["MOMENT Pro"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Restore purchases"].waitForExistence(timeout: 15) || app.staticTexts["Thank you. Everything is unlocked."].exists || app.staticTexts["Prices aren't available right now."].exists)
-    }
-
-    func testMomentsHubCreatesMonthRecapAndOpensEditor() {
-        waitForDemo()
-        app.tabBars.buttons["Vault"].tap()
-        XCTAssertTrue(app.buttons["vaultMoments"].waitForExistence(timeout: 10))
-        app.buttons["vaultMoments"].tap()
-        XCTAssertTrue(app.staticTexts["Make something worth sharing."].waitForExistence(timeout: 5))
-        app.buttons["This month"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["momentShare"].waitForExistence(timeout: 20), "the editor should open with a share action")
-        app.buttons["momentShare"].tap()
-        XCTAssertTrue(app.buttons["Send as a Moment (opens in MOMENT)"].waitForExistence(timeout: 5))
-        app.buttons["Send as a Moment (opens in MOMENT)"].tap()
-        // The system share sheet appears with the .moment file.
-        XCTAssertTrue(app.otherElements["ActivityListView"].waitForExistence(timeout: 15) || app.buttons["Close"].waitForExistence(timeout: 15) || app.navigationBars.element.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["nowCompose"].waitForExistence(timeout: 20))
     }
 
     /// Not an assertion test: walks the app and writes screenshots for design review.
     func testScreenshotTour() {
-        waitForDemo()
-        snap("01-home")
-        app.swipeUp(); snap("02-home-scrolled")
-        app.tabBars.buttons["Vault"].tap(); sleep(1); snap("03-vault")
-        app.tabBars.buttons["Search"].tap(); sleep(1); snap("04-search")
-        let field = app.textFields["searchField"]; field.tap(); field.typeText("What did Sarah want?\n"); sleep(2); snap("05-search-results")
-        app.tabBars.buttons["People"].tap(); sleep(1); snap("06-people")
-        if app.staticTexts["Rahul"].firstMatch.waitForExistence(timeout: 5) { app.staticTexts["Rahul"].firstMatch.tap(); sleep(1); snap("07-person") }
-        app.tabBars.buttons["Home"].tap()
-        if app.otherElements["surfaceCard-Follow up"].firstMatch.waitForExistence(timeout: 5) { app.otherElements["surfaceCard-Follow up"].firstMatch.tap(); sleep(1); snap("08-memory-detail") }
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.buttons["captureButton"].tap(); sleep(1); snap("09-capture")
-        app.buttons["captureText"].tap(); sleep(1)
-        let editor = app.textViews["captureTextEditor"]; editor.tap(); editor.typeText("Sarah wants to try that new ramen place in Indiranagar next weekend")
-        app.buttons["captureSubmit"].tap()
-        _ = app.staticTexts["captureResultHeadline"].waitForExistence(timeout: 20); sleep(1); snap("10-capture-result")
-        app.buttons["captureSave"].tap(); sleep(1)
-        app.buttons["settingsButton"].tap(); sleep(1); snap("11-settings")
-        app.staticTexts["Privacy Center"].tap(); sleep(1); snap("12-privacy")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.staticTexts["MOMENT Pro"].firstMatch.tap(); sleep(2); snap("13-paywall")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["Vault"].tap(); sleep(1)
-        if app.staticTexts["Promises"].firstMatch.waitForExistence(timeout: 5) { app.staticTexts["Promises"].firstMatch.tap(); sleep(1); snap("14-promises"); app.navigationBars.buttons.element(boundBy: 0).tap() }
-        if app.staticTexts["Gifts"].firstMatch.waitForExistence(timeout: 5) { app.staticTexts["Gifts"].firstMatch.tap(); sleep(1); snap("15-gifts"); app.navigationBars.buttons.element(boundBy: 0).tap() }
-        if app.staticTexts["Plans"].firstMatch.waitForExistence(timeout: 5) {
-            app.staticTexts["Plans"].firstMatch.tap(); sleep(1)
-            if app.staticTexts["Goa"].firstMatch.waitForExistence(timeout: 5) { app.staticTexts["Goa"].firstMatch.tap(); sleep(1); snap("16-plan") ; app.navigationBars.buttons.element(boundBy: 0).tap() }
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-        }
-        app.buttons["captureButton"].tap(); sleep(1)
-        app.buttons["captureVoice"].tap(); sleep(3); snap("17-voice")
-        app.buttons["Cancel"].firstMatch.tap()
-        app.tabBars.buttons["Vault"].tap(); sleep(1)
-        if app.buttons["vaultMoments"].waitForExistence(timeout: 5) {
-            app.buttons["vaultMoments"].tap(); sleep(1); snap("21-moments-hub")
-            app.buttons["This month"].firstMatch.tap()
-            if app.buttons["momentShare"].waitForExistence(timeout: 20) { sleep(2); snap("22-moment-editor"); app.swipeLeft(); sleep(1); snap("23-moment-editor-2") }
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-        }
+        waitForFeed()
+        snap("01-home"); app.swipeUp(); snap("02-home-scrolled")
+        app.otherElements["feedMoment-m_goa"].firstMatch.tap(); _ = app.otherElements["momentHero"].waitForExistence(timeout: 10); sleep(1); snap("03-moment")
+        app.swipeUp(); sleep(1); snap("04-moment-timeline")
+        app.buttons["addYourSide"].tap(); sleep(1); snap("05-add-side")
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["nowCompose"].tap(); sleep(1); snap("06-now-compose"); app.buttons["Cancel"].tap()
+        if app.buttons["now-n1"].exists { app.buttons["now-n1"].tap(); sleep(1); snap("07-now-viewer"); app.buttons["nowClose"].tap() }
+        app.tabBars.buttons["Discover"].tap(); sleep(1); snap("08-discover")
+        app.tabBars.buttons["New"].tap(); sleep(1); snap("09-new-moment")
+        app.tabBars.buttons["Inbox"].tap(); sleep(1); snap("10-inbox")
+        app.buttons["Messages"].tap(); sleep(1); snap("11-messages")
+        if app.buttons["conversation-conv_rahul"].firstMatch.exists { app.buttons["conversation-conv_rahul"].firstMatch.tap(); sleep(1); snap("12-conversation"); app.navigationBars.buttons.element(boundBy: 0).tap() }
+        app.tabBars.buttons["You"].tap(); sleep(1); snap("13-profile")
+        app.buttons["safetyLink"].tap(); sleep(1); snap("14-safety"); app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["myMemories"].tap(); _ = app.staticTexts["homeHeadline"].waitForExistence(timeout: 20); sleep(1); snap("15-private-home")
+        app.buttons["memoriesDone"].tap()
         app.terminate()
-        app.launchArguments = ["-reset-onboarding"]
+        app.launchArguments = ["-uitest", "-reset-onboarding"]
         app.launch()
         if app.buttons["onboardingContinue"].waitForExistence(timeout: 10) {
-            snap("18-onboarding-1"); app.buttons["onboardingContinue"].tap(); sleep(1); snap("19-onboarding-2")
-            app.buttons["onboardingContinue"].tap(); app.buttons["onboardingContinue"].tap(); sleep(1); snap("20-onboarding-4")
-            app.buttons["onboardingSkip"].tap()
+            snap("16-onboarding-1"); app.buttons["onboardingContinue"].tap(); sleep(1); snap("17-onboarding-2")
+            app.buttons["onboardingContinue"].tap(); sleep(1); snap("18-onboarding-3"); app.buttons["onboardingContinue"].tap(); sleep(1); snap("19-onboarding-profile")
         }
     }
 

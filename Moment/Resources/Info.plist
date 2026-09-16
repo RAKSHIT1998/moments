@@ -2,46 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.rakshitbargotra.moment.refresh</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>MOMENT</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>MOMENT</string>
-	<key>CFBundlePackageType</key>
-	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-	</dict>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string>LaunchBackground</string>
-	</dict>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>arm64</string>
-	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -57,18 +25,99 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>MOMENT</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.rakshitbargotra.moment</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>moment</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+	<key>MomentPrivacyPolicyURL</key>
+	<string></string>
+	<key>MomentSupportURL</key>
+	<string></string>
+	<key>MomentTermsURL</key>
+	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Optional. Use your calendar as context for what matters this week. MOMENT never adds or changes events without asking you first.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Use your camera to scan documents and screens into Moments. Scans are processed on this iPhone.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Optional. Link a person in MOMENT to one of your contacts. MOMENT never imports your address book.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Lock your Moments so only you can open them.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Attach a city-level place to a Moment. Never your exact location.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Use your microphone to turn voice notes into Moments.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos to add to a Moment.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Use speech recognition to understand your voice Moments. On-device recognition is used when your iPhone supports it.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>CaptureMomentIntent</string>
+		<string>SearchMemoriesIntent</string>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>com.rakshitbargotra.moment.package</string>
-			<key>UTTypeDescription</key>
-			<string>Moment</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
 				<string>public.content</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>Moment</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.rakshitbargotra.moment.package</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
@@ -81,50 +130,6 @@
 				</array>
 			</dict>
 		</dict>
-	</array>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<false/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.rakshitbargotra.moment</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>moment</string>
-			</array>
-		</dict>
-	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>Use your camera to scan documents and screens into Moments. Scans are processed on this iPhone.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Use your microphone to turn voice notes into Moments.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Use speech recognition to understand your voice Moments. On-device recognition is used when your iPhone supports it.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Lock your Moments so only you can open them.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Optional. Use your calendar as context for what matters this week. MOMENT never adds or changes events without asking you first.</string>
-	<key>NSContactsUsageDescription</key>
-	<string>Optional. Link a person in MOMENT to one of your contacts. MOMENT never imports your address book.</string>
-	<key>MomentSupportURL</key>
-	<string></string>
-	<key>MomentPrivacyPolicyURL</key>
-	<string></string>
-	<key>MomentTermsURL</key>
-	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
-	<key>NSUserActivityTypes</key>
-	<array>
-		<string>CaptureMomentIntent</string>
-		<string>SearchMemoriesIntent</string>
-	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.rakshitbargotra.moment.refresh</string>
 	</array>
 </dict>
 </plist>

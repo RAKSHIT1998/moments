@@ -6,6 +6,8 @@ public struct SharedCaptureItem: Codable, Identifiable, Sendable {
     public enum Kind: String, Codable, Sendable {
         case image, text, url, pdf, file
     }
+    /// What the user asked for in the share sheet: keep it in private memory, or add it to a shared Moment.
+    public enum Intent: String, Codable, Sendable { case remember, addToMoment }
 
     public var id: UUID
     public var kind: Kind
@@ -16,14 +18,16 @@ public struct SharedCaptureItem: Codable, Identifiable, Sendable {
     public var fileName: String?
     /// Bundle identifier of the app the content came from, if the extension could tell.
     public var sourceApp: String?
+    public var intent: Intent?
 
-    public init(id: UUID = UUID(), kind: Kind, createdAt: Date = .now, text: String? = nil, fileName: String? = nil, sourceApp: String? = nil) {
+    public init(id: UUID = UUID(), kind: Kind, createdAt: Date = .now, text: String? = nil, fileName: String? = nil, sourceApp: String? = nil, intent: Intent? = nil) {
         self.id = id
         self.kind = kind
         self.createdAt = createdAt
         self.text = text
         self.fileName = fileName
         self.sourceApp = sourceApp
+        self.intent = intent
     }
 }
 

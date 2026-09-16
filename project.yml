@@ -60,6 +60,8 @@ targets:
       - sdk: EventKit.framework
       - sdk: Contacts.framework
       - sdk: ContactsUI.framework
+      - sdk: CloudKit.framework
+      - sdk: PhotosUI.framework
     scheme:
       storeKitConfiguration: Moment/Resources/Moment.storekit
       testTargets:

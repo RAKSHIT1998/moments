@@ -3,14 +3,23 @@ import UIKit
 
 /// Drains items dropped by the Share Extension into the pipeline.
 @MainActor
+@Observable
 final class ShareInboxService {
-    private let importer: ImportService
-    private var isDraining = false
+    @ObservationIgnored private let importer: ImportService
+    @ObservationIgnored private var isDraining = false
     /// Free-tier check; items stay queued (never lost) when the limit is reached.
-    var canCreateMemory: () -> Bool = { true }
+    @ObservationIgnored var canCreateMemory: () -> Bool = { true }
     private(set) var blockedByLimit = false
+    /// Photos/videos the user chose to "Add to a Moment" from the share sheet; the app asks which one.
+    private(set) var pendingForMoment: [PendingMomentMedia] = []
+    struct PendingMomentMedia: Identifiable, Equatable { let id: UUID; let url: URL; let isVideo: Bool }
 
     init(importer: ImportService) { self.importer = importer }
+
+    func clearPendingForMoment() {
+        for p in pendingForMoment { try? FileManager.default.removeItem(at: p.url) }
+        pendingForMoment = []
+    }
 
     /// Returns the number of captures processed.
     @discardableResult
@@ -20,6 +29,15 @@ final class ShareInboxService {
         defer { isDraining = false }
         var count = 0
         for item in ShareInbox.pending() {
+            if item.intent == .addToMoment {
+                if let url = ShareInbox.payloadURL(for: item) {
+                    let dest = FileManager.default.temporaryDirectory.appending(path: "share-\(item.id.uuidString).\(url.pathExtension)")
+                    try? FileManager.default.removeItem(at: dest)
+                    if (try? FileManager.default.copyItem(at: url, to: dest)) != nil { pendingForMoment.append(PendingMomentMedia(id: item.id, url: dest, isVideo: url.pathExtension.lowercased() == "mov")) }
+                }
+                ShareInbox.remove(item)
+                continue
+            }
             guard canCreateMemory() else { blockedByLimit = true; break }
             blockedByLimit = false
             let input: CaptureInput?

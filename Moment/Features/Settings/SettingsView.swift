@@ -64,7 +64,8 @@ struct PrivacyCenterView: View {
                 }.padding(.vertical, 6)
             }
             Section {
-                row("Stored on this iPhone", "Memories, people, plans and media. Encrypted with iOS Data Protection; media is additionally AES-GCM encrypted.", "iphone", ok: true)
+                row("Private memory: stored on this iPhone", "Memories, people, plans and media. Encrypted with iOS Data Protection; media is additionally AES-GCM encrypted. Never synced.", "iphone", ok: true)
+                row("Shared Moments: your iCloud", "Moments you make live in your own iCloud (CloudKit). Inviting someone shares that one Moment with them, nothing else. Photos are compressed and stripped of location and device metadata before upload.", "icloud", ok: true)
                 row("Processed on this iPhone", "Text recognition, speech, understanding and search run locally.", "cpu", ok: true)
                 row(env.settings.useCloudAI ? "Sent to cloud AI: only what you capture, when you capture it" : "Sent to cloud AI: nothing", env.settings.useCloudAI ? "Cloud AI is ON. Each capture is sent to the AI provider using your own key. Your memory database is never uploaded." : "Cloud AI is off. Nothing you capture leaves this device.", "cloud", ok: !env.settings.useCloudAI)
                 row("Shared with apps: nothing", "The widget reads a short snapshot inside MOMENT's own app group. No third-party SDKs. No ad networks.", "square.grid.2x2", ok: true)
@@ -72,6 +73,7 @@ struct PrivacyCenterView: View {
                 row("Analytics: nothing is sent", "MOMENT has no analytics service and no third-party SDKs. Optional usage counts stay on this iPhone.", "chart.bar", ok: true)
             }
             Section("Controls") {
+                NavigationLink(value: SocialRoute.safety) { Text("Privacy & safety (shared Moments)") }
                 NavigationLink(value: Route.aiSettings) { Text("Cloud AI") }
                 NavigationLink(value: Route.dataSettings) { Text("Export, clear media, delete everything") }
                 Button("Clear search history") { env.settings.clearSearchHistory() }
@@ -224,9 +226,11 @@ struct AboutView: View {
                 }.padding(.vertical, 8)
             }
             Section("Your numbers") {
+                LabeledRow(label: "Shared Moments you started", value: "\(env.analytics.sharedMomentsCreated)")
+                LabeledRow(label: "Moments you joined", value: "\(env.analytics.count(.momentJoined))")
                 LabeledRow(label: "Memories saved", value: "\(env.storage.memoryCount)")
                 LabeledRow(label: "Useful memories resurfaced", value: "\(env.storage.profile().usefulMemoriesResurfaced)")
-                Text("The only number MOMENT cares about: times it brought something back at the right moment and you acted on it.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                Text("The number MOMENT cares about: experiences you kept together with the people who were there.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             Section("Analytics") {
                 @Bindable var settings = env.settings

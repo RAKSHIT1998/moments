@@ -18,12 +18,14 @@ final class StorageService {
         isInMemory = inMemory
         let schema = Schema(MomentSchema.models)
         let config: ModelConfiguration
+        // Private memory never syncs: the iCloud entitlement exists for shared Moments (CloudKitBackend) only,
+        // so SwiftData's automatic CloudKit mirroring is switched off explicitly.
         if inMemory {
-            config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         } else {
             let dir = directory ?? Self.storeDirectory
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-            config = ModelConfiguration("Moment", schema: schema, url: dir.appending(path: "Moment.store"), allowsSave: true)
+            config = ModelConfiguration("Moment", schema: schema, url: dir.appending(path: "Moment.store"), allowsSave: true, cloudKitDatabase: .none)
         }
         container = try ModelContainer(for: schema, migrationPlan: MomentMigrationPlan.self, configurations: [config])
         container.mainContext.autosaveEnabled = true

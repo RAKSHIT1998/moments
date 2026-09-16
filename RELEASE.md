@@ -21,8 +21,10 @@ Everything below is derived from the actual project. Nothing is invented: where 
 
 - App Groups (`group.com.rakshitbargotra.moment`) — Share Extension → app inbox, widget snapshot. App, Share, Widget targets.
 - Keychain access group (`$(AppIdentifierPrefix)com.rakshitbargotra.moment`) — media encryption key, optional cloud-AI key. App target.
-- Background Modes: `fetch` (BGAppRefreshTask `com.rakshitbargotra.moment.refresh`, ~every 6h+, re-runs surfacing so a "birthday in 7 days" notification is scheduled even if the app hasn't been opened).
-- Not enabled (not needed): Push Notifications, iCloud, Sign in with Apple, Associated Domains, HealthKit, Location.
+- Background Modes: `fetch` (BGAppRefreshTask `com.rakshitbargotra.moment.refresh`, ~every 6h+, re-runs surfacing so a "birthday in 7 days" notification is scheduled even if the app hasn't been opened) and `remote-notification` (silent CloudKit pushes when a shared Moment changes).
+- iCloud → CloudKit, container `iCloud.com.rakshitbargotra.moment` — shared Moments, profiles, NOW, reports. App target only. SwiftData mirroring is explicitly off (`cloudKitDatabase: .none`); private memory never syncs.
+- Push Notifications (`aps-environment`) — only for CloudKit database subscriptions (content-available); the app never sends its own pushes. Xcode/`-allowProvisioningUpdates` must enable **iCloud (CloudKit)** and **Push Notifications** on the App ID; the CloudKit container is created on first signed build.
+- Not enabled (not needed): Sign in with Apple, Associated Domains, HealthKit, Location.
 
 ## Permissions (all contextual, none at onboarding)
 
@@ -176,7 +178,20 @@ What has **not** been done, because it needs your App Store Connect credentials:
 - Photos: Memory Drop uses `PhotosPicker` (no library permission). Video export writes to a temporary file handed to the share sheet (no Photos-add permission needed).
 - No music is bundled or generated.
 
+## Social platform (added)
+
+- Backend is **CloudKit** (`CloudKitBackend`): a Moment is a record in the owner's private DB custom zone; inviting people creates a `CKShare` (system `UICloudSharingController` — contacts, permissions, real `icloud.com/share/...` links). Invitees' contributions are written into the shared zone with their own identity; `memberIDs` on the root keeps "who was there". Public Moments are mirrored to the public DB for Discover. NOW posts, follows, reports and profiles live in the public DB; blocks/mutes/safety settings in the private DB. Media are `CKAsset`s produced by `MediaPipeline` (≤2048 px, EXIF stripped; video 1080p H.264, ≤120 s).
+- Share links open the app through the CloudKit share flow (`SceneDelegate.windowScene(_:userDidAcceptCloudKitShareWith:)`); `moment://moment/<id>` deep-links a known Moment; a silent push (`CKDatabaseSubscription`) triggers a refresh and one local notification per Moment that grew ("3 new additions from people who were there" — never content).
+- Offline: `UploadQueue` persists jobs to Application Support and retries with backoff; permission errors stop retrying and show as *Failed* with a Retry banner.
+- Safety: block, mute, report (reason + details → `Report` records), private account, who-can-add/comment/message/mention, client-side abuse/spam filter on comments, NOW posts and DMs, contributor can remove their own media, owner can delete for everyone, member can leave.
+- App Privacy label now: **Data Linked to You** — Name, User ID, Photos or Videos, Other User Content, Coarse Location (city-level place the user types); purpose App Functionality; no tracking. `PrivacyInfo.xcprivacy` updated accordingly.
+- Free tier: every social feature is free and complete (feed, NOW, Moments, invites, DMs, Discover, reactions, comments). Pro still only gates private-memory count and story exports.
+- **Not built (needs infrastructure this repo doesn't have):** a web preview page for share links (needs a domain + universal links; CloudKit's own share landing page is used instead), licensed music, server-side ML moderation (reports land in CloudKit for manual review), server-side push composition (local notifications on silent push instead).
+
 ## Verification notes
+
+- Social layer: unit tests for `FeedRanker`, `MomentTimeline`, `ContentModeration`, `UploadQueue` (offline persistence, resume, permanent failure), `MediaPipeline` and end-to-end flows on `InMemoryBackend` (create → invite → other person adds their side → stranger rejected; accept invite link; feed ranking + block; reactions/comments/moderation; NOW → save to Moment; safety settings; DMs with Moment replies; profile/friendship; delete/leave ownership). See the test summary below for the run result.
+- **CloudKit on a real device is unverified from this Mac** (no signed-in iCloud account available to `xcodebuild`). The `CloudKitBackend` compiles against the same protocol the in-memory backend passes; first device run needs the container created (Xcode → Signing & Capabilities → iCloud) and, before public release, the CloudKit Dashboard schema deployed to Production (Development schema is created automatically on first write; Production requires "Deploy Schema Changes").
 
 - Moments layer: 84 unit tests pass (StoryComposer, recaps, core-memory detector, command routing, `.moment` package round-trip and merge, image + H.264 video export, free-tier export budget). **The UI test for the Moments flow (`testMomentsHubCreatesMonthRecapAndOpensEditor`) and the updated screenshot tour have not completed on this Mac** — the UI test runner repeatedly failed to initialize under host load (load average 100–300 from other work and simulator cache rebuilds after the disk filled). Run when idle: `xcodebuild -project Moment.xcodeproj -scheme Moment -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:MomentUITests test`. The 10 pre-Moments UI tests passed on the previous build.
 
