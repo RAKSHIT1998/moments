@@ -75,7 +75,7 @@ struct SocialHomeView: View {
                     }
                     .buttonStyle(PressScaleStyle())
                     .accessibilityLabel("Post to NOW").accessibilityIdentifier("nowCompose")
-                    ForEach(env.social.nowPosts) { post in
+                    ForEach(env.social.nowPosts.filter { !$0.isStatus }) { post in
                         Button { selectedNow = post } label: {
                             VStack(spacing: 6) {
                                 PersonAvatar(name: post.authorName, size: 56)

@@ -156,11 +156,14 @@ extension AppEnvironment {
         if ProcessInfo.processInfo.arguments.contains("-reset-onboarding") { settings.onboardingCompleted = false }
         if ProcessInfo.processInfo.arguments.contains("-uitest") { settings.onboardingCompleted = true; settings.requireBiometrics = false }
         if ProcessInfo.processInfo.arguments.contains("-reset") { try? await lifecycle.deleteEverything(); settings.onboardingCompleted = true }
-        if ProcessInfo.processInfo.arguments.contains("-demo") { await DemoData.seedAsync(into: self) }
         #endif
         // Social first: the feed is the first screen, and this is cheap (cached session + one fetch).
         await social.start()
         UIApplication.shared.registerForRemoteNotifications()
+        #if DEBUG
+        // Private-memory demo data runs the full understanding pipeline; keep it after the feed is up.
+        if ProcessInfo.processInfo.arguments.contains("-demo") { await DemoData.seedAsync(into: self) }
+        #endif
         LocalIntelligenceProvider.warmUp()
         await shareInbox.drain()
         await surface.refresh()

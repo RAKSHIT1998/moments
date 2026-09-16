@@ -60,7 +60,7 @@ struct NowViewerView: View {
     @State private var dragY: CGFloat = 0
     private let seconds = 5.0
 
-    private var posts: [NowPost] { env.social.nowPosts }
+    private var posts: [NowPost] { env.social.nowPosts.filter { !$0.isStatus } }
     private var current: NowPost { posts.indices.contains(index) ? posts[index] : post }
 
     var body: some View {

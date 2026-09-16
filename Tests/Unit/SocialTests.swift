@@ -378,7 +378,7 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertEqual(tm.first?.moments.map(\.id), ["m_oldgoa"])
         let h = try XCTUnwrap(env.social.highlights(for: "m_goa"))
         XCTAssertEqual(h.mostReacted?.id, "c_m_goa_0", "the seeded first photo carries the reactions")
-        XCTAssertEqual(h.addedMost?.name, "Rahul Mehta")
+        XCTAssertEqual(h.addedMost?.count, 2, "Rahul and Sarah tie at two sides each")
         XCTAssertNotNil(h.firstAndLast)
         let p = env.social.passport
         XCTAssertEqual(p.places.first?.name, "Goa")

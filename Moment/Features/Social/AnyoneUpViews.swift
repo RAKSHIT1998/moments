@@ -15,12 +15,8 @@ struct NowStatusRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(mine ? "You" : post.authorName.split(separator: " ").first.map(String.init) ?? post.authorName) \(mine ? post.activity.line.replacingOccurrences(of: "is ", with: "are ").replacingOccurrences(of: "wants", with: "want") : post.activity.line)").font(MFont.headline)
-                HStack(spacing: 4) {
-                    if !post.text.isEmpty { Text(post.text).lineLimit(1) }
-                    if let p = post.coarsePlace { Text("· \(p)") }
-                    Text("· \(post.createdAt.formatted(.relative(presentation: .named)))")
-                }
-                .font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                Text([post.text.isEmpty ? nil : post.text, post.coarsePlace, post.createdAt.formatted(.relative(presentation: .named))].compactMap { $0 }.joined(separator: " · "))
+                    .font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
                 if !post.joinerNames.isEmpty {
                     HStack(spacing: 6) { AvatarStack(names: post.joinerNames, size: 18); Text("\(post.joinerNames.count) in").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
                 }
