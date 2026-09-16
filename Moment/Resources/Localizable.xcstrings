@@ -168,6 +168,16 @@
     "%lld" : {
 
     },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
     "%lld %@ · %@" : {
       "localizations" : {
         "en" : {
@@ -194,6 +204,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@ together · since %3$@"
+          }
+        }
+      }
+    },
+    "%lld %@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@%3$@"
           }
         }
       }
@@ -226,6 +246,9 @@
           }
         }
       }
+    },
+    "%lld Moments together" : {
+
     },
     "%lld new Moment%@" : {
       "localizations" : {
@@ -262,6 +285,9 @@
         }
       }
     },
+    "%lld together" : {
+
+    },
     "%lld uploads need a retry" : {
 
     },
@@ -272,6 +298,9 @@
 
     },
     "1 new Moment to review" : {
+
+    },
+    "A card for the people who weren't there — and the ones who were. The invite link goes with it." : {
 
     },
     "A line about it (optional)" : {
@@ -307,10 +336,16 @@
     "Add a photo" : {
 
     },
+    "Add a photo now" : {
+
+    },
     "Add another memory" : {
 
     },
     "Add me to Moments" : {
+
+    },
+    "Add Moments from any Moment's menu → \"Add to collection\"." : {
 
     },
     "Add my side" : {
@@ -329,6 +364,9 @@
 
     },
     "Add to Calendar" : {
+
+    },
+    "Add to collection" : {
 
     },
     "Add your side" : {
@@ -481,6 +519,15 @@
     "Cloud AI is on — captures are sent to your provider." : {
 
     },
+    "Collections" : {
+
+    },
+    "COLLECTIONS" : {
+
+    },
+    "Collections are private. Only you see how you group your Moments." : {
+
+    },
     "Comment on my Moments" : {
 
     },
@@ -553,10 +600,16 @@
     "Delete All Data" : {
 
     },
+    "Delete collection" : {
+
+    },
     "Delete everything?" : {
 
     },
     "Delete Moment" : {
+
+    },
+    "Delete this collection?" : {
 
     },
     "Delete this Moment for everyone?" : {
@@ -717,6 +770,9 @@
     "Goa '26, Sarah's 30th, Sunday run…" : {
 
     },
+    "Goa trips, 2026, Birthdays…" : {
+
+    },
     "Gone in %lldh" : {
 
     },
@@ -724,6 +780,12 @@
 
     },
     "Got it." : {
+
+    },
+    "Group Moments into albums — a trip, a year, a person." : {
+
+    },
+    "Group Moments into albums — a trip, a year, a person. Only you see them." : {
 
     },
     "handle" : {
@@ -957,6 +1019,9 @@
     "Moment · %@" : {
 
     },
+    "Moment Card" : {
+
+    },
     "MOMENT is locked" : {
 
     },
@@ -1020,6 +1085,9 @@
     "Never forget what matters." : {
 
     },
+    "New collection" : {
+
+    },
     "New Moment" : {
 
     },
@@ -1030,6 +1098,9 @@
 
     },
     "No categories. Just give it to me." : {
+
+    },
+    "No collections yet." : {
 
     },
     "No date yet." : {
@@ -1101,6 +1172,9 @@
     "Nothing made yet." : {
 
     },
+    "Nothing matches \"%@\"." : {
+
+    },
     "Nothing needs you yet." : {
 
     },
@@ -1132,6 +1206,9 @@
 
     },
     "On-device understanding" : {
+
+    },
+    "One alert per Moment that grew — who and how many, never the photos." : {
 
     },
     "ONE YEAR AGO" : {
@@ -1194,6 +1271,9 @@
     "People you know" : {
 
     },
+    "PEOPLE YOU WERE THERE WITH" : {
+
+    },
     "People, places, the plans you made and the ones that happened. Yours to keep or share." : {
 
     },
@@ -1219,6 +1299,12 @@
 
     },
     "Pick the photos. I'll find the story." : {
+
+    },
+    "Pin to profile" : {
+
+    },
+    "PINNED" : {
 
     },
     "Place" : {
@@ -1336,6 +1422,9 @@
     "Remove demo data" : {
 
     },
+    "Remove from collection" : {
+
+    },
     "Remove key" : {
 
     },
@@ -1441,6 +1530,12 @@
     "Search My Memories" : {
 
     },
+    "Search titles, places, people" : {
+
+    },
+    "See all" : {
+
+    },
     "See it" : {
 
     },
@@ -1462,6 +1557,9 @@
     "Set" : {
 
     },
+    "Set as cover" : {
+
+    },
     "Set reminder" : {
 
     },
@@ -1477,16 +1575,25 @@
     "Share anything to MOMENT" : {
 
     },
+    "Share as a card" : {
+
+    },
     "Share as images" : {
 
     },
     "Share as video" : {
 
     },
+    "Share card" : {
+
+    },
     "Share link" : {
 
     },
     "Share with %@" : {
+
+    },
+    "Shared Moments" : {
 
     },
     "Shared Moments live in your iCloud (private database) and in the iCloud of people you share with. Leaving a Moment removes your access; deleting one you created removes it for everyone." : {
@@ -1593,6 +1700,9 @@
 
     },
     "That's the Moment." : {
+
+    },
+    "The Moments inside stay where they are." : {
 
     },
     "The number MOMENT cares about: experiences you kept together with the people who were there." : {
@@ -1703,6 +1813,9 @@
     "Unmute" : {
 
     },
+    "Unpin from profile" : {
+
+    },
     "Up to %lld a day" : {
 
     },
@@ -1805,6 +1918,9 @@
     "When is this?" : {
 
     },
+    "When people add to a Moment I'm in" : {
+
+    },
     "When people add to your Moments or react, it shows here." : {
 
     },
@@ -1871,10 +1987,16 @@
     "You own your data. %lld memories." : {
 
     },
+    "You reacted %@" : {
+
+    },
     "You were there too." : {
 
     },
     "You're on MOMENT Pro." : {
+
+    },
+    "YOUR %@ IN MOMENTS" : {
 
     },
     "Your API key" : {
