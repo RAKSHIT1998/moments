@@ -9,6 +9,8 @@ struct RootView: View {
         Group {
             if !env.settings.onboardingCompleted {
                 SocialOnboardingView()
+            } else if !env.settings.setupCompleted {
+                SetupView()
             } else {
                 mainTabs
             }

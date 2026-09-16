@@ -66,7 +66,7 @@ final class AppEnvironment {
         self.speech = SpeechService()
         self.stories = StoryService(storage: storage, media: media, importer: importer, settings: settings, analytics: analytics, subscriptions: subscriptions)
         self.flags = FeatureFlags()
-        self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
+        self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media, settings: settings), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
         actions.onChange = { [weak self] in self?.surface.noteDataChanged() }
         search.changeToken = { [weak self] in self?.surface.changeToken ?? 0 }
         importer.onChange = { [weak self] in self?.surface.noteDataChanged() }
@@ -78,10 +78,10 @@ final class AppEnvironment {
 
     /// CloudKit in production. In DEBUG, `-uitest`/`-demo` runs use the in-process backend so the
     /// simulator (no iCloud) exercises every social flow against fictional people.
-    static func defaultBackend(media: MediaStore) -> any SocialBackend {
+    static func defaultBackend(media: MediaStore, settings: SettingsStore) -> any SocialBackend {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
-        if args.contains("-uitest") || args.contains("-demo") || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+        if args.contains("-uitest") || args.contains("-demo") || settings.demoMode || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
             let b = InMemoryBackend(displayName: "Rakshit")
             Task { await b.seedDemo() }
             return b
@@ -114,6 +114,29 @@ final class AppEnvironment {
     #endif
 
     func openMemory(_ id: UUID) { pendingMemoryID = id }
+
+    #if DEBUG
+    /// Switches the running app to the in-process social backend with sample people/Moments and
+    /// seeds the private memory demo set. Persisted, so it survives relaunch until turned off.
+    func enableDemoMode() async {
+        settings.demoMode = true
+        let backend = InMemoryBackend(displayName: settings.displayName.isBlank ? "Rakshit" : settings.displayName)
+        await backend.seedDemo()
+        social.replaceBackend(backend)
+        await social.start()
+        await DemoData.seedAsync(into: self)
+        toast("Sample data loaded.")
+    }
+
+    func disableDemoMode() async {
+        settings.demoMode = false
+        settings.demoLoaded = false
+        try? await lifecycle.deleteEverything()
+        social.replaceBackend(CloudKitBackend(media: media))
+        await social.start()
+        toast("Sample data removed.")
+    }
+    #endif
 }
 
 enum RootTab: String, CaseIterable, Identifiable {

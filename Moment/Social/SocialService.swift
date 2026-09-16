@@ -7,8 +7,8 @@ import UserNotifications
 @MainActor
 @Observable
 final class SocialService {
-    let backend: any SocialBackend
-    let queue: UploadQueue
+    private(set) var backend: any SocialBackend
+    private(set) var queue: UploadQueue
     private let media: MediaStore
     private let settings: SettingsStore
     private let analytics: AnalyticsService
@@ -57,7 +57,14 @@ final class SocialService {
         self.media = media
         self.settings = settings
         self.analytics = analytics
+        self.queueDirectory = queueDirectory
         self.queue = UploadQueue(backend: backend, media: media, directory: queueDirectory)
+        wireQueue()
+    }
+
+    private let queueDirectory: URL?
+
+    private func wireQueue() {
         queue.onUploaded = { [weak self] job in
             guard let self else { return }
             Task {
@@ -67,6 +74,16 @@ final class SocialService {
                 }
             }
         }
+    }
+
+    /// DEBUG demo mode swaps the backend at runtime; all caches are dropped.
+    func replaceBackend(_ new: any SocialBackend) {
+        backend = new
+        queue = UploadQueue(backend: new, media: media, directory: queueDirectory)
+        wireQueue()
+        me = nil; feed = []; nowPosts = []; moments = [:]; contributions = [:]; comments = [:]; myReactions = [:]; users = [:]
+        activity = []; invites = []; conversations = []; messages = [:]; collections = []; groups = []; imageCache = [:]; seen = []
+        hasLoadedOnce = false
     }
 
     var displayName: String { me?.displayName ?? (settings.displayName.isBlank ? "You" : settings.displayName) }

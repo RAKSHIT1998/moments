@@ -28,6 +28,15 @@ struct SettingsView: View {
             Section("Notifications") {
                 NavigationLink(value: Route.notificationSettings) { Label("Reminders", systemImage: "bell") }
             }
+            Section("Setup") {
+                Button { settings.setupCompleted = false } label: { Label("Run setup again", systemImage: "checklist") }
+                #if DEBUG
+                Toggle(isOn: Binding(get: { settings.demoMode }, set: { on in Task { if on { await env.enableDemoMode() } else { await env.disableDemoMode() } } })) {
+                    Label("Sample data (development)", systemImage: "sparkles")
+                }
+                Text("Fictional people and Moments on an in-process backend. Turning it off deletes them and returns to iCloud.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                #endif
+            }
             Section("Connections") {
                 Toggle(isOn: Binding(get: { settings.calendarConnected }, set: { on in Task { if on { settings.calendarConnected = await env.calendar.connect() } else { settings.calendarConnected = false } } })) {
                     Label("Calendar", systemImage: "calendar")

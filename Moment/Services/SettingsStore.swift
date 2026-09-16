@@ -15,6 +15,8 @@ final class SettingsStore {
         notificationsEnabled = defaults.object(forKey: "notificationsEnabled") as? Bool ?? true
         socialNotifications = defaults.object(forKey: "socialNotifications") as? Bool ?? true
         featuredMomentIDs = defaults.stringArray(forKey: "featuredMomentIDs") ?? []
+        setupCompleted = defaults.bool(forKey: "setupCompleted")
+        demoMode = defaults.bool(forKey: "demoMode")
         dailyNotificationBudget = defaults.object(forKey: "dailyNotificationBudget") as? Int ?? 2
         lockScreenWidgetAllowed = defaults.bool(forKey: "lockScreenWidgetAllowed")
         analyticsEnabled = defaults.bool(forKey: "analyticsEnabled")
@@ -70,6 +72,10 @@ final class SettingsStore {
     var socialNotifications: Bool { didSet { defaults.set(socialNotifications, forKey: "socialNotifications") } }
     /// Moments pinned to the top of your profile (private preference; up to 3).
     var featuredMomentIDs: [String] { didSet { defaults.set(featuredMomentIDs, forKey: "featuredMomentIDs") } }
+    /// The one-time setup checklist after onboarding (profile photo, notifications, people, group).
+    var setupCompleted: Bool { didSet { defaults.set(setupCompleted, forKey: "setupCompleted") } }
+    /// DEBUG builds only: run against the in-process backend with sample people and Moments.
+    var demoMode: Bool { didSet { defaults.set(demoMode, forKey: "demoMode") } }
     var dailyNotificationBudget: Int { didSet { defaults.set(dailyNotificationBudget, forKey: "dailyNotificationBudget") } }
     var lockScreenWidgetAllowed: Bool { didSet { defaults.set(lockScreenWidgetAllowed, forKey: "lockScreenWidgetAllowed") } }
     var analyticsEnabled: Bool { didSet { defaults.set(analyticsEnabled, forKey: "analyticsEnabled") } }
@@ -96,6 +102,8 @@ final class SettingsStore {
         notificationsEnabled = true
         socialNotifications = true
         featuredMomentIDs = []
+        setupCompleted = false
+        demoMode = false
         dailyNotificationBudget = 2
         lockScreenWidgetAllowed = false
         analyticsEnabled = false
