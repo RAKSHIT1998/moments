@@ -31,6 +31,9 @@
     "“%@”" : {
 
     },
+    "\"%@\" is from the same day with the same people. Merge it into this Moment? Everyone's sides stay attributed." : {
+
+    },
     "“I really want these New Balance 530 😍”" : {
 
     },
@@ -66,6 +69,12 @@
         }
       }
     },
+    "%@ AGO" : {
+
+    },
+    "%@ AGO TODAY" : {
+
+    },
     "%@ by %@" : {
       "localizations" : {
         "en" : {
@@ -77,6 +86,9 @@
       }
     },
     "%@ is coming together." : {
+
+    },
+    "%@ joined" : {
 
     },
     "%@ memor%@" : {
@@ -91,6 +103,16 @@
     },
     "%@ says you were there" : {
 
+    },
+    "%@ started it · %lld in · %lld added" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ started it · %2$lld in · %3$lld added"
+          }
+        }
+      }
     },
     "%@ wants %@" : {
       "localizations" : {
@@ -151,6 +173,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@: %2$lld memories worth remembering."
+          }
+        }
+      }
+    },
+    "%@'s %@ · %lld reactions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@'s %2$@ · %3$lld reactions"
           }
         }
       }
@@ -224,6 +256,9 @@
     "%lld all time" : {
 
     },
+    "%lld in" : {
+
+    },
     "%lld items" : {
 
     },
@@ -266,6 +301,16 @@
     "%lld open" : {
 
     },
+    "%lld people · %lld Moments" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld people · %2$lld Moments"
+          }
+        }
+      }
+    },
     "%lld photos" : {
 
     },
@@ -297,10 +342,16 @@
     "+%lld more" : {
 
     },
+    "×%lld" : {
+
+    },
     "1 new Moment to review" : {
 
     },
     "A card for the people who weren't there — and the ones who were. The invite link goes with it." : {
+
+    },
+    "A group is a private space for the people you keep making Moments with." : {
 
     },
     "A line about it (optional)" : {
@@ -330,13 +381,22 @@
     "Add" : {
 
     },
+    "ADD" : {
+
+    },
     "Add “%@” to your calendar?" : {
+
+    },
+    "Add a few sides first." : {
 
     },
     "Add a photo" : {
 
     },
     "Add a photo now" : {
+
+    },
+    "Add a place to a Moment and it shows up here." : {
 
     },
     "Add another memory" : {
@@ -409,6 +469,15 @@
 
     },
     "Answer" : {
+
+    },
+    "Anyone out? (optional)" : {
+
+    },
+    "ANYONE UP?" : {
+
+    },
+    "Anyone who scans gets the invite link. They join with their own iCloud account and add their side." : {
 
     },
     "Anything you want to remember" : {
@@ -486,6 +555,9 @@
     "Change dates" : {
 
     },
+    "Chat" : {
+
+    },
     "Choose photos" : {
 
     },
@@ -526,6 +598,9 @@
 
     },
     "Collections are private. Only you see how you group your Moments." : {
+
+    },
+    "Come back next year — today's Moments will be waiting here." : {
 
     },
     "Comment on my Moments" : {
@@ -570,6 +645,9 @@
     "Create" : {
 
     },
+    "Create a group" : {
+
+    },
     "Create Moment" : {
 
     },
@@ -606,10 +684,16 @@
     "Delete everything?" : {
 
     },
+    "Delete group" : {
+
+    },
     "Delete Moment" : {
 
     },
     "Delete this collection?" : {
+
+    },
+    "Delete this group?" : {
 
     },
     "Delete this Moment for everyone?" : {
@@ -663,6 +747,12 @@
     "Every Moment lands here with its source, in the order it happened." : {
 
     },
+    "Everyone" : {
+
+    },
+    "Everyone in the group can see its Moments and chat. You can add people later." : {
+
+    },
     "Everyone who was invited loses access. Their own photos stay on their phones." : {
 
     },
@@ -711,6 +801,9 @@
     "Failed" : {
 
     },
+    "Find your people." : {
+
+    },
     "First came up %@." : {
 
     },
@@ -738,6 +831,12 @@
           }
         }
       }
+    },
+    "Friends you follow back see this. Your exact location is never shared." : {
+
+    },
+    "Friends' map" : {
+
     },
     "from %@" : {
 
@@ -788,6 +887,9 @@
     "Group Moments into albums — a trip, a year, a person. Only you see them." : {
 
     },
+    "Groups" : {
+
+    },
     "handle" : {
 
     },
@@ -833,6 +935,12 @@
     "I only answer from what you've given me. Try a person's name, a place, or a topic — or tell me something to remember." : {
 
     },
+    "I WAS THERE" : {
+
+    },
+    "I'm up for…" : {
+
+    },
     "Ignore" : {
 
     },
@@ -840,6 +948,9 @@
 
     },
     "Important" : {
+
+    },
+    "In" : {
 
     },
     "Inbox" : {
@@ -866,6 +977,15 @@
     "It lands in your Inbox, already understood." : {
 
     },
+    "JOIN" : {
+
+    },
+    "Join %@" : {
+
+    },
+    "Join to add your side. Your photos stay yours." : {
+
+    },
     "Keep" : {
 
     },
@@ -887,7 +1007,19 @@
     "Last seen %@" : {
 
     },
+    "Lasts %lld hours" : {
+
+    },
+    "Leave" : {
+
+    },
+    "Leave group" : {
+
+    },
     "Leave Moment" : {
+
+    },
+    "Leave this group?" : {
 
     },
     "Let it go" : {
@@ -932,6 +1064,9 @@
     "Make a Moment from something that happened and invite the people who were there. Their side shows up next to yours." : {
 
     },
+    "Make it a Moment" : {
+
+    },
     "Make something worth sharing." : {
 
     },
@@ -957,6 +1092,9 @@
 
     },
     "Making your video…" : {
+
+    },
+    "Map" : {
 
     },
     "Mark a memory important and it will live here." : {
@@ -1031,7 +1169,13 @@
     "MOMENT isn't ready yet. Open the app once." : {
 
     },
+    "Moment Map" : {
+
+    },
     "MOMENT never imports your address book. Link a person from their profile." : {
+
+    },
+    "MOMENT PASSPORT" : {
 
     },
     "MOMENT Pro" : {
@@ -1049,7 +1193,13 @@
     "MOMENTS" : {
 
     },
+    "Moments and chats stay with the people in them." : {
+
+    },
     "Moments MOMENT brought back this month that you acted on." : {
+
+    },
+    "MOMENTS TOGETHER" : {
 
     },
     "More" : {
@@ -1064,13 +1214,22 @@
     "More reactions" : {
 
     },
+    "Most reacted" : {
+
+    },
     "Mute" : {
 
     },
     "Mute %@" : {
 
     },
+    "My map" : {
+
+    },
     "My private memory" : {
+
+    },
+    "Mystery Moment" : {
 
     },
     "Name" : {
@@ -1086,6 +1245,9 @@
 
     },
     "New collection" : {
+
+    },
+    "New group" : {
 
     },
     "New Moment" : {
@@ -1112,6 +1274,9 @@
     "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
 
     },
+    "No Moments with everyone yet. Start one — the group is invited automatically." : {
+
+    },
     "No Moments you can see yet." : {
 
     },
@@ -1136,7 +1301,13 @@
     "No sides yet." : {
 
     },
+    "No stamps yet." : {
+
+    },
     "Nobody — remove person" : {
+
+    },
+    "Nobody's out yet. Say what you're up for and see who joins." : {
 
     },
     "Not connected" : {
@@ -1160,6 +1331,9 @@
     "Notes" : {
 
     },
+    "Nothing from this day yet." : {
+
+    },
     "Nothing here yet." : {
 
     },
@@ -1179,6 +1353,9 @@
 
     },
     "Nothing open. When someone says “I'll send you…”, MOMENT keeps track." : {
+
+    },
+    "Nothing to replay yet" : {
 
     },
     "Nothing to tidy up." : {
@@ -1232,6 +1409,9 @@
     "Open plan" : {
 
     },
+    "Open the map" : {
+
+    },
     "Optional. Used as context only; MOMENT never adds events without asking." : {
 
     },
@@ -1244,10 +1424,22 @@
     "Original screenshot" : {
 
     },
+    "Others see it blurred — \"You had to be there\" — until they tap Reveal." : {
+
+    },
+    "OUR STORY" : {
+
+    },
+    "Passport" : {
+
+    },
     "Paste a link" : {
 
     },
     "Paste your key" : {
+
+    },
+    "Pause" : {
 
     },
     "Payment is charged to your Apple Account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period, and you can manage or cancel them in your Apple Account settings. Lifetime is a one-time purchase." : {
@@ -1325,6 +1517,9 @@
     "Plans" : {
 
     },
+    "Play" : {
+
+    },
     "Post" : {
 
     },
@@ -1359,9 +1554,6 @@
 
     },
     "Promises" : {
-
-    },
-    "Public Moment by %@. You can react, comment and remix it." : {
 
     },
     "Question" : {
@@ -1443,6 +1635,9 @@
     "Reopen" : {
 
     },
+    "Replay" : {
+
+    },
     "Reply to a Moment or message a friend. Conversations stay between you." : {
 
     },
@@ -1464,10 +1659,16 @@
     "Retry" : {
 
     },
+    "Reveal" : {
+
+    },
     "Review" : {
 
     },
     "Right now" : {
+
+    },
+    "Same event?" : {
 
     },
     "Same template, your memories." : {
@@ -1510,6 +1711,21 @@
 
     },
     "Say something" : {
+
+    },
+    "Scan a Moment QR" : {
+
+    },
+    "Scan to join" : {
+
+    },
+    "SCAN TO JOIN" : {
+
+    },
+    "Scanner unavailable" : {
+
+    },
+    "Scope" : {
 
     },
     "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
@@ -1590,6 +1806,12 @@
     "Share link" : {
 
     },
+    "Share QR" : {
+
+    },
+    "Share this memory" : {
+
+    },
     "Share with %@" : {
 
     },
@@ -1627,6 +1849,9 @@
 
     },
     "Show Pending Promises" : {
+
+    },
+    "Show QR to join" : {
 
     },
     "Show Today's Moments" : {
@@ -1669,6 +1894,9 @@
     "Sources" : {
 
     },
+    "STAMPS" : {
+
+    },
     "Start a new Moment" : {
 
     },
@@ -1702,10 +1930,19 @@
     "That's the Moment." : {
 
     },
+    "The boys, Family, Travel crew…" : {
+
+    },
+    "THE MOMENT" : {
+
+    },
     "The Moments inside stay where they are." : {
 
     },
     "The number MOMENT cares about: experiences you kept together with the people who were there." : {
+
+    },
+    "The passport is built from your own Moments on this device. It's private unless you share a card." : {
 
     },
     "The story" : {
@@ -1726,6 +1963,9 @@
     "This cannot be undone. Export first if you want a copy." : {
 
     },
+    "This device can't scan here. Open the link from Messages or Photos instead." : {
+
+    },
     "This looks like a core memory." : {
 
     },
@@ -1742,6 +1982,12 @@
 
     },
     "Tidy up" : {
+
+    },
+    "Time Machine" : {
+
+    },
+    "TIME MACHINE" : {
 
     },
     "Timeline" : {
@@ -1873,16 +2119,25 @@
     "wants" : {
 
     },
+    "Were you there?" : {
+
+    },
     "What are we remembering?" : {
 
     },
     "What are you trying to remember?" : {
 
     },
+    "What are you up for?" : {
+
+    },
     "What do you remember?" : {
 
     },
     "What do you want to remember?" : {
+
+    },
+    "What happened on this day, in other years." : {
 
     },
     "What happened?" : {
@@ -1933,6 +2188,9 @@
     "Where (city, optional)" : {
 
     },
+    "Where, roughly (city or area)" : {
+
+    },
     "Who can see it" : {
 
     },
@@ -1979,6 +2237,9 @@
 
     },
     "You can also tell me things: “Remember that Rahul likes Japanese food.”" : {
+
+    },
+    "You had to be there." : {
 
     },
     "You mentioned %@." : {
