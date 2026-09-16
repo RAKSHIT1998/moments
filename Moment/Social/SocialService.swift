@@ -45,7 +45,6 @@ final class SocialService {
     /// Navigation targets set by deep links / notifications.
     var pendingMomentID: String?
     var pendingInviteError: String?
-    var pendingConversationID: String?
     /// Pre-filled input when remixing someone's Moment.
     var remixDraft: NewMomentInput?
     var unreadActivity: Int { activity.filter { !$0.read }.count }
@@ -104,7 +103,7 @@ final class SocialService {
 
     // MARK: - Feed
 
-    func refreshFeed() async {
+    func refreshFeed(notify: Bool = false) async {
         isLoadingFeed = true
         defer { isLoadingFeed = false }
         do {
@@ -112,7 +111,7 @@ final class SocialService {
             for m in page.items { moments[m.id] = m }
             await rebuildGraph(from: page.items)
             feed = FeedRanker.rank(page.items, me: myID, graph: graph, seen: seen)
-            detectNewContributions(page.items)
+            detectNewContributions(page.items, notify: notify)
         } catch { lastError = error.localizedDescription }
     }
 
@@ -485,13 +484,15 @@ final class SocialService {
     /// Called from a CloudKit push (or a foreground refresh). Compares contribution counts and
     /// posts one local notification per Moment that grew — never content, just who and how many.
     func handleRemoteChange() async {
-        await refreshFeed()
+        await refreshFeed(notify: true)
         await refreshInbox()
     }
 
-    private func detectNewContributions(_ items: [SocialMoment]) {
+    /// Only a remote change (silent push) may notify; foreground refreshes just update the baseline,
+    /// so your own uploads never produce a "new additions" alert.
+    private func detectNewContributions(_ items: [SocialMoment], notify: Bool) {
         for m in items where m.memberIDs.contains(myID) {
-            if let old = lastContributionCounts[m.id], m.contributionCount > old, m.creatorID != myID || m.memberIDs.count > 1 {
+            if notify, let old = lastContributionCounts[m.id], m.contributionCount > old, m.memberIDs.count > 1 {
                 let content = UNMutableNotificationContent()
                 content.title = m.title
                 content.body = "\(m.contributionCount - old) new \(m.contributionCount - old == 1 ? "addition" : "additions") from people who were there"

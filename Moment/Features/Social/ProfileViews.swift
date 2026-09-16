@@ -11,6 +11,7 @@ struct SocialProfileView: View {
     @State private var showReport = false
     @State private var showMemories = false
     @State private var showSettings = false
+    @State private var openConversation: String?
 
     private var isMe: Bool { userID == env.social.myID }
     private var moments: [SocialMoment] { isMe ? env.social.momentsImIn : env.social.moments(with: userID) + publicOnes }
@@ -37,7 +38,7 @@ struct SocialProfileView: View {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Settings").accessibilityIdentifier("profileSettings")
                 } else {
                     Menu {
-                        Button("Message", systemImage: "bubble") { Task { if let c = await env.social.conversation(with: userID) { env.social.pendingConversationID = c.id } } }
+                        Button("Message", systemImage: "bubble") { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } }
                         Divider()
                         Button(env.social.muted.contains(userID) ? "Unmute" : "Mute", systemImage: "speaker.slash") { Task { await env.social.mute(userID) } }
                         Button("Report", systemImage: "flag") { showReport = true }
@@ -51,7 +52,7 @@ struct SocialProfileView: View {
         .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
         .fullScreenCover(isPresented: $showMemories) { PrivateMemoryHubView() }
         .sheet(isPresented: $showSettings) { NavigationStack { SettingsView().socialDestinations() } }
-        .navigationDestination(item: Binding(get: { env.social.pendingConversationID }, set: { env.social.pendingConversationID = $0 })) { id in ConversationView(conversationID: id) }
+        .navigationDestination(item: $openConversation) { id in ConversationView(conversationID: id) }
         .modifier(SocialErrorAlert())
     }
 
@@ -105,7 +106,7 @@ struct SocialProfileView: View {
                 } else {
                     Button(user?.isPrivateAccount == true ? "Request to follow" : "Follow") { Task { await env.social.follow(userID) } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("followToggle")
                 }
-                Button { Task { if let c = await env.social.conversation(with: userID) { env.social.pendingConversationID = c.id } } } label: { Label("Message", systemImage: "bubble") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("messageButton")
+                Button { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } } label: { Label("Message", systemImage: "bubble") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("messageButton")
             }
             if !shared.isEmpty {
                 NavigationLink(value: SocialRoute.friendship(userID)) {

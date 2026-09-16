@@ -19,6 +19,9 @@
     "· birthday in %lld days" : {
 
     },
+    "· gone in 24h" : {
+
+    },
     "· shared %lld×" : {
 
     },
@@ -32,6 +35,12 @@
 
     },
     "“Useful” and “Not useful” quietly tune which kinds of Moments show up first." : {
+
+    },
+    "@" : {
+
+    },
+    "@%@" : {
 
     },
     "%@" : {
@@ -57,6 +66,16 @@
         }
       }
     },
+    "%@ by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ by %2$@"
+          }
+        }
+      }
+    },
     "%@ is coming together." : {
 
     },
@@ -69,6 +88,9 @@
           }
         }
       }
+    },
+    "%@ says you were there" : {
+
     },
     "%@ wants %@" : {
       "localizations" : {
@@ -133,10 +155,56 @@
         }
       }
     },
+    "%@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$@"
+          }
+        }
+      }
+    },
     "%lld" : {
 
     },
+    "%lld %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "%lld %@ · %lld photos · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$lld photos · %4$@"
+          }
+        }
+      }
+    },
+    "%lld %@ together · since %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ together · since %3$@"
+          }
+        }
+      }
+    },
+    "%lld added" : {
+
+    },
     "%lld all time" : {
+
+    },
+    "%lld items" : {
 
     },
     "%lld Moment%@ remembered for you this month." : {
@@ -145,6 +213,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld Moment%2$@ remembered for you this month."
+          }
+        }
+      }
+    },
+    "%lld Moments · %lld places · since %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld Moments · %2$lld places · since %3$@"
           }
         }
       }
@@ -165,6 +243,9 @@
     "%lld open" : {
 
     },
+    "%lld photos" : {
+
+    },
     "%lld selected" : {
 
     },
@@ -181,10 +262,28 @@
         }
       }
     },
+    "%lld uploads need a retry" : {
+
+    },
+    "+%lld" : {
+
+    },
     "+%lld more" : {
 
     },
     "1 new Moment to review" : {
+
+    },
+    "A line about it (optional)" : {
+
+    },
+    "A line about you" : {
+
+    },
+    "A Moment" : {
+
+    },
+    "A NOTE" : {
 
     },
     "About" : {
@@ -194,6 +293,9 @@
 
     },
     "Active" : {
+
+    },
+    "Activity" : {
 
     },
     "Add" : {
@@ -208,16 +310,31 @@
     "Add another memory" : {
 
     },
+    "Add me to Moments" : {
+
+    },
     "Add my side" : {
 
     },
+    "Add people" : {
+
+    },
     "Add person" : {
+
+    },
+    "Add photos, a video or a note. Everyone who was there sees it here." : {
+
+    },
+    "Add to a Moment" : {
 
     },
     "Add to Calendar" : {
 
     },
     "Add your side" : {
+
+    },
+    "ADD YOUR SIDE" : {
 
     },
     "Add your side of the memory — a photo, a line, your version of what happened. %@ will see it when you send it back." : {
@@ -235,10 +352,19 @@
     "All data deleted" : {
 
     },
+    "Allow downloads" : {
+
+    },
     "Allow notifications" : {
 
     },
+    "Allow resharing" : {
+
+    },
     "Already understood. Save the ones that matter." : {
+
+    },
+    "Also block this person" : {
 
     },
     "Analytics" : {
@@ -277,13 +403,31 @@
     "Before %@" : {
 
     },
+    "Bio" : {
+
+    },
     "Birthday" : {
 
     },
     "Birthday · %@" : {
 
     },
+    "Block" : {
+
+    },
+    "Block %@" : {
+
+    },
+    "Blocked" : {
+
+    },
+    "Blocked people (%lld)" : {
+
+    },
     "Calendar" : {
+
+    },
+    "Camera" : {
 
     },
     "Cancel" : {
@@ -325,6 +469,9 @@
     "Close" : {
 
     },
+    "Close friend ★" : {
+
+    },
     "Cloud AI" : {
 
     },
@@ -332,6 +479,12 @@
 
     },
     "Cloud AI is on — captures are sent to your provider." : {
+
+    },
+    "Comment on my Moments" : {
+
+    },
+    "Comments" : {
 
     },
     "Confidence: %@" : {
@@ -358,10 +511,25 @@
     "Couldn't export" : {
 
     },
+    "Couldn't join that Moment" : {
+
+    },
     "Couldn't open that Moment" : {
 
     },
     "Counts events like “capture completed” locally so you can see them here. Nothing is sent anywhere, and never your content." : {
+
+    },
+    "Create" : {
+
+    },
+    "Create Moment" : {
+
+    },
+    "Created it · %lld added" : {
+
+    },
+    "Creating…" : {
 
     },
     "Daily brief" : {
@@ -376,6 +544,9 @@
     "Date" : {
 
     },
+    "Dates come from your photos." : {
+
+    },
     "Delete" : {
 
     },
@@ -388,6 +559,9 @@
     "Delete Moment" : {
 
     },
+    "Delete this Moment for everyone?" : {
+
+    },
     "Delete this Moment?" : {
 
     },
@@ -397,7 +571,16 @@
     "Density" : {
 
     },
+    "Description" : {
+
+    },
+    "Details (optional)" : {
+
+    },
     "Discard" : {
+
+    },
+    "Discover" : {
 
     },
     "Dismiss" : {
@@ -421,13 +604,22 @@
     "Edit person" : {
 
     },
+    "Edit profile" : {
+
+    },
     "Every Moment lands here with its source, in the order it happened." : {
+
+    },
+    "Everyone who was invited loses access. Their own photos stay on their phones." : {
 
     },
     "Everything about %@" : {
 
     },
     "Everything is understood on this iPhone." : {
+
+    },
+    "Everywhere" : {
 
     },
     "Exact date" : {
@@ -442,7 +634,16 @@
     "Export as %@" : {
 
     },
+    "Export as video / images" : {
+
+    },
     "Export failed" : {
+
+    },
+    "Export images" : {
+
+    },
+    "Export video" : {
 
     },
     "Export, clear media, delete everything" : {
@@ -451,7 +652,22 @@
     "Export, media & delete" : {
 
     },
+    "Exports include every side with the person's name. No music, no watermark clutter — just \"Made with MOMENT\" on the last frame." : {
+
+    },
+    "Failed" : {
+
+    },
     "First came up %@." : {
+
+    },
+    "Follow" : {
+
+    },
+    "Followers" : {
+
+    },
+    "Following" : {
 
     },
     "Format" : {
@@ -498,10 +714,31 @@
     "Given" : {
 
     },
+    "Goa '26, Sarah's 30th, Sunday run…" : {
+
+    },
+    "Gone in %lldh" : {
+
+    },
     "Got it" : {
 
     },
     "Got it." : {
+
+    },
+    "handle" : {
+
+    },
+    "Handle" : {
+
+    },
+    "Happening now" : {
+
+    },
+    "HAPPENING NOW" : {
+
+    },
+    "Happening now (LIVE)" : {
 
     },
     "Here's exactly where they live and what leaves this iPhone." : {
@@ -543,7 +780,22 @@
     "Important" : {
 
     },
+    "Inbox" : {
+
+    },
     "Intelligence" : {
+
+    },
+    "Invitations to other people's Moments land here. Links opened from Messages open the Moment directly." : {
+
+    },
+    "Invite %lld" : {
+
+    },
+    "Invite people" : {
+
+    },
+    "Invites" : {
 
     },
     "It happened" : {
@@ -573,7 +825,13 @@
     "Last seen %@" : {
 
     },
+    "Leave Moment" : {
+
+    },
     "Let it go" : {
+
+    },
+    "Library" : {
 
     },
     "Light" : {
@@ -586,6 +844,9 @@
 
     },
     "Listening" : {
+
+    },
+    "LIVE" : {
 
     },
     "Load demo data" : {
@@ -606,6 +867,9 @@
     "Made with MOMENT" : {
 
     },
+    "Make a Moment from something that happened and invite the people who were there. Their side shows up next to yours." : {
+
+    },
     "Make something worth sharing." : {
 
     },
@@ -616,6 +880,12 @@
 
     },
     "Make this shareable" : {
+
+    },
+    "Make your first Moment" : {
+
+    },
+    "Make your first Moment from the + tab." : {
 
     },
     "Make your own" : {
@@ -648,6 +918,9 @@
     "Memory Drop" : {
 
     },
+    "Mention me" : {
+
+    },
     "Mentioned %@" : {
 
     },
@@ -663,10 +936,25 @@
     "Merge into another person…" : {
 
     },
+    "Message" : {
+
+    },
+    "Message me" : {
+
+    },
+    "Messages" : {
+
+    },
     "Model: %@. Stored only in this device's Keychain." : {
 
     },
+    "Moment" : {
+
+    },
     "MOMENT" : {
+
+    },
+    "Moment · %@" : {
 
     },
     "MOMENT is locked" : {
@@ -693,6 +981,9 @@
     "Moments" : {
 
     },
+    "MOMENTS" : {
+
+    },
     "Moments MOMENT brought back this month that you acted on." : {
 
     },
@@ -705,13 +996,31 @@
     "More options" : {
 
     },
+    "More reactions" : {
+
+    },
+    "Mute" : {
+
+    },
+    "Mute %@" : {
+
+    },
+    "My private memory" : {
+
+    },
     "Name" : {
+
+    },
+    "Name or @handle" : {
 
     },
     "Needs review" : {
 
     },
     "Never forget what matters." : {
+
+    },
+    "New Moment" : {
 
     },
     "New name" : {
@@ -732,6 +1041,15 @@
     "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
 
     },
+    "No Moments you can see yet." : {
+
+    },
+    "No one blocked." : {
+
+    },
+    "No one found." : {
+
+    },
     "No pending promises." : {
 
     },
@@ -742,6 +1060,9 @@
 
     },
     "No saved memories yet." : {
+
+    },
+    "No sides yet." : {
 
     },
     "Nobody — remove person" : {
@@ -795,6 +1116,9 @@
     "Notify me" : {
 
     },
+    "NOW" : {
+
+    },
     "Now give me something from your life." : {
 
     },
@@ -810,7 +1134,13 @@
     "On-device understanding" : {
 
     },
+    "ONE YEAR AGO" : {
+
+    },
     "Only genuinely useful ones — a birthday coming up with a gift idea saved, a promise going stale, a plan whose time is near. Never “come back to MOMENT”." : {
+
+    },
+    "Only the people you invite can see a Moment set to \"People in it\". You can change this any time." : {
 
     },
     "Open" : {
@@ -852,16 +1182,34 @@
     "People" : {
 
     },
+    "PEOPLE" : {
+
+    },
+    "People in it can add" : {
+
+    },
+    "People must be approved to follow you and see Moments set to Friends." : {
+
+    },
     "People you know" : {
 
     },
     "People, places, the plans you made and the ones that happened. Yours to keep or share." : {
 
     },
+    "Permissions" : {
+
+    },
     "Person" : {
 
     },
+    "Photo" : {
+
+    },
     "Photo added" : {
+
+    },
+    "PHOTOS & VIDEO" : {
 
     },
     "Pick 5–10 photos from a trip or a night out. MOMENT turns them into your first Moment — on your iPhone, in seconds." : {
@@ -873,13 +1221,40 @@
     "Pick the photos. I'll find the story." : {
 
     },
+    "Place" : {
+
+    },
+    "Place (city-level, e.g. Goa)" : {
+
+    },
+    "Places are city-level. MOMENT never stores or shares exact coordinates." : {
+
+    },
+    "Places, Moments, @people" : {
+
+    },
     "Plan · %@" : {
 
     },
     "Plans" : {
 
     },
+    "Post" : {
+
+    },
+    "Post comment" : {
+
+    },
+    "Post to NOW" : {
+
+    },
     "Privacy" : {
+
+    },
+    "Privacy & safety" : {
+
+    },
+    "Privacy & safety (shared Moments)" : {
 
     },
     "Privacy Center" : {
@@ -888,13 +1263,28 @@
     "Privacy Policy" : {
 
     },
+    "Private · on-device" : {
+
+    },
+    "Private account" : {
+
+    },
+    "Profile" : {
+
+    },
     "Promises" : {
+
+    },
+    "Public Moment by %@. You can react, comment and remix it." : {
 
     },
     "Question" : {
 
     },
     "Re-link contact" : {
+
+    },
+    "React" : {
 
     },
     "Reading %lld of %lld…" : {
@@ -906,6 +1296,9 @@
           }
         }
       }
+    },
+    "Reason" : {
+
     },
     "Relationship (optional, e.g. brother)" : {
 
@@ -928,7 +1321,16 @@
     "Reminders" : {
 
     },
+    "Remix" : {
+
+    },
+    "Remix into a new Moment" : {
+
+    },
     "Remixed from %@" : {
+
+    },
+    "Remove" : {
 
     },
     "Remove demo data" : {
@@ -940,6 +1342,9 @@
     "Remove link" : {
 
     },
+    "Remove photo" : {
+
+    },
     "Removes stored screenshots, audio and files. Text memories stay." : {
 
     },
@@ -949,10 +1354,25 @@
     "Reopen" : {
 
     },
+    "Reply to a Moment or message a friend. Conversations stay between you." : {
+
+    },
+    "Report" : {
+
+    },
+    "Reports are reviewed. The person isn't told who reported them." : {
+
+    },
+    "Request to follow" : {
+
+    },
     "Reset what MOMENT learned from your feedback" : {
 
     },
     "Restore purchases" : {
+
+    },
+    "Retry" : {
 
     },
     "Review" : {
@@ -962,6 +1382,9 @@
 
     },
     "Same template, your memories." : {
+
+    },
+    "Sample photos" : {
 
     },
     "Save" : {
@@ -988,10 +1411,28 @@
     "Save something to MOMENT. It will be understood and remembered." : {
 
     },
+    "Save to a Moment" : {
+
+    },
+    "Saved to a Moment" : {
+
+    },
+    "Saving…" : {
+
+    },
+    "Say something" : {
+
+    },
     "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
 
     },
+    "Screenshots, promises, plans, gift ideas — on-device only. %lld memories." : {
+
+    },
     "Search" : {
+
+    },
+    "Search by name or @handle." : {
 
     },
     "Search Memories" : {
@@ -1004,6 +1445,9 @@
 
     },
     "See what MOMENT understands" : {
+
+    },
+    "Send" : {
 
     },
     "Send as a Moment" : {
@@ -1021,7 +1465,13 @@
     "Set reminder" : {
 
     },
+    "Set up your profile" : {
+
+    },
     "Settings" : {
+
+    },
+    "Share a Moment" : {
 
     },
     "Share anything to MOMENT" : {
@@ -1033,7 +1483,13 @@
     "Share as video" : {
 
     },
+    "Share link" : {
+
+    },
     "Share with %@" : {
+
+    },
+    "Shared Moments live in your iCloud (private database) and in the iCloud of people you share with. Leaving a Moment removes your access; deleting one you created removes it for everyone." : {
 
     },
     "Shared with you" : {
@@ -1057,6 +1513,9 @@
     "Show Gift Ideas" : {
 
     },
+    "Show my public Moments by place" : {
+
+    },
     "Show on Home" : {
 
     },
@@ -1069,7 +1528,22 @@
     "Show Upcoming Plans" : {
 
     },
+    "Shows as LIVE; people can add as it happens." : {
+
+    },
+    "Shows next to %@'s, with your name on it." : {
+
+    },
+    "Sign in to iCloud on this iPhone to share Moments with people. You can still make private ones." : {
+
+    },
     "Since %@" : {
+
+    },
+    "Skip" : {
+
+    },
+    "Something went wrong" : {
 
     },
     "Sounds like something to remember" : {
@@ -1086,6 +1560,9 @@
       }
     },
     "Sources" : {
+
+    },
+    "Start a new Moment" : {
 
     },
     "Start with photos" : {
@@ -1118,16 +1595,22 @@
     "That's the Moment." : {
 
     },
-    "The only number MOMENT cares about: times it brought something back at the right moment and you acted on it." : {
+    "The number MOMENT cares about: experiences you kept together with the people who were there." : {
 
     },
     "The story" : {
+
+    },
+    "They get an invite and can add their side. You can also share a link after." : {
 
     },
     "Things I owe people" : {
 
     },
     "Things people owe me" : {
+
+    },
+    "This account is private. Follow to see shared Moments." : {
 
     },
     "This cannot be undone. Export first if you want a copy." : {
@@ -1193,6 +1676,9 @@
     "Unarchive" : {
 
     },
+    "Unblock" : {
+
+    },
     "Understanding what's in them. This happens on your iPhone." : {
 
     },
@@ -1205,16 +1691,28 @@
     "Understood with Cloud AI" : {
 
     },
+    "Unfollow" : {
+
+    },
     "Unlock with %@" : {
 
     },
     "Unmark important" : {
 
     },
+    "Unmute" : {
+
+    },
     "Up to %lld a day" : {
 
     },
     "Upcoming Plans" : {
+
+    },
+    "Uploading" : {
+
+    },
+    "Uploading %lld…" : {
 
     },
     "Use “%@”" : {
@@ -1241,6 +1739,18 @@
     "View gift idea" : {
 
     },
+    "Visibility" : {
+
+    },
+    "Visible to people you follow back. Disappears in 24 hours unless you save it to a Moment." : {
+
+    },
+    "Voice note" : {
+
+    },
+    "Waiting for the people who were there." : {
+
+    },
     "Want me to tell you when one of these becomes urgent? At most %lld a day, never “come back to the app”. Details stay hidden unless you turn them on." : {
 
     },
@@ -1250,10 +1760,19 @@
     "wants" : {
 
     },
+    "What are we remembering?" : {
+
+    },
     "What are you trying to remember?" : {
 
     },
+    "What do you remember?" : {
+
+    },
     "What do you want to remember?" : {
+
+    },
+    "What happened?" : {
 
     },
     "What is this?" : {
@@ -1265,7 +1784,13 @@
     "What should I remember?" : {
 
     },
+    "What should people call you?" : {
+
+    },
     "What to remember" : {
+
+    },
+    "What's happening right now?" : {
 
     },
     "What's worth remembering?" : {
@@ -1274,7 +1799,13 @@
     "When" : {
 
     },
+    "WHEN & WHERE" : {
+
+    },
     "When is this?" : {
+
+    },
+    "When people add to your Moments or react, it shows here." : {
 
     },
     "When should I bring this back?" : {
@@ -1283,7 +1814,28 @@
     "When?" : {
 
     },
+    "Where (city, optional)" : {
+
+    },
+    "Who can see it" : {
+
+    },
+    "WHO CAN SEE IT" : {
+
+    },
+    "Who can…" : {
+
+    },
     "Who is this about?" : {
+
+    },
+    "Who was there" : {
+
+    },
+    "WHO WAS THERE" : {
+
+    },
+    "Who was there?" : {
 
     },
     "Why am I seeing this?" : {
@@ -1299,6 +1851,12 @@
 
     },
     "With" : {
+
+    },
+    "with %@" : {
+
+    },
+    "You" : {
 
     },
     "You + %@" : {
@@ -1325,6 +1883,12 @@
     "Your archive fills in as you capture." : {
 
     },
+    "Your data" : {
+
+    },
+    "YOUR LIFE IN MOMENTS" : {
+
+    },
     "Your life, remembered." : {
 
     },
@@ -1346,7 +1910,13 @@
     "Your Moment" : {
 
     },
+    "Your Moments" : {
+
+    },
     "Your month in Moments" : {
+
+    },
+    "Your name" : {
 
     },
     "Your name (shown as “…'s side”)" : {
@@ -1355,7 +1925,16 @@
     "Your numbers" : {
 
     },
+    "Your photos are compressed and stripped of location data before upload. You can remove them any time." : {
+
+    },
+    "Your profile is stored in your iCloud. Only people you share with see your Moments." : {
+
+    },
     "Your side" : {
+
+    },
+    "YOUR SIDE OF" : {
 
     },
     "Yours" : {
