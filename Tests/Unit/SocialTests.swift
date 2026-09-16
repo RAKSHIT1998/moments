@@ -308,6 +308,83 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertNil(env.social.yearSummary(2020))
     }
 
+    func testIWasThereJoinsAVisibleMomentButNotAPrivateOne() async throws {
+        let (env, backend) = await makeSocial()
+        // Dev's public run: I can join.
+        let ok = await env.social.join(momentID: "m_run")
+        XCTAssertTrue(ok)
+        XCTAssertTrue(env.social.moments["m_run"]!.memberIDs.contains("me"))
+        // Anaya's private Moment: not visible, not joinable.
+        try await backend.acting(as: "u_anaya") { b in _ = try await b.createMoment(MomentDraft(title: "secret", description: "", visibility: .privateOnly)) }
+        let secret = await backend.moments.values.first { $0.title == "secret" }!.id
+        let denied = await env.social.join(momentID: secret)
+        XCTAssertFalse(denied)
+    }
+
+    func testMergeDetectsSameDayOverlapAndMovesSides() async throws {
+        let (env, _) = await makeSocial()
+        let dup = await env.social.createMoment(SocialService.NewMomentInput(title: "Goa again", startAt: env.social.moments["m_goa"]!.startAt, visibility: .group, initialMemberIDs: ["u_rahul"], note: "same trip"))
+        let dupID = try XCTUnwrap(dup?.id)
+        for _ in 0..<50 where env.social.queue.pendingCount > 0 { try await Task.sleep(for: .milliseconds(50)) }
+        XCTAssertEqual(env.social.mergeCandidates(for: "m_goa").map(\.id), [dupID])
+        let before = env.social.moments["m_goa"]!.contributionCount
+        let merged = await env.social.merge(sourceID: dupID, into: "m_goa")
+        XCTAssertTrue(merged)
+        XCTAssertNil(env.social.moments[dupID])
+        XCTAssertEqual(env.social.moments["m_goa"]?.contributionCount, before + 1)
+        XCTAssertTrue(env.social.allContributions("m_goa").contains { $0.caption == "same trip" && $0.authorID == "me" })
+    }
+
+    func testAnyoneUpJoinAndMakeItAMoment() async throws {
+        let (env, backend) = await makeSocial()
+        let posted = await env.social.postNow(text: "Anyone out?", photo: nil, place: "Bandra", activity: .drinks, hours: 3)
+        XCTAssertTrue(posted)
+        for _ in 0..<50 where env.social.queue.pendingCount > 0 { try await Task.sleep(for: .milliseconds(50)) }
+        await env.social.refreshNow()
+        let mine = try XCTUnwrap(env.social.nowPosts.first { $0.authorID == "me" && $0.activity == .drinks })
+        XCTAssertLessThan(mine.expiresAt.timeIntervalSinceNow, 3.1 * 3600)
+        try await backend.acting(as: "u_rahul") { b in _ = try await b.joinNow(id: mine.id) }
+        await env.social.refreshNow()
+        let joined = try XCTUnwrap(env.social.nowPosts.first { $0.id == mine.id })
+        XCTAssertEqual(joined.joinerIDs, ["u_rahul"])
+        let made = await env.social.makeMoment(from: joined)
+        let m = try XCTUnwrap(made)
+        XCTAssertTrue(m.isLive)
+        XCTAssertTrue(m.memberIDs.contains("u_rahul"), "everyone who joined is in the Moment")
+        XCTAssertEqual(env.social.nowPosts.first { $0.id == mine.id }?.savedToMomentID, m.id)
+    }
+
+    func testGroupsHaveChatAndGroupMomentsInviteEveryone() async throws {
+        let (env, _) = await makeSocial()
+        let rahulUser = await env.social.user("u_rahul"), devUser = await env.social.user("u_dev")
+        let rahul = try XCTUnwrap(rahulUser), dev = try XCTUnwrap(devUser)
+        let created = await env.social.createGroup(name: "Crew", emoji: "🔥", members: [rahul, dev])
+        let g = try XCTUnwrap(created)
+        XCTAssertEqual(g.memberIDs, ["me", "u_rahul", "u_dev"])
+        XCTAssertNotNil(g.conversationID, "a group gets its own chat")
+        XCTAssertTrue(env.social.conversations.contains { $0.id == g.conversationID })
+        // Seeded group's Moments: Goa '26 has me + Rahul + Sarah.
+        let crew = try XCTUnwrap(env.social.groups.first { $0.id == "g_boys" })
+        XCTAssertTrue(env.social.moments(for: crew).contains { $0.id == "m_goa" })
+        await env.social.leaveGroup(g.id)
+        XCTAssertFalse(env.social.groups.contains { $0.id == g.id })
+    }
+
+    func testTimeMachineHighlightsAndPassportUseRealData() async throws {
+        let (env, _) = await makeSocial()
+        await env.social.loadMoment("m_goa")
+        let tm = env.social.timeMachine
+        XCTAssertEqual(tm.first?.yearsAgo, 1)
+        XCTAssertEqual(tm.first?.moments.map(\.id), ["m_oldgoa"])
+        let h = try XCTUnwrap(env.social.highlights(for: "m_goa"))
+        XCTAssertEqual(h.mostReacted?.id, "c_m_goa_0", "the seeded first photo carries the reactions")
+        XCTAssertEqual(h.addedMost?.name, "Rahul Mehta")
+        XCTAssertNotNil(h.firstAndLast)
+        let p = env.social.passport
+        XCTAssertEqual(p.places.first?.name, "Goa")
+        XCTAssertGreaterThanOrEqual(p.people, 3)
+    }
+
     func testMediaPipelineStripsMetadataAndBounds() throws {
         let big = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000)).image { ctx in UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000)) }.jpegData(compressionQuality: 1)!
         let p = try XCTUnwrap(MediaPipeline.preparePhoto(big))

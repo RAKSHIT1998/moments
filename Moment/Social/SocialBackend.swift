@@ -29,6 +29,10 @@ protocol SocialBackend: AnyObject, Sendable {
     func leaveMoment(id: String) async throws
     /// Owner picks any photo as the cover.
     func setCover(momentID: String, data: Data) async throws -> SocialMoment
+    /// Join a Moment you can see (public / friends / live) without an invite — "I WAS THERE".
+    func join(momentID: String) async throws -> SocialMoment
+    /// Owner merges another of their Moments into this one; contributions move, the source is deleted.
+    func merge(sourceID: String, into targetID: String) async throws -> SocialMoment
 
     // Feed / discover
     func feed(cursor: String?) async throws -> FeedPage<SocialMoment>
@@ -45,6 +49,8 @@ protocol SocialBackend: AnyObject, Sendable {
     func postNow(_ post: NowPost, mediaData: Data?) async throws -> NowPost
     func nowFeed() async throws -> [NowPost]
     func deleteNow(id: String) async throws
+    /// Respond to "Anyone up?" — you're in.
+    func joinNow(id: String) async throws -> NowPost
 
     // Graph & safety
     func follow(userID: String, close: Bool) async throws
@@ -69,6 +75,11 @@ protocol SocialBackend: AnyObject, Sendable {
     func send(_ message: DirectMessage, mediaData: Data?) async throws -> DirectMessage
     func conversation(with userID: String) async throws -> Conversation
 
+    // Groups
+    func groups() async throws -> [SocialGroup]
+    func saveGroup(_ g: SocialGroup) async throws -> SocialGroup
+    func leaveGroup(id: String) async throws
+
     // Collections
     func collections() async throws -> [MomentCollection]
     func saveCollection(_ c: MomentCollection) async throws -> MomentCollection
@@ -92,6 +103,9 @@ struct MomentDraft: Sendable, Equatable {
     var remixedFromID: String?
     var isLive: Bool = false
     var coverData: Data?
+    var isTeaser: Bool = false
+    /// Members to add at creation (a group's members, "Anyone up?" joiners).
+    var initialMemberIDs: [String] = []
 }
 
 /// Relationship strength from actual shared experience — the strongest feed signal.

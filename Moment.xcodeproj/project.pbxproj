@@ -10,6 +10,7 @@
 		014447D56B3397F25E80FCFF /* ContactsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08309B0CE1C66D16FB6F594D /* ContactsUI.framework */; };
 		0285B723C18749CE1F9E0966 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCF55B8B5F6D5CB4D33B179F /* LocalAuthentication.framework */; };
 		033E77A5A2ED0C06FC0A0526 /* MomentShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D887C1DD0EA1606B091CB51 /* MomentShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		08ADB64DD5A6A0E0F539CEE4 /* GroupsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */; };
 		0C5C103168D6547093BC820E /* Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95B9C3A259A9C120E652B2C /* Navigation.swift */; };
 		0DB6F3F3DB3C2FC3188E35A0 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14A6BB131383E5B68E8C3ECC /* SwiftUI.framework */; };
 		10CFB8E5E33C71A72229D297 /* MockIntelligenceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF7B6494F5CAD44C17FD5CE /* MockIntelligenceProvider.swift */; };
@@ -25,6 +26,7 @@
 		1E2E9CEDB3E53263EDA7D911 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA848AB27C2E9D6A983848E /* UserProfile.swift */; };
 		1F3C8B1532F27C8D32809C36 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CDE8865DCC5565F0F18159 /* TestSupport.swift */; };
 		1F7A67BEC5DCA9CF15BB2EDB /* SurfaceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46B837DFBC554068413617E /* SurfaceEngine.swift */; };
+		232615715B4EB7D80CBFAE6E /* MomentReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CDDCC14CAA01CA8B94AD72 /* MomentReplayView.swift */; };
 		253B610AC9C3E34C8CCF3A25 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DADC9D5305FDF50A47E1FB /* HomeView.swift */; };
 		2733058E3DDD07CC1C2CD571 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85815A1B846A2FB25CB3CCB3 /* Haptics.swift */; };
 		27E386AF6AFFB676461FECAD /* MomentWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 08BB6B968DBA16FA3CE625D6 /* MomentWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -87,6 +89,7 @@
 		7E8219B83E5B2FFF255B7848 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AA2E43C2DA317B153F92DF /* Source.swift */; };
 		7F8C0F76AF86C4F0A32AF7C1 /* MemoryExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97670D7D495DC8C9D24B011F /* MemoryExtractor.swift */; };
 		80B8B43F5D8947F386C00D15 /* StorySlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 879C6AD575C6CCDCD84FB776 /* StorySlideView.swift */; };
+		81C1DA1B71C8AA33EC6CA67E /* AnyoneUpViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2262C63D4642A003CB7BBC35 /* AnyoneUpViews.swift */; };
 		831C8B951105BCD56D07F6E8 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2433F544D7F649F0CC38531F /* InsightsView.swift */; };
 		87EBBF2ABD3801073ABEC314 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CCE6604C8AA23BE9032247 /* Person.swift */; };
 		88A6B9F362D93B01431CF4F2 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6A646F1DE414EA441ADB01 /* AppGroup.swift */; };
@@ -94,9 +97,11 @@
 		8C3D54549413F71443C70F1F /* MomentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */; };
 		8C48BDFA001921C190F8A425 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03EE7A0BC02BAF0519F3FD9F /* Contacts.framework */; };
 		91A3470C495E6AE3A2195936 /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B317B3A7B19EC3A46F0BCC83 /* PeopleView.swift */; };
+		91A8AA3E094B2DAB67E5E4DC /* MomentMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0265A93A19FEB7C292C84E3B /* MomentMapView.swift */; };
 		92E2060C773758E5F99FAC9A /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C76A24F401455CDDD4FBD9 /* SpotlightService.swift */; };
 		961B5290CC4E0CE943747C56 /* CaptureResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5448A08E37BA411D80BA9745 /* CaptureResultView.swift */; };
 		9A2C8C96DBDC8CF2BB2C5D22 /* MomentTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */; };
+		9AE551CA8FC102DAAA36B28F /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30A2DD7ACE9C387984B8F46 /* PassportView.swift */; };
 		9C177C0A2FE9B5E38C18E5A8 /* StoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944D1321F8D9D86DF3ADEAD7 /* StoryTests.swift */; };
 		9CE595A527E80315B31ACFFE /* SocialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F52E1AA7DA3C0CC26929069 /* SocialTests.swift */; };
 		9FE484EBAD729973D3A30C4E /* MemoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9931D268CC837A42E80DBB72 /* MemoryDetailView.swift */; };
@@ -136,6 +141,7 @@
 		C16A01A772C8F1228ED124B6 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4C668FA9F7A9D3409D9CA2 /* StorageService.swift */; };
 		C31660C66731399B8F24684D /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8DDAC35E606B8C6F88547BEB /* UserNotifications.framework */; };
 		C382BC9234912551D942412F /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3F06116693EADA1E347C0C /* AnalyticsService.swift */; };
+		C461209C8A29A137ABF942BA /* TimeMachineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B1F4F35283648A73218767 /* TimeMachineView.swift */; };
 		C7DE4FF4D0C26E69EEA9CFC0 /* BiometricLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15EB92990089E986ADF8CFB5 /* BiometricLock.swift */; };
 		C862DCB798E16B1A30049AC2 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2758C294DACD68F438B13F88 /* DiscoverView.swift */; };
 		C87A4B7A5F49B361FA1724AB /* ScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D0F4607A79E985EC89BA42 /* ScaleTests.swift */; };
@@ -150,6 +156,7 @@
 		D8D400D51411BA6D29CDC7BF /* TextCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BD8E11337502940E390678 /* TextCaptureView.swift */; };
 		DACD61F90AA6EE3D525BB122 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5E7FF001AE74D299FFE511 /* Tokens.swift */; };
 		DD29CE90872B07034F6F5C54 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D487C54357A09FE87A6AB /* InboxView.swift */; };
+		DD4F6ABC38EFC44782D90495 /* MomentQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = 075796B622629115456247AA /* MomentQR.swift */; };
 		DDD1A68E384A2AEDBF49F8DD /* CaptureInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE481E631860A89665ACB23 /* CaptureInput.swift */; };
 		DE6E2269F563B21660F117C5 /* ModelSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F47CC79B86477F233E48F7 /* ModelSchema.swift */; };
 		E0C185D59FB14E5ABDFBCB51 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138469A6359AD25CB00CEAE2 /* OnboardingView.swift */; };
@@ -226,10 +233,13 @@
 /* Begin PBXFileReference section */
 		00AA2E43C2DA317B153F92DF /* Source.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Source.swift; sourceTree = "<group>"; };
 		01A8D429606026115D94F7E9 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		0265A93A19FEB7C292C84E3B /* MomentMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentMapView.swift; sourceTree = "<group>"; };
+		02B1F4F35283648A73218767 /* TimeMachineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeMachineView.swift; sourceTree = "<group>"; };
 		03ADDAA92DD2C6F1379A9145 /* ContextResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextResolver.swift; sourceTree = "<group>"; };
 		03EE7A0BC02BAF0519F3FD9F /* Contacts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Contacts.framework; path = System/Library/Frameworks/Contacts.framework; sourceTree = SDKROOT; };
 		05A643CCABB561B1C8BFBB0A /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
 		0620243E0CB2098944EEF87F /* CaptureSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSheet.swift; sourceTree = "<group>"; };
+		075796B622629115456247AA /* MomentQR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentQR.swift; sourceTree = "<group>"; };
 		08309B0CE1C66D16FB6F594D /* ContactsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ContactsUI.framework; path = System/Library/Frameworks/ContactsUI.framework; sourceTree = SDKROOT; };
 		08BB6B968DBA16FA3CE625D6 /* MomentWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = MomentWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		099E5563E849B28E34AF3D83 /* NaturalLanguage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NaturalLanguage.framework; path = System/Library/Frameworks/NaturalLanguage.framework; sourceTree = SDKROOT; };
@@ -259,6 +269,7 @@
 		1E5033AA78120CF9890F02C1 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		1E7BAE8ACD83B15C7EAD2A5D /* UploadQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadQueue.swift; sourceTree = "<group>"; };
 		20E19B651898264EAFB49C34 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
+		2262C63D4642A003CB7BBC35 /* AnyoneUpViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyoneUpViews.swift; sourceTree = "<group>"; };
 		23296DD1967CFBE1A9BBC3A7 /* ContactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsService.swift; sourceTree = "<group>"; };
 		233C70AD418E6A99105CA0BE /* AnalysisResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisResult.swift; sourceTree = "<group>"; };
 		2433F544D7F649F0CC38531F /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
@@ -311,6 +322,7 @@
 		714E4BBA9B7EA42F86B87BD7 /* VoiceCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCaptureView.swift; sourceTree = "<group>"; };
 		71B2BE31F8C22260376A9ABC /* EntityCorrection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityCorrection.swift; sourceTree = "<group>"; };
 		74419D240FA662A65F61F683 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		78CDDCC14CAA01CA8B94AD72 /* MomentReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentReplayView.swift; sourceTree = "<group>"; };
 		79E1C6AE4BB4326FAA6A5E28 /* SearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchIndex.swift; sourceTree = "<group>"; };
 		7D4F7FB4AB4D27843673924B /* MemoryEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEditView.swift; sourceTree = "<group>"; };
 		7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewMomentView.swift; sourceTree = "<group>"; };
@@ -334,6 +346,7 @@
 		9DFC21D1E077E0C4D8E0D5C6 /* PlanIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanIntelligence.swift; sourceTree = "<group>"; };
 		9E67AB191F9FF477B99FD522 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		A29CE3D3931CAD0A1A835421 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		A30A2DD7ACE9C387984B8F46 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
 		A32CD298346F88F5EBA6AB25 /* Place.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Place.swift; sourceTree = "<group>"; };
 		A39684E5785BF6263297F29A /* PlansViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansViews.swift; sourceTree = "<group>"; };
 		A556007B88DC6B38789AADAC /* ImportanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportanceEngine.swift; sourceTree = "<group>"; };
@@ -359,6 +372,7 @@
 		C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialComponents.swift; sourceTree = "<group>"; };
 		CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryBackend.swift; sourceTree = "<group>"; };
 		CBB6ED0572B5EFBC45EB3918 /* StoryExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryExporter.swift; sourceTree = "<group>"; };
+		CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViews.swift; sourceTree = "<group>"; };
 		D1BD8E11337502940E390678 /* TextCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextCaptureView.swift; sourceTree = "<group>"; };
 		D38D487C54357A09FE87A6AB /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
 		D46B837DFBC554068413617E /* SurfaceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceEngine.swift; sourceTree = "<group>"; };
@@ -735,19 +749,26 @@
 			isa = PBXGroup;
 			children = (
 				8F1F0F2A25A452A34A9667B1 /* AddSideView.swift */,
+				2262C63D4642A003CB7BBC35 /* AnyoneUpViews.swift */,
 				117AB0C48540E075181FF08E /* CollectionsView.swift */,
 				2758C294DACD68F438B13F88 /* DiscoverView.swift */,
+				CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */,
 				D38D487C54357A09FE87A6AB /* InboxView.swift */,
 				28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */,
+				0265A93A19FEB7C292C84E3B /* MomentMapView.swift */,
 				F77EA4C7C648B3B19E08F618 /* MomentPageView.swift */,
+				075796B622629115456247AA /* MomentQR.swift */,
+				78CDDCC14CAA01CA8B94AD72 /* MomentReplayView.swift */,
 				4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */,
 				7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */,
 				5C3152B7F4E2A271743F15FE /* NowViews.swift */,
+				A30A2DD7ACE9C387984B8F46 /* PassportView.swift */,
 				35DF02CBAACFC80DBA64B3DE /* ProfileViews.swift */,
 				C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */,
 				6095FF6387263E8433445C6E /* SocialHomeView.swift */,
 				52CF4190AA7B1191468EEFE6 /* SocialOnboardingView.swift */,
 				C7A5F365A8464F0635F14CBA /* SocialPolish.swift */,
+				02B1F4F35283648A73218767 /* TimeMachineView.swift */,
 			);
 			path = Social;
 			sourceTree = "<group>";
@@ -1130,6 +1151,7 @@
 				AD7CB9D07270B2B0D6770841 /* AddSideView.swift in Sources */,
 				3D27469E7D1AADF7308A37B5 /* AnalysisResult.swift in Sources */,
 				C382BC9234912551D942412F /* AnalyticsService.swift in Sources */,
+				81C1DA1B71C8AA33EC6CA67E /* AnyoneUpViews.swift in Sources */,
 				3624A4217F332DAE365613CF /* AppConfig.swift in Sources */,
 				45007FAEE419DF73218CBA4B /* AppEnvironment.swift in Sources */,
 				F943C6E224E8B47999DF2EC5 /* AppGroup.swift in Sources */,
@@ -1159,6 +1181,7 @@
 				317548CE115F3F4912ED2AC2 /* FeatureFlags.swift in Sources */,
 				354D344A35AB2A30ACF617AD /* FileCrypto.swift in Sources */,
 				5736D62CCE23E9A8DAAE7409 /* GiftIdea.swift in Sources */,
+				08ADB64DD5A6A0E0F539CEE4 /* GroupsViews.swift in Sources */,
 				2733058E3DDD07CC1C2CD571 /* Haptics.swift in Sources */,
 				253B610AC9C3E34C8CCF3A25 /* HomeView.swift in Sources */,
 				E13DB8C1AEC75D4839D32C10 /* ImageColor.swift in Sources */,
@@ -1188,8 +1211,11 @@
 				6C305244AC139E93B4C7CE3C /* MomentApp.swift in Sources */,
 				8C3D54549413F71443C70F1F /* MomentCardView.swift in Sources */,
 				EFDABBED851392CE6E3DF100 /* MomentEditorView.swift in Sources */,
+				91A8AA3E094B2DAB67E5E4DC /* MomentMapView.swift in Sources */,
 				4BD8072CDD074BDB025C68E7 /* MomentPackage.swift in Sources */,
 				CDBB878F04FBA8EB9F54629D /* MomentPageView.swift in Sources */,
+				DD4F6ABC38EFC44782D90495 /* MomentQR.swift in Sources */,
+				232615715B4EB7D80CBFAE6E /* MomentReplayView.swift in Sources */,
 				D64934A44EAC1F378AEA169B /* MomentStory.swift in Sources */,
 				9A2C8C96DBDC8CF2BB2C5D22 /* MomentTools.swift in Sources */,
 				D5EC1F0A13BC8D5B159BBB2B /* MomentViewerView.swift in Sources */,
@@ -1200,6 +1226,7 @@
 				D661CD5AF3A5823E9860F7D2 /* NowViews.swift in Sources */,
 				51719135D2E89867A294025F /* OCRService.swift in Sources */,
 				E0C185D59FB14E5ABDFBCB51 /* OnboardingView.swift in Sources */,
+				9AE551CA8FC102DAAA36B28F /* PassportView.swift in Sources */,
 				AADE24B77452D37294A5E45A /* PaywallView.swift in Sources */,
 				91A3470C495E6AE3A2195936 /* PeopleView.swift in Sources */,
 				87EBBF2ABD3801073ABEC314 /* Person.swift in Sources */,
@@ -1245,6 +1272,7 @@
 				D8D400D51411BA6D29CDC7BF /* TextCaptureView.swift in Sources */,
 				12C6B1C04964E103A7FB9D04 /* TextNormalizer.swift in Sources */,
 				F2F6883D99882ABCF124F8BF /* Theme.swift in Sources */,
+				C461209C8A29A137ABF942BA /* TimeMachineView.swift in Sources */,
 				DACD61F90AA6EE3D525BB122 /* Tokens.swift in Sources */,
 				8C1D419962B265A4151AD993 /* UploadQueue.swift in Sources */,
 				1E2E9CEDB3E53263EDA7D911 /* UserProfile.swift in Sources */,

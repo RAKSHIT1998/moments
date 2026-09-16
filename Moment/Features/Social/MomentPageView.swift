@@ -18,6 +18,11 @@ struct MomentPageView: View {
     @State private var expanded: Contribution?
     @State private var showCollections = false
     @State private var showCard = false
+    @State private var perspective: String? = nil      // nil = everyone
+    @State private var showReplay = false
+    @State private var showQR = false
+    @State private var revealed = false
+    @State private var mergeCandidate: SocialMoment?
     @State private var showLiveCamera = false
     @State private var burst: String?
     @State private var scrollY: CGFloat = 0
@@ -37,8 +42,11 @@ struct MomentPageView: View {
                         VStack(alignment: .leading, spacing: MSpacing.xl) {
                             meta(moment)
                             stats(moment)
+                            if let candidate = mergeCandidate { mergeCard(moment, candidate) }
                             if !moment.description.isEmpty { Text(moment.description).font(MFont.body) }
                             ReactionBar(momentID: moment.id, counts: moment.reactionCounts, onReact: { burst = $0.emoji })
+                            if let h = env.social.highlights(for: moment.id), h.mostReacted != nil || h.mostActiveHour != nil { highlightsCard(h) }
+                            perspectives(moment)
                             timeline(moment)
                             comments(moment)
                         }
@@ -68,7 +76,7 @@ struct MomentPageView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .task { await env.social.loadMoment(momentID) }
+        .task { await env.social.loadMoment(momentID); mergeCandidate = env.social.mergeCandidates(for: momentID).first }
         .refreshable { await env.social.loadMoment(momentID) }
         .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
         .sheet(isPresented: $showCloudSharing) { if let m = moment { CloudSharingView(momentID: m.id) } }
@@ -76,6 +84,8 @@ struct MomentPageView: View {
         .sheet(isPresented: $showInvitePicker) { InvitePickerSheet(momentID: momentID) }
         .sheet(isPresented: $showCollections) { AddToCollectionSheet(momentID: momentID) }
         .sheet(isPresented: $showCard) { if let m = moment { MomentCardSheet(moment: m) } }
+        .sheet(isPresented: $showQR) { if let m = moment { MomentQRSheet(moment: m) } }
+        .fullScreenCover(isPresented: $showReplay) { MomentReplayView(momentID: momentID) }
         .sheet(isPresented: $showLiveCamera) { CameraPicker { data in Task { await env.social.addSide(momentID: momentID, photos: [data], note: ""); env.toast("Added to the live Moment."); Haptics.saved() } } }
         .sheet(isPresented: $showExport) { if let m = moment { MomentExportSheet(moment: m) } }
         .fullScreenCover(item: $expanded) { c in MediaPagerView(momentID: momentID, startAt: c) }
@@ -89,8 +99,17 @@ struct MomentPageView: View {
 
     private func hero(_ m: SocialMoment) -> some View {
         let stretch = max(0, scrollY)   // pull-down grows the cover instead of showing a gap
+        let hidden = m.isTeaser && !isMember && !revealed
         return ZStack(alignment: .bottomLeading) {
             SocialImage(ref: m.coverRef).frame(height: 420 + stretch).frame(maxWidth: .infinity).offset(y: -stretch)
+                .blur(radius: hidden ? 28 : 0).animation(.easeOut(duration: 0.6), value: hidden)
+            if hidden {
+                VStack(spacing: MSpacing.m) {
+                    Text("You had to be there.").font(MFont.heroSmall).foregroundStyle(.white)
+                    Button { withAnimation { revealed = true }; Haptics.saved() } label: { Label("Reveal", systemImage: "eye") }.buttonStyle(ChipButtonStyle(prominent: true, light: true)).accessibilityIdentifier("reveal")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
             LinearGradient(colors: [.black.opacity(0.35), .clear, .clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: MSpacing.s) {
                 if m.isLive {
@@ -129,8 +148,16 @@ struct MomentPageView: View {
             .accessibilityIdentifier("momentMembers")
             if isMember, m.isGroup {
                 Text("You were there too.").font(MFont.callout).foregroundStyle(MColor.accent)
-            } else if !isMember, m.visibility == .publicAll {
-                Text("Public Moment by \(m.creatorName). You can react, comment and remix it.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            } else if !isMember {
+                HStack(spacing: MSpacing.m) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Were you there?").font(MFont.headline)
+                        Text("Join to add your side. Your photos stay yours.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    }
+                    Spacer()
+                    Button("I WAS THERE") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("iWasThere")
+                }
+                .momentCard(padding: MSpacing.m)
             }
         }
     }
@@ -161,8 +188,69 @@ struct MomentPageView: View {
         return others.count <= 3 ? others.joined(separator: ", ") : "\(others[0]), \(others[1]) + \(others.count - 2) more"
     }
 
-    private func timeline(_ m: SocialMoment) -> some View {
+    /// Everyone / one person: the same night from each side.
+    private func perspectives(_ m: SocialMoment) -> some View {
         let all = env.social.allContributions(m.id)
+        var seen = Set<String>()
+        let authors: [(id: String, name: String)] = all.compactMap { seen.insert($0.authorID).inserted ? (id: $0.authorID, name: $0.authorName) : nil }
+        return Group {
+            if authors.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: MSpacing.s) {
+                        Button { perspective = nil; Haptics.selection() } label: { Label("Everyone", systemImage: "person.3") }.buttonStyle(ChipButtonStyle(prominent: perspective == nil)).accessibilityIdentifier("perspective-all")
+                        ForEach(authors, id: \.id) { a in
+                            Button { perspective = a.id; Haptics.selection() } label: {
+                                HStack(spacing: 6) { PersonAvatar(name: a.name, size: 18); Text(a.id == env.social.myID ? "You" : a.name.split(separator: " ").first.map(String.init) ?? a.name) }
+                            }
+                            .buttonStyle(ChipButtonStyle(prominent: perspective == a.id))
+                            .accessibilityIdentifier("perspective-\(a.id)")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func highlightsCard(_ h: SocialService.Highlights) -> some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            HStack { Text("THE MOMENT").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.accent); Spacer(); Button { showReplay = true } label: { Label("Replay", systemImage: "play.circle") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("replay") }
+            if let c = h.mostReacted {
+                Button { expanded = c } label: {
+                    HStack(spacing: MSpacing.m) {
+                        SocialImage(ref: c.media).frame(width: 72, height: 72).clipShape(RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Most reacted").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                            Text("\(c.authorName.split(separator: " ").first.map(String.init) ?? c.authorName)'s \(c.kind == .text ? "note" : "photo") · \(c.reactionCounts.values.reduce(0, +)) reactions").font(MFont.headline).foregroundStyle(MColor.textPrimary)
+                            Text(ReactionKind.allCases.filter { (c.reactionCounts[$0.rawValue] ?? 0) > 0 }.map(\.emoji).joined(separator: " ")).font(.title3)
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            HStack(spacing: MSpacing.s) {
+                if let hour = h.mostActiveHour { StatTile(value: hour.formatted(date: .omitted, time: .shortened), label: "busiest · \(h.mostActiveCount) added", symbol: "bolt") }
+                if let a = h.addedMost { StatTile(value: a.name == env.social.displayName ? "You" : String(a.name.split(separator: " ").first ?? ""), label: "added most · \(a.count)", symbol: "star") }
+            }
+        }
+        .momentCard()
+        .accessibilityIdentifier("highlights")
+    }
+
+    private func mergeCard(_ m: SocialMoment, _ other: SocialMoment) -> some View {
+        VStack(alignment: .leading, spacing: MSpacing.s) {
+            Text("Same event?").font(MFont.headline)
+            Text("\"\(other.title)\" is from the same day with the same people. Merge it into this Moment? Everyone's sides stay attributed.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            HStack(spacing: MSpacing.s) {
+                Button("Merge") { Task { if await env.social.merge(sourceID: other.id, into: m.id) { env.toast("Merged."); mergeCandidate = nil; Haptics.completed() } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("mergeMoments")
+                Button("Keep separate") { mergeCandidate = nil }.buttonStyle(ChipButtonStyle())
+            }
+        }
+        .momentCard()
+    }
+
+    private func timeline(_ m: SocialMoment) -> some View {
+        let all = env.social.allContributions(m.id).filter { perspective == nil || $0.authorID == perspective }
         let entries = MomentTimeline.build(all)
         return VStack(alignment: .leading, spacing: MSpacing.l) {
             if all.isEmpty {
@@ -274,6 +362,8 @@ struct MomentPageView: View {
             Menu {
                 Button("Share link", systemImage: "link") { Task { await shareLink(m) } }
                 Button("Share as a card", systemImage: "rectangle.portrait.on.rectangle.portrait") { showCard = true }
+                if isOwner || m.shareURL != nil { Button("Show QR to join", systemImage: "qrcode") { showQR = true } }
+                Button("Replay", systemImage: "play.circle") { showReplay = true }
                 if isMember { Button("Add to collection", systemImage: "folder.badge.plus") { showCollections = true } }
                 if isMember { Button(env.social.isFeatured(m.id) ? "Unpin from profile" : "Pin to profile", systemImage: env.social.isFeatured(m.id) ? "pin.slash" : "pin") { env.social.toggleFeatured(m.id); env.toast(env.social.isFeatured(m.id) ? "Pinned to your profile." : "Unpinned.") } }
                 if m.allowsReshare || isMember { Button("Export as video / images", systemImage: "square.and.arrow.up") { showExport = true } }

@@ -100,9 +100,15 @@ struct SocialProfileView: View {
                 }
             }
             if isMe {
-                HStack(spacing: MSpacing.s) {
-                    NavigationLink(value: SocialRoute.editProfile) { Label("Edit profile", systemImage: "pencil") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("editProfile")
-                    NavigationLink(value: SocialRoute.safety) { Label("Privacy & safety", systemImage: "shield") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("safetyLink")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: MSpacing.s) {
+                        NavigationLink(value: SocialRoute.editProfile) { Label("Edit profile", systemImage: "pencil") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("editProfile")
+                        NavigationLink(value: SocialRoute.groups) { Label("Groups", systemImage: "person.3") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("groupsLink")
+                        NavigationLink(value: SocialRoute.passport) { Label("Passport", systemImage: "book.closed") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("passportLink")
+                        NavigationLink(value: SocialRoute.map) { Label("Map", systemImage: "map") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("mapLink")
+                        NavigationLink(value: SocialRoute.timeMachine) { Label("Time Machine", systemImage: "clock.arrow.circlepath") }.buttonStyle(ChipButtonStyle())
+                        NavigationLink(value: SocialRoute.safety) { Label("Privacy & safety", systemImage: "shield") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("safetyLink")
+                    }
                 }
             }
         }
@@ -270,7 +276,37 @@ struct FriendshipPageView: View {
                     Text("You + \(user?.displayName ?? "")").displayStyle()
                     Text("\(shared.count) Moments · \(places.count) places · since \(shared.last.map { ($0.startAt ?? $0.createdAt).formatted(.dateTime.month(.wide).year()) } ?? "")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                 }
-                ForEach(shared) { m in NavigationLink(value: SocialRoute.moment(m.id)) { MomentFeedCard(moment: m) }.buttonStyle(PressScaleStyle()) }
+                HStack(spacing: MSpacing.s) {
+                    StatTile(value: "\(shared.count)", label: "Moments", symbol: "rectangle.stack")
+                    StatTile(value: "\(places.count)", label: "places", symbol: "mappin")
+                    StatTile(value: "\(shared.reduce(0) { $0 + $1.mediaCount })", label: "photos", symbol: "photo")
+                }
+                // OUR STORY: the chain, oldest first — first Moment together at the top.
+                VStack(alignment: .leading, spacing: MSpacing.s) {
+                    Text("OUR STORY").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                    ForEach(Array(shared.reversed().enumerated()), id: \.element.id) { i, m in
+                        HStack(alignment: .top, spacing: MSpacing.m) {
+                            VStack(spacing: 0) {
+                                Circle().fill(i == 0 ? MColor.accent : MColor.fill).frame(width: 10, height: 10)
+                                Rectangle().fill(MColor.separator).frame(width: 1).frame(maxHeight: .infinity)
+                            }
+                            NavigationLink(value: SocialRoute.moment(m.id)) {
+                                HStack(spacing: MSpacing.m) {
+                                    SocialImage(ref: m.coverRef).frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(i == 0 ? "First Moment together" : m.dateLabel).font(MFont.caption).foregroundStyle(i == 0 ? MColor.accent : MColor.textSecondary)
+                                        Text(m.title).font(MFont.headline).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                                        if let p = m.coarsePlace { Text(p).font(MFont.footnote).foregroundStyle(MColor.textSecondary) }
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.bottom, MSpacing.m)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
             .padding(MSpacing.l)
         }

@@ -29,6 +29,7 @@ actor InMemoryBackend: SocialBackend {
     var dms: [String: [DirectMessage]] = [:]
     var mediaBlobs: [String: Data] = [:]
     var collectionsByID: [String: MomentCollection] = [:]
+    var groupsByID: [String: SocialGroup] = [:]
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
     var offline = false
@@ -64,7 +65,9 @@ actor InMemoryBackend: SocialBackend {
         try gate()
         var cover: MediaRef? = nil
         if let data = draft.coverData { let id = "cover_\(UUID().uuidString)"; mediaBlobs[id] = data; cover = MediaRef(kind: .photo, localRef: nil, remoteID: id) }
-        let m = SocialMoment(id: "m_\(UUID().uuidString)", creatorID: me.id, creatorName: me.displayName, title: draft.title, description: draft.description, coverRef: cover, createdAt: .now, startAt: draft.startAt, endAt: draft.endAt, locationName: draft.locationName, coarsePlace: draft.coarsePlace, visibility: draft.visibility, memberIDs: [me.id], memberNames: [me.displayName], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: draft.isLive, templateID: draft.templateID, remixedFromID: draft.remixedFromID, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true)
+        var m = SocialMoment(id: "m_\(UUID().uuidString)", creatorID: me.id, creatorName: me.displayName, title: draft.title, description: draft.description, coverRef: cover, createdAt: .now, startAt: draft.startAt, endAt: draft.endAt, locationName: draft.locationName, coarsePlace: draft.coarsePlace, visibility: draft.visibility, memberIDs: [me.id], memberNames: [me.displayName], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: draft.isLive, templateID: draft.templateID, remixedFromID: draft.remixedFromID, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: draft.isTeaser)
+        for id in draft.initialMemberIDs where !m.memberIDs.contains(id) { if let u = users[id] { m.memberIDs.append(id); m.memberNames.append(u.displayName) } }
+        m.shareURL = URL(string: "https://www.icloud.com/share/\(m.id)")
         moments[m.id] = m
         me.momentCount += 1; users[me.id] = me
         return m
@@ -75,6 +78,7 @@ actor InMemoryBackend: SocialBackend {
         existing.title = moment.title; existing.description = moment.description; existing.visibility = moment.visibility
         existing.locationName = moment.locationName; existing.coarsePlace = moment.coarsePlace; existing.isLive = moment.isLive
         existing.allowsReshare = moment.allowsReshare; existing.allowsDownload = moment.allowsDownload; existing.allowsContributions = moment.allowsContributions
+        existing.isTeaser = moment.isTeaser
         moments[moment.id] = existing
         return existing
     }
@@ -161,6 +165,28 @@ actor InMemoryBackend: SocialBackend {
         moments[id] = m
     }
 
+    func join(momentID: String) async throws -> SocialMoment {
+        try gate(); guard var m = moments[momentID] else { throw SocialError.notFound }
+        guard canSee(m), m.allowsContributions else { throw SocialError.notAllowed }
+        if !m.memberIDs.contains(me.id) { m.memberIDs.append(me.id); m.memberNames.append(me.displayName); moments[momentID] = m }
+        activityItems.insert(ActivityItem(id: "act_\(UUID().uuidString)", kind: .joined, actorName: me.displayName, momentID: m.id, momentTitle: m.title, text: "\(me.displayName) joined \(m.title)", createdAt: .now, read: false), at: 0)
+        return m
+    }
+
+    func merge(sourceID: String, into targetID: String) async throws -> SocialMoment {
+        try gate(); guard let src = moments[sourceID], var dst = moments[targetID] else { throw SocialError.notFound }
+        guard src.creatorID == me.id, dst.creatorID == me.id else { throw SocialError.notAllowed }
+        let moved = (contributions[sourceID] ?? []).map { var c = $0; c.momentID = targetID; return c }
+        contributions[targetID, default: []].append(contentsOf: moved)
+        comments[targetID, default: []].append(contentsOf: (comments[sourceID] ?? []).map { var c = $0; c.momentID = targetID; return c })
+        for (id, name) in zip(src.memberIDs, src.memberNames) where !dst.memberIDs.contains(id) { dst.memberIDs.append(id); dst.memberNames.append(name) }
+        dst.contributionCount += src.contributionCount; dst.mediaCount += src.mediaCount; dst.commentCount += src.commentCount
+        if let s = src.startAt, let d = dst.startAt, s < d { dst.startAt = s }
+        moments[targetID] = dst
+        moments[sourceID] = nil; contributions[sourceID] = nil; comments[sourceID] = nil; reactions[sourceID] = nil
+        return dst
+    }
+
     func setCover(momentID: String, data: Data) async throws -> SocialMoment {
         try gate(); guard var m = moments[momentID] else { throw SocialError.notFound }
         guard m.creatorID == me.id else { throw SocialError.notAllowed }
@@ -239,6 +265,12 @@ actor InMemoryBackend: SocialBackend {
         return nows.filter { !$0.isExpired && visible.contains($0.authorID) && !muted.contains($0.authorID) }
     }
     func deleteNow(id: String) async throws { try gate(); nows.removeAll { $0.id == id && $0.authorID == me.id } }
+    func joinNow(id: String) async throws -> NowPost {
+        try gate(); guard let i = nows.firstIndex(where: { $0.id == id }) else { throw SocialError.notFound }
+        guard !blocked.contains(nows[i].authorID) else { throw SocialError.blocked }
+        if !nows[i].joinerIDs.contains(me.id) { nows[i].joinerIDs.append(me.id); nows[i].joinerNames.append(me.displayName) }
+        return nows[i]
+    }
 
     // MARK: Graph & safety
     func follow(userID: String, close: Bool) async throws {
@@ -285,6 +317,26 @@ actor InMemoryBackend: SocialBackend {
         if safety.whoCanMessage == .nobody { throw SocialError.notAllowed }
         let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: [me.id, userID], participantNames: [me.displayName, u.displayName], lastMessage: "", updatedAt: .now)
         convos.append(c); return c
+    }
+
+    // MARK: Groups
+    func groups() async throws -> [SocialGroup] { try gate(); return groupsByID.values.filter { $0.memberIDs.contains(me.id) }.sorted { $0.createdAt < $1.createdAt } }
+    func saveGroup(_ g: SocialGroup) async throws -> SocialGroup {
+        try gate(); var out = g
+        if groupsByID[g.id] == nil { out.ownerID = me.id }
+        guard out.ownerID == me.id || out.memberIDs.contains(me.id) else { throw SocialError.notAllowed }
+        if !out.memberIDs.contains(out.ownerID) { out.memberIDs.insert(out.ownerID, at: 0); out.memberNames.insert(users[out.ownerID]?.displayName ?? "", at: 0) }
+        if out.conversationID == nil {
+            let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: out.memberIDs, participantNames: out.memberNames, lastMessage: "", updatedAt: .now)
+            convos.append(c); out.conversationID = c.id
+        } else if let ci = convos.firstIndex(where: { $0.id == out.conversationID }) { convos[ci].participantIDs = out.memberIDs; convos[ci].participantNames = out.memberNames }
+        groupsByID[g.id] = out; return out
+    }
+    func leaveGroup(id: String) async throws {
+        try gate(); guard var g = groupsByID[id] else { throw SocialError.notFound }
+        if g.ownerID == me.id { groupsByID[id] = nil; return }
+        if let i = g.memberIDs.firstIndex(of: me.id) { g.memberIDs.remove(at: i); if i < g.memberNames.count { g.memberNames.remove(at: i) } }
+        groupsByID[id] = g
     }
 
     // MARK: Collections
@@ -366,8 +418,10 @@ actor InMemoryBackend: SocialBackend {
         moments["m_goa"]!.commentCount = 2
         nows = [
             NowPost(id: "n1", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Chai run. Who's up", media: nil, createdAt: .now.addingTimeInterval(-1800), expiresAt: .now.addingTimeInterval(22 * 3600), coarsePlace: "Bandra", savedToMomentID: nil),
-            NowPost(id: "n2", authorID: "u_sarah", authorName: "Sarah Kim", text: "Finally trying that ramen place", media: nil, createdAt: .now.addingTimeInterval(-5400), expiresAt: .now.addingTimeInterval(18 * 3600), coarsePlace: "Lower Parel", savedToMomentID: nil)
+            NowPost(id: "n2", authorID: "u_sarah", authorName: "Sarah Kim", text: "Finally trying that ramen place", media: nil, createdAt: .now.addingTimeInterval(-5400), expiresAt: .now.addingTimeInterval(18 * 3600), coarsePlace: "Lower Parel", savedToMomentID: nil),
+            NowPost(id: "n3", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Anyone out?", media: nil, createdAt: .now.addingTimeInterval(-600), expiresAt: .now.addingTimeInterval(4 * 3600), coarsePlace: "Bandra", savedToMomentID: nil, activity: .drinks, joinerIDs: ["u_sarah"], joinerNames: ["Sarah Kim"])
         ]
+        groupsByID["g_boys"] = SocialGroup(id: "g_boys", ownerID: me.id, name: "The Goa crew", emoji: "🏖️", memberIDs: [me.id, "u_rahul", "u_sarah"], memberNames: [me.displayName, "Rahul Mehta", "Sarah Kim"], conversationID: nil, createdAt: .now.adding(days: -100))
         activityItems = [
             ActivityItem(id: "a1", kind: .contribution, actorName: "Rahul Mehta", momentID: "m_bday", momentTitle: "Sarah's 30th", text: "Rahul added 3 photos to Sarah's 30th", createdAt: .now.addingTimeInterval(-3600), read: false),
             ActivityItem(id: "a2", kind: .reaction, actorName: "Sarah Kim", momentID: "m_goa", momentTitle: "Goa '26", text: "Sarah reacted ❤️ to Goa '26", createdAt: .now.addingTimeInterval(-7200), read: false),

@@ -83,6 +83,8 @@ struct SocialMoment: Codable, Sendable, Equatable, Identifiable, Hashable {
     var allowsReshare: Bool
     var allowsDownload: Bool
     var allowsContributions: Bool
+    /// "You had to be there": shown blurred until the viewer taps Reveal. Playful, opt-in.
+    var isTeaser: Bool = false
 
     var isGroup: Bool { memberIDs.count > 1 }
     var dateLabel: String {
@@ -142,6 +144,17 @@ enum ReactionKind: String, Codable, CaseIterable, Sendable {
 
 /// NOW: what's happening right now. Gone in 24 hours unless saved to a Moment.
 struct NowPost: Codable, Sendable, Equatable, Identifiable, Hashable {
+    /// What you're up to — "Anyone up?" presets. `none` is a plain post.
+    enum Activity: String, Codable, CaseIterable, Sendable {
+        case none, drinks, food, drive, coffee, gym, party, shopping, beach, movie, exploring, chilling
+        var emoji: String {
+            switch self { case .none: ""; case .drinks: "🍸"; case .food: "🍜"; case .drive: "🚗"; case .coffee: "☕️"; case .gym: "🏋️"; case .party: "🎉"; case .shopping: "🛍️"; case .beach: "🏖️"; case .movie: "🎬"; case .exploring: "🧭"; case .chilling: "🛋️" }
+        }
+        var label: String { self == .none ? "Just a post" : rawValue.capitalizedFirst }
+        var line: String {
+            switch self { case .none: ""; case .drinks: "is out for drinks"; case .food: "is looking for food"; case .drive: "is on a drive"; case .coffee: "wants coffee"; case .gym: "is at the gym"; case .party: "is at a party"; case .shopping: "is shopping"; case .beach: "is at the beach"; case .movie: "is watching a movie"; case .exploring: "is exploring"; case .chilling: "is chilling" }
+        }
+    }
     var id: String
     var authorID: String
     var authorName: String
@@ -151,7 +164,24 @@ struct NowPost: Codable, Sendable, Equatable, Identifiable, Hashable {
     var expiresAt: Date
     var coarsePlace: String?
     var savedToMomentID: String?
+    var activity: Activity = .none
+    /// People who tapped JOIN (ids) — the spontaneous-meetup mechanic.
+    var joinerIDs: [String] = []
+    var joinerNames: [String] = []
     var isExpired: Bool { expiresAt < .now }
+    var isStatus: Bool { activity != .none }
+}
+
+/// A permanent group: the boys, family, work, travel crew. Has its own Moments, NOW and chat.
+struct SocialGroup: Codable, Sendable, Equatable, Identifiable, Hashable {
+    var id: String
+    var ownerID: String
+    var name: String
+    var emoji: String
+    var memberIDs: [String]
+    var memberNames: [String]
+    var conversationID: String?
+    var createdAt: Date
 }
 
 struct Follow: Codable, Sendable, Equatable, Hashable {

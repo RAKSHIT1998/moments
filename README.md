@@ -24,6 +24,14 @@ Moment/Features/Social/   Home (NOW strip + feed), Moment page (timeline of side
                           onboarding, "Add to a Moment" from the share sheet
 ```
 
+What's built on top of that contract (all real data, nothing generated):
+- **Moment Together / live rooms** — start a live Moment, friends see it under *Happening now* and tap **JOIN**; members get a camera shortcut to add as it happens.
+- **I WAS THERE / ADD YOUR SIDE** — explicit participation only; every contribution stays owned by its author (remove any time).
+- **Perspectives** — Everyone / one person, same night from each side. **Timeline** by real capture time. **THE MOMENT** highlights (most reacted, busiest hour, who added most) and **Replay** (cinematic auto-advancing timeline with joins).
+- **NOW + Anyone up?** — status presets (drinks, food, drive…), JOIN, and *Make it a Moment* which creates a live Moment with everyone who joined.
+- **Groups** (own Moments, NOW, chat), **Collections**, **Time Machine** (1/2/3… years ago today), **Moment Map** (city-level pins, geocoded on device), **Passport**, **Year in Moments**, **You + X / Our story** chains.
+- **Moment QR** (scan to join with the system scanner), **Moment Card** image share, **Mystery Moments** (blurred until Reveal), **Merge** suggestions for same-day overlapping Moments, pinned Moments, @mentions.
+
 Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the app uses `CloudKitBackend` with container `iCloud.com.rakshitbargotra.moment`. Nothing social is faked with local-only data in Release: if iCloud is unavailable the UI says so and keeps private Moments working.
 
 ## Requirements

@@ -134,6 +134,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["allowsReshare"] = 1
         record["allowsDownload"] = 1
         record["allowsContributions"] = 1
+        record["isTeaser"] = draft.isTeaser ? 1 : 0
         if let cover = draft.coverData, let url = try? Self.tempFile(cover, ext: "jpg") { record["cover"] = CKAsset(fileURL: url) }
         let saved = try await save(record, in: privateDB)
         let moment = try await moment(from: saved)
@@ -152,6 +153,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["allowsReshare"] = moment.allowsReshare ? 1 : 0
         record["allowsDownload"] = moment.allowsDownload ? 1 : 0
         record["allowsContributions"] = moment.allowsContributions ? 1 : 0
+        record["isTeaser"] = moment.isTeaser ? 1 : 0
         let saved = try await save(record, in: db)
         let updated = try await self.moment(from: saved)
         if moment.visibility == .publicAll { try await mirrorPublic(updated, record: saved) } else { _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: "public_\(moment.id)")) }
@@ -310,6 +312,46 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         do { try await sharedDB.deleteRecord(withID: shareRef.recordID) } catch { throw map(error) }
     }
 
+    /// Joining without an invite only works for public Moments (the public mirror is world-writable
+    /// once the "Authenticated" role has write access in the CloudKit Dashboard). Private/friends
+    /// Moments need a share link — CloudKit enforces that server-side.
+    func join(momentID: String) async throws -> SocialMoment {
+        let (record, db) = try await momentRecord(id: momentID)
+        let me = try await currentUser()
+        guard db === publicDB || db === sharedDB else { return try await moment(from: record) }
+        var members = record["memberIDs"] as? [String] ?? []
+        if !members.contains(me.id) {
+            members.append(me.id); record["memberIDs"] = members
+            record["memberNames"] = (record["memberNames"] as? [String] ?? []) + [me.displayName]
+            _ = try await save(record, in: db)
+        }
+        return try await moment(from: record)
+    }
+
+    func merge(sourceID: String, into targetID: String) async throws -> SocialMoment {
+        let (src, sdb) = try await momentRecord(id: sourceID)
+        let (dst, ddb) = try await momentRecord(id: targetID)
+        guard sdb === privateDB, ddb === privateDB else { throw SocialError.notAllowed }
+        // Re-point children: CloudKit records can't change zone/parent in place, so copy then delete.
+        let q = CKQuery(recordType: "Contribution", predicate: NSPredicate(format: "momentRef == %@", CKRecord.Reference(recordID: src.recordID, action: .deleteSelf)))
+        let children = try await query(q, in: privateDB, zone: src.recordID.zoneID, limit: 500)
+        var copies: [CKRecord] = []
+        for c in children {
+            let copy = CKRecord(recordType: "Contribution", recordID: CKRecord.ID(recordName: c.recordID.recordName + "-m", zoneID: dst.recordID.zoneID))
+            for key in c.allKeys() where key != "momentRef" { copy[key] = c[key] }
+            copy["momentRef"] = CKRecord.Reference(recordID: dst.recordID, action: .deleteSelf)
+            copy.parent = CKRecord.Reference(recordID: dst.recordID, action: .none)
+            copies.append(copy)
+        }
+        dst["contributionCount"] = (dst["contributionCount"] as? Int ?? 0) + (src["contributionCount"] as? Int ?? 0)
+        dst["mediaCount"] = (dst["mediaCount"] as? Int ?? 0) + (src["mediaCount"] as? Int ?? 0)
+        var members = dst["memberIDs"] as? [String] ?? [], names = dst["memberNames"] as? [String] ?? []
+        for (id, n) in zip(src["memberIDs"] as? [String] ?? [], src["memberNames"] as? [String] ?? []) where !members.contains(id) { members.append(id); names.append(n) }
+        dst["memberIDs"] = members; dst["memberNames"] = names
+        do { _ = try await privateDB.modifyRecords(saving: copies + [dst], deleting: [src.recordID]) } catch { throw map(error) }
+        return try await moment(from: dst)
+    }
+
     func setCover(momentID: String, data: Data) async throws -> SocialMoment {
         let (record, db) = try await momentRecord(id: momentID)
         guard db === privateDB else { throw SocialError.notAllowed }
@@ -446,10 +488,20 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["text"] = post.text
         record["expiresAt"] = post.expiresAt
         record["coarsePlace"] = post.coarsePlace
+        record["activity"] = post.activity.rawValue
+        record["joinerIDs"] = post.joinerIDs; record["joinerNames"] = post.joinerNames
         if let mediaData, let url = try? Self.tempFile(mediaData, ext: "jpg") { record["media"] = CKAsset(fileURL: url) }
         let saved = try await save(record, in: publicDB)
         var out = post; out.id = saved.recordID.recordName
         return out
+    }
+
+    func joinNow(id: String) async throws -> NowPost {
+        let me = try await currentUser()
+        guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: id)) else { throw SocialError.notFound }
+        var ids = r["joinerIDs"] as? [String] ?? [], names = r["joinerNames"] as? [String] ?? []
+        if !ids.contains(me.id) { ids.append(me.id); names.append(me.displayName); r["joinerIDs"] = ids; r["joinerNames"] = names; _ = try await save(r, in: publicDB) }
+        return NowPost(id: id, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: nil, createdAt: r.creationDate ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, coarsePlace: r["coarsePlace"] as? String, savedToMomentID: nil, activity: NowPost.Activity(rawValue: r["activity"] as? String ?? "") ?? .none, joinerIDs: ids, joinerNames: names)
     }
 
     func nowFeed() async throws -> [NowPost] {
@@ -462,7 +514,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         for r in try await query(q, in: publicDB, limit: 100) {
             var ref: MediaRef? = nil
             if let asset = r["media"] as? CKAsset, let url = asset.fileURL, let data = try? Data(contentsOf: url), let local = try? await media.store(data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: r.recordID.recordName) }
-            out.append(NowPost(id: r.recordID.recordName, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: ref, createdAt: r.creationDate ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, coarsePlace: r["coarsePlace"] as? String, savedToMomentID: nil))
+            out.append(NowPost(id: r.recordID.recordName, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: ref, createdAt: r.creationDate ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, coarsePlace: r["coarsePlace"] as? String, savedToMomentID: nil, activity: NowPost.Activity(rawValue: r["activity"] as? String ?? "") ?? .none, joinerIDs: r["joinerIDs"] as? [String] ?? [], joinerNames: r["joinerNames"] as? [String] ?? []))
         }
         return out
     }
@@ -626,6 +678,62 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         return Conversation(id: r.recordID.recordName, participantIDs: [me.id, userID], participantNames: [me.displayName, other.displayName], lastMessage: "", updatedAt: .now)
     }
 
+    // MARK: - Groups (a shared record in the owner's zone; members get it in their shared DB)
+
+    func groups() async throws -> [SocialGroup] {
+        try await ensureZone()
+        var out: [SocialGroup] = []
+        let q = CKQuery(recordType: "Group", predicate: NSPredicate(value: true))
+        for db in [privateDB, sharedDB] {
+            let zones: [CKRecordZone.ID] = db === privateDB ? [zoneID] : ((try? await sharedDB.allRecordZones().map(\.zoneID)) ?? [])
+            for z in zones {
+                for r in (try? await query(q, in: db, zone: z, limit: 100)) ?? [] {
+                    out.append(SocialGroup(id: r.recordID.recordName, ownerID: r["ownerID"] as? String ?? "", name: r["name"] as? String ?? "", emoji: r["emoji"] as? String ?? "👥", memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], conversationID: r["conversationID"] as? String, createdAt: r.creationDate ?? .now))
+                }
+            }
+        }
+        return out.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func saveGroup(_ g: SocialGroup) async throws -> SocialGroup {
+        try await ensureZone()
+        let me = try await currentUser()
+        let (existing, db) = (try? await anyRecord(name: g.id, type: "Group")) ?? (CKRecord(recordType: "Group", recordID: CKRecord.ID(recordName: g.id, zoneID: zoneID)), privateDB)
+        var out = g
+        if existing["ownerID"] == nil { out.ownerID = me.id }
+        if !out.memberIDs.contains(out.ownerID) { out.memberIDs.insert(out.ownerID, at: 0); out.memberNames.insert(me.displayName, at: 0) }
+        existing["ownerID"] = out.ownerID; existing["name"] = out.name; existing["emoji"] = out.emoji
+        existing["memberIDs"] = out.memberIDs; existing["memberNames"] = out.memberNames
+        if out.conversationID == nil, out.ownerID == me.id {
+            // Group chat: one Conversation record shared to the same people.
+            let conv = CKRecord(recordType: "Conversation", recordID: CKRecord.ID(recordName: "conv_\(UUID().uuidString)", zoneID: zoneID))
+            conv["participantIDs"] = out.memberIDs; conv["participantNames"] = out.memberNames; conv["lastMessage"] = ""
+            let share = CKShare(rootRecord: conv); share.publicPermission = .none
+            for uid in out.memberIDs where uid != me.id { if let p = try? await container.shareParticipant(forUserRecordID: CKRecord.ID(recordName: uid)) { p.permission = .readWrite; share.addParticipant(p) } }
+            do { _ = try await privateDB.modifyRecords(saving: [conv, share], deleting: []) } catch { throw map(error) }
+            out.conversationID = conv.recordID.recordName
+        }
+        existing["conversationID"] = out.conversationID
+        if db === privateDB, out.ownerID == me.id {
+            let share: CKShare
+            if let ref = existing.share, let sh = try? await privateDB.record(for: ref.recordID) as? CKShare { share = sh } else { share = CKShare(rootRecord: existing); share.publicPermission = .none }
+            for uid in out.memberIDs where uid != me.id && !share.participants.contains(where: { $0.userIdentity.userRecordID?.recordName == uid }) {
+                if let p = try? await container.shareParticipant(forUserRecordID: CKRecord.ID(recordName: uid)) { p.permission = .readWrite; share.addParticipant(p) }
+            }
+            do { _ = try await privateDB.modifyRecords(saving: [existing, share], deleting: []) } catch { throw map(error) }
+        } else {
+            _ = try await save(existing, in: db)
+        }
+        return out
+    }
+
+    func leaveGroup(id: String) async throws {
+        let (record, db) = try await anyRecord(name: id, type: "Group")
+        if db === privateDB { do { try await privateDB.deleteRecord(withID: record.recordID) } catch { throw map(error) }; return }
+        guard let ref = record.share else { throw SocialError.notAllowed }
+        do { try await sharedDB.deleteRecord(withID: ref.recordID) } catch { throw map(error) }
+    }
+
     // MARK: - Collections (private DB, default zone)
 
     func collections() async throws -> [MomentCollection] {
@@ -744,7 +852,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
             else if let share = try? await (r.recordID.zoneID.ownerName == CKCurrentUserDefaultName ? privateDB : sharedDB).record(for: shareRef.recordID) as? CKShare { shareURL = share.url; shareURLCache[shareRef.recordID.recordName] = share.url }
         }
         let id = (r["sourceID"] as? String) ?? r.recordID.recordName
-        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1)
+        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1)
     }
 
     static func contribution(from r: CKRecord, media: MediaStore) async throws -> Contribution {

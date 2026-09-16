@@ -56,6 +56,13 @@ extension View {
             case .myMemories: PrivateMemoryHubView()
             case .collections: CollectionsView()
             case .collection(let id): CollectionDetailView(collectionID: id)
+            case .timeMachine: TimeMachineView()
+            case .groups: GroupsView()
+            case .group(let id): GroupDetailView(groupID: id)
+            case .newMomentForGroup(let id): NewMomentView(groupID: id)
+            case .map: MomentMapView()
+            case .passport: PassportView()
+            case .scan: QRScannerView()
             }
         }
     }

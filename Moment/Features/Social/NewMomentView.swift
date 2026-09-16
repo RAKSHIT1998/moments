@@ -7,6 +7,7 @@ struct NewMomentView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     var initial: SocialService.NewMomentInput? = nil
+    var groupID: String? = nil
     var onCreated: ((SocialMoment) -> Void)? = nil
 
     @State private var title = ""
@@ -14,6 +15,7 @@ struct NewMomentView: View {
     @State private var place = ""
     @State private var visibility: MomentVisibility = .group
     @State private var isLive = false
+    @State private var isTeaser = false
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var photos: [PhotoPick] = []
     @State private var videoURLs: [URL] = []
@@ -90,6 +92,13 @@ struct NewMomentView: View {
                 }
                 .tint(MColor.accent)
                 .accessibilityIdentifier("liveToggle")
+                Toggle(isOn: $isTeaser) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Mystery Moment").font(MFont.headline)
+                        Text("Others see it blurred — \"You had to be there\" — until they tap Reveal.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    }
+                }
+                .tint(MColor.accent)
                 Button {
                     Task { await create() }
                 } label: {
@@ -109,6 +118,11 @@ struct NewMomentView: View {
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             if let initial, title.isEmpty { title = initial.title; description = initial.description; visibility = initial.visibility }
+            if let groupID, let g = env.social.groups.first(where: { $0.id == groupID }), people.isEmpty {
+                // A group Moment: everyone in the group is invited from the start.
+                for (id, name) in zip(g.memberIDs, g.memberNames) where id != env.social.myID { people.append(SocialUser(id: id, displayName: name, handle: "", bio: "", avatarRef: nil, isPrivateAccount: false, momentCount: 0, sharedCount: 0, placeCount: 0, peopleCount: 0, createdAt: .now)) }
+                if title.isEmpty { title = "" }
+            }
             if photos.isEmpty && initial == nil { titleFocused = true }
         }
         .onChange(of: pickerItems) { _, items in Task { await load(items) } }
@@ -203,7 +217,7 @@ struct NewMomentView: View {
         creating = true
         defer { creating = false }
         var input = initial ?? SocialService.NewMomentInput(title: title)
-        input.title = title; input.description = description; input.visibility = visibility; input.isLive = isLive
+        input.title = title; input.description = description; input.visibility = visibility; input.isLive = isLive; input.isTeaser = isTeaser
         input.locationName = place.isBlank ? nil : place.trimmed
         input.photos = photos.map(\.data); input.videoURLs = videoURLs
         guard let m = await env.social.createMoment(input) else { return }

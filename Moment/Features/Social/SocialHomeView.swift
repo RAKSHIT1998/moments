@@ -6,6 +6,8 @@ import PhotosUI
 struct SocialHomeView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var showNowComposer = false
+    @State private var showAnyoneUp = false
+    @State private var showScanner = false
     @State private var selectedNow: NowPost?
 
     var body: some View {
@@ -15,19 +17,20 @@ struct SocialHomeView: View {
                     AccountBanner()
                     UploadBanner()
                     nowStrip
-                    if let oneYear = env.social.onThisDay.first { onThisDayCard(oneYear) }
+                    AnyoneUpSection(showComposer: $showAnyoneUp)
+                    liveSection
+                    if let tm = env.social.timeMachine.first, let m = tm.moments.first { TimeMachineCard(yearsAgo: tm.yearsAgo, moment: m) }
                     if env.social.feed.isEmpty && !env.social.hasLoadedOnce && env.social.accountStatus != .noAccount {
                         SkeletonFeedCard(); SkeletonFeedCard()
                     } else if env.social.feed.isEmpty && !env.social.isLoadingFeed {
                         emptyFeed
                     }
-                    ForEach(env.social.feed, id: \.moment.id) { scored in
-                        NavigationLink(value: SocialRoute.moment(scored.moment.id)) {
-                            MomentFeedCard(moment: scored.moment, reason: scored.reason)
-                        }
-                        .buttonStyle(PressScaleStyle())
-                        .onAppear { env.social.markSeen(scored.moment.id) }
-                    }
+                    let mine = env.social.feed.filter { $0.moment.memberIDs.contains(env.social.myID) && !$0.moment.isLive }
+                    let friends = env.social.feed.filter { !$0.moment.memberIDs.contains(env.social.myID) && !$0.moment.isLive }
+                    if !mine.isEmpty { sectionHeader("YOUR MOMENTS", "Experiences you were part of") }
+                    ForEach(mine, id: \.moment.id) { scored in feedRow(scored) }
+                    if !friends.isEmpty { sectionHeader("FRIENDS & DISCOVER", "Where your people were") }
+                    ForEach(friends, id: \.moment.id) { scored in feedRow(scored) }
                 }
                 .padding(.horizontal, MSpacing.l)
                 .padding(.bottom, 96)
@@ -35,6 +38,9 @@ struct SocialHomeView: View {
             .background(MColor.background)
             .navigationTitle("Moments")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder") }.accessibilityLabel("Scan a Moment QR").accessibilityIdentifier("scanQR")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(value: SocialRoute.newMoment) { Image(systemName: "plus.circle.fill").font(.title3) }
                         .accessibilityLabel("New Moment").accessibilityIdentifier("newMoment")
@@ -43,6 +49,8 @@ struct SocialHomeView: View {
             .refreshable { await env.social.refreshAll() }
             .socialDestinations()
             .sheet(isPresented: $showNowComposer) { NowComposerView() }
+            .sheet(isPresented: $showAnyoneUp) { AnyoneUpComposer() }
+            .sheet(isPresented: $showScanner) { QRScannerView() }
             .fullScreenCover(item: $selectedNow) { post in NowViewerView(post: post) }
         }
         .modifier(SocialErrorAlert())
@@ -83,6 +91,54 @@ struct SocialHomeView: View {
                 }
                 .padding(.vertical, 4)
             }
+        }
+    }
+
+    private func feedRow(_ scored: FeedRanker.Scored) -> some View {
+        NavigationLink(value: SocialRoute.moment(scored.moment.id)) {
+            MomentFeedCard(moment: scored.moment, reason: scored.reason)
+        }
+        .buttonStyle(PressScaleStyle())
+        .onAppear { env.social.markSeen(scored.moment.id) }
+    }
+
+    private func sectionHeader(_ title: String, _ sub: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+            Text(sub).font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+        }
+        .padding(.top, MSpacing.s)
+    }
+
+    /// Moments happening right now that you can join — the "Moment Together" entry point.
+    @ViewBuilder private var liveSection: some View {
+        let live = env.social.feed.map(\.moment).filter(\.isLive)
+        if !live.isEmpty {
+            VStack(alignment: .leading, spacing: MSpacing.s) {
+                HStack(spacing: 6) {
+                    Circle().fill(MColor.danger).frame(width: 8, height: 8)
+                    Text("HAPPENING NOW").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                }
+                ForEach(live) { m in
+                    HStack(spacing: MSpacing.m) {
+                        SocialImage(ref: m.coverRef).frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(m.title).font(MFont.headline).lineLimit(1)
+                            Text("\(m.creatorName.split(separator: " ").first.map(String.init) ?? m.creatorName) started it · \(m.memberIDs.count) in · \(m.contributionCount) added").font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
+                        }
+                        Spacer()
+                        if m.memberIDs.contains(env.social.myID) {
+                            NavigationLink(value: SocialRoute.addSide(m.id)) { Text("ADD") }.buttonStyle(ChipButtonStyle(prominent: true))
+                        } else {
+                            Button("JOIN") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("joinLive-\(m.id)")
+                        }
+                    }
+                    .momentCard(padding: MSpacing.m)
+                    .overlay(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous).strokeBorder(MColor.danger.opacity(0.25), lineWidth: 1))
+                    .onTapGesture { env.social.pendingMomentID = m.id }
+                }
+            }
+            .accessibilityIdentifier("liveSection")
         }
     }
 
@@ -133,6 +189,13 @@ enum SocialRoute: Hashable {
     case myMemories
     case collections
     case collection(String)
+    case timeMachine
+    case groups
+    case group(String)
+    case newMomentForGroup(String)
+    case map
+    case passport
+    case scan
 }
 
 extension View {

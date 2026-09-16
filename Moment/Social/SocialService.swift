@@ -40,6 +40,7 @@ final class SocialService {
     private(set) var muted: Set<String> = []
     private(set) var safety = SafetySettings()
     private(set) var collections: [MomentCollection] = []
+    private(set) var groups: [SocialGroup] = []
     private(set) var hasLoadedOnce = false
     private var imageCache: [String: UIImage] = [:]
     private var lastContributionCounts: [String: Int] = [:]
@@ -93,7 +94,8 @@ final class SocialService {
         async let i: () = refreshInbox()
         async let s: () = refreshSafety()
         async let c: () = refreshCollections()
-        _ = await (f, n, i, s, c)
+        async let g: () = refreshGroups()
+        _ = await (f, n, i, s, c, g)
         hasLoadedOnce = true
     }
 
@@ -252,6 +254,8 @@ final class SocialService {
         var templateID: String? = nil
         var remixedFromID: String? = nil
         var isLive = false
+        var isTeaser = false
+        var initialMemberIDs: [String] = []
         var photos: [Data] = []
         var videoURLs: [URL] = []
         var note: String = ""
@@ -263,9 +267,11 @@ final class SocialService {
         guard let me else { lastError = SocialError.notSignedIn.localizedDescription; return nil }
         let prepared = input.photos.compactMap(MediaPipeline.preparePhoto)
         let dates = prepared.compactMap(\.capturedAt).sorted()
-        let draft = MomentDraft(title: input.title.isBlank ? "Untitled Moment" : input.title.trimmed, description: input.description.trimmed, startAt: input.startAt ?? dates.first, endAt: input.endAt ?? (dates.count > 1 ? dates.last : nil), locationName: input.locationName, coarsePlace: input.locationName.map(Self.coarse), visibility: input.visibility, templateID: input.templateID, remixedFromID: input.remixedFromID, isLive: input.isLive, coverData: prepared.first.flatMap { MediaPipeline.thumbnail($0.data, side: 1080) })
+        let draft = MomentDraft(title: input.title.isBlank ? "Untitled Moment" : input.title.trimmed, description: input.description.trimmed, startAt: input.startAt ?? dates.first, endAt: input.endAt ?? (dates.count > 1 ? dates.last : nil), locationName: input.locationName, coarsePlace: input.locationName.map(Self.coarse), visibility: input.visibility, templateID: input.templateID, remixedFromID: input.remixedFromID, isLive: input.isLive, coverData: prepared.first.flatMap { MediaPipeline.thumbnail($0.data, side: 1080) }, isTeaser: input.isTeaser, initialMemberIDs: input.initialMemberIDs)
         do {
-            let m = try await backend.createMoment(draft)
+            var m = try await backend.createMoment(draft)
+            // CloudKit adds people through the share; the in-memory backend already did it in create.
+            if !input.initialMemberIDs.isEmpty, backend is CloudKitBackend { _ = try? await backend.share(momentID: m.id, with: input.initialMemberIDs); m = (try? await backend.moment(id: m.id)) ?? m }
             moments[m.id] = m
             if analytics.count(.momentCreated) == 0 { analytics.track(.firstMomentCreated) }
             analytics.track(.momentCreated, category: input.visibility.rawValue)
@@ -298,6 +304,110 @@ final class SocialService {
             let c = Contribution(id: UUID().uuidString, momentID: momentID, authorID: author.id, authorName: author.displayName, kind: .text, media: nil, caption: note.trimmed, createdAt: .now, originalTimestamp: nil, reactionCounts: [:], commentCount: 0, uploadState: .pending)
             queue.enqueue(.contribution(c))
         }
+    }
+
+    /// "I WAS THERE" on a Moment you can see but weren't invited to.
+    func join(momentID: String) async -> Bool {
+        do {
+            let m = try await backend.join(momentID: momentID); moments[momentID] = m
+            analytics.track(.momentJoined); Haptics.completed()
+            await refreshFeed()
+            return true
+        } catch { lastError = error.localizedDescription; return false }
+    }
+
+    /// Two of your Moments that look like the same event: same day, overlapping people.
+    func mergeCandidates(for momentID: String) -> [SocialMoment] {
+        guard let m = moments[momentID], m.creatorID == myID else { return [] }
+        let day = m.startAt ?? m.createdAt
+        return moments.values.filter { o in
+            o.id != m.id && o.creatorID == myID && Calendar.current.isDate(o.startAt ?? o.createdAt, inSameDayAs: day) && !Set(o.memberIDs).intersection(m.memberIDs).subtracting([myID]).isEmpty
+        }
+    }
+
+    func merge(sourceID: String, into targetID: String) async -> Bool {
+        do {
+            let m = try await backend.merge(sourceID: sourceID, into: targetID)
+            moments[sourceID] = nil; contributions[sourceID] = nil
+            moments[targetID] = m
+            await loadMoment(targetID); await refreshFeed()
+            return true
+        } catch { lastError = error.localizedDescription; return false }
+    }
+
+    // MARK: - Groups
+
+    func refreshGroups() async { groups = (try? await backend.groups()) ?? [] }
+
+    @discardableResult
+    func createGroup(name: String, emoji: String, members: [SocialUser]) async -> SocialGroup? {
+        guard let me else { return nil }
+        let g = SocialGroup(id: "grp_\(UUID().uuidString)", ownerID: me.id, name: name.trimmed, emoji: emoji, memberIDs: [me.id] + members.map(\.id), memberNames: [me.displayName] + members.map(\.displayName), conversationID: nil, createdAt: .now)
+        do { let saved = try await backend.saveGroup(g); groups.append(saved); await refreshInbox(); return saved } catch { lastError = error.localizedDescription; return nil }
+    }
+
+    func add(members: [SocialUser], to groupID: String) async {
+        guard let i = groups.firstIndex(where: { $0.id == groupID }) else { return }
+        var g = groups[i]
+        for u in members where !g.memberIDs.contains(u.id) { g.memberIDs.append(u.id); g.memberNames.append(u.displayName) }
+        do { groups[i] = try await backend.saveGroup(g) } catch { lastError = error.localizedDescription }
+    }
+
+    func leaveGroup(_ id: String) async {
+        groups.removeAll { $0.id == id }
+        do { try await backend.leaveGroup(id: id) } catch { lastError = error.localizedDescription }
+    }
+
+    /// Moments where every member of the group was there (or the creator picked the group).
+    func moments(for group: SocialGroup) -> [SocialMoment] {
+        let members = Set(group.memberIDs)
+        return moments.values.filter { Set($0.memberIDs).intersection(members).count >= min(members.count, 2) && $0.memberIDs.contains(myID) }.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    // MARK: - Time Machine & highlights
+
+    /// Moments from this day in previous years, grouped by how many years ago.
+    var timeMachine: [(yearsAgo: Int, moments: [SocialMoment])] {
+        let cal = Calendar.current
+        let today = cal.dateComponents([.month, .day], from: .now)
+        let thisYear = cal.component(.year, from: .now)
+        var buckets: [Int: [SocialMoment]] = [:]
+        for m in moments.values where m.memberIDs.contains(myID) {
+            let d = m.startAt ?? m.createdAt
+            let c = cal.dateComponents([.month, .day, .year], from: d)
+            guard c.month == today.month, abs((c.day ?? 0) - (today.day ?? 0)) <= 1, let y = c.year, y < thisYear else { continue }
+            buckets[thisYear - y, default: []].append(m)
+        }
+        return buckets.keys.sorted().map { (yearsAgo: $0, moments: buckets[$0]!.sorted { $0.createdAt > $1.createdAt }) }
+    }
+
+    struct Highlights { var mostReacted: Contribution?; var mostActiveHour: Date?; var mostActiveCount: Int; var addedMost: (name: String, count: Int)?; var firstAndLast: (Date, Date)? }
+
+    /// "THE MOMENT" — computed from reactions and timestamps only. Nothing is guessed.
+    func highlights(for momentID: String) -> Highlights? {
+        let all = allContributions(momentID).filter { $0.uploadState == .uploaded }
+        guard !all.isEmpty else { return nil }
+        let mostReacted = all.filter { $0.reactionCounts.values.reduce(0, +) > 0 }.max { $0.reactionCounts.values.reduce(0, +) < $1.reactionCounts.values.reduce(0, +) }
+        let times = all.map { $0.originalTimestamp ?? $0.createdAt }
+        let cal = Calendar.current
+        let byHour = Dictionary(grouping: times) { cal.dateInterval(of: .hour, for: $0)?.start ?? $0 }
+        let busiest = byHour.max { $0.value.count < $1.value.count }
+        let byAuthor = Dictionary(grouping: all, by: \.authorName).mapValues(\.count).max { $0.value < $1.value }
+        return Highlights(mostReacted: mostReacted, mostActiveHour: byHour.count > 1 ? busiest?.key : nil, mostActiveCount: busiest?.value.count ?? 0, addedMost: byAuthor.map { (name: $0.key, count: $0.value) }, firstAndLast: times.count > 1 ? (times.min()!, times.max()!) : nil)
+    }
+
+    /// Passport: places, people, trips — the shape of a life in Moments.
+    struct Passport { var places: [(name: String, count: Int)]; var people: Int; var trips: Int; var nights: Int; var events: Int; var years: [Int] }
+    var passport: Passport {
+        let mine = momentsImIn
+        var places: [String: Int] = [:]
+        for m in mine { if let p = m.coarsePlace, !p.isEmpty { places[p, default: 0] += 1 } }
+        let people = Set(mine.flatMap(\.memberIDs)).subtracting([myID]).count
+        let trips = mine.filter { if let s = $0.startAt, let e = $0.endAt { return !Calendar.current.isDate(s, inSameDayAs: e) }; return false }.count
+        let nights = mine.filter { Calendar.current.component(.hour, from: $0.startAt ?? $0.createdAt) >= 19 }.count
+        let events = mine.filter { $0.memberIDs.count >= 5 }.count
+        let years = Array(Set(mine.map { Calendar.current.component(.year, from: $0.startAt ?? $0.createdAt) })).sorted(by: >)
+        return Passport(places: places.map { (name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }, people: people, trips: trips, nights: nights, events: events, years: years)
     }
 
     func setCover(momentID: String, from contribution: Contribution) async {
@@ -433,12 +543,12 @@ final class SocialService {
         if let posts = try? await backend.nowFeed() { nowPosts = posts.filter { !muted.contains($0.authorID) && !blocked.contains($0.authorID) } }
     }
 
-    func postNow(text: String, photo: Data?, place: String?) async -> Bool {
+    func postNow(text: String, photo: Data?, place: String?, activity: NowPost.Activity = .none, hours: Double = 24) async -> Bool {
         guard let me else { return false }
         if case .blocked(let why) = ContentModeration.check(text) { lastError = why; return false }
         var ref: MediaRef? = nil
         if let photo, let p = MediaPipeline.preparePhoto(photo), let local = try? await media.store(p.data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: nil, width: p.width, height: p.height) }
-        let post = NowPost(id: UUID().uuidString, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, createdAt: .now, expiresAt: .now.addingTimeInterval(24 * 3600), coarsePlace: place.map(Self.coarse), savedToMomentID: nil)
+        let post = NowPost(id: UUID().uuidString, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, createdAt: .now, expiresAt: .now.addingTimeInterval(hours * 3600), coarsePlace: place.map(Self.coarse), savedToMomentID: nil, activity: activity)
         nowPosts.insert(post, at: 0)
         queue.enqueue(.now(post))
         analytics.track(.nowPosted, category: photo == nil ? "text" : "photo")
@@ -452,6 +562,25 @@ final class SocialService {
         queue.enqueue(.contribution(c))
         if let i = nowPosts.firstIndex(where: { $0.id == post.id }) { nowPosts[i].savedToMomentID = momentID }
         analytics.track(.nowSaved)
+    }
+
+    func joinNow(_ post: NowPost) async {
+        do {
+            let updated = try await backend.joinNow(id: post.id)
+            if let i = nowPosts.firstIndex(where: { $0.id == post.id }) { nowPosts[i] = updated }
+            Haptics.completed()
+        } catch { lastError = error.localizedDescription }
+    }
+
+    /// "MAKE THIS A MOMENT": a spontaneous meetup becomes a shared Moment with everyone who joined.
+    func makeMoment(from post: NowPost) async -> SocialMoment? {
+        let title = post.activity != .none ? "\(post.activity.label) · \(post.createdAt.formatted(.dateTime.weekday(.wide)))" : (post.text.isBlank ? "Tonight" : String(post.text.prefix(40)))
+        var input = NewMomentInput(title: title, visibility: .group, isLive: true)
+        input.locationName = post.coarsePlace
+        input.initialMemberIDs = ([post.authorID] + post.joinerIDs).filter { $0 != myID }
+        guard let m = await createMoment(input) else { return nil }
+        await saveNow(post, to: m.id)
+        return m
     }
 
     func deleteNow(_ post: NowPost) async {
