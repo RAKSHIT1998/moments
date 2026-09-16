@@ -49,11 +49,76 @@ struct NowComposerView: View {
     }
 }
 
-/// Full-screen NOW post with "Save to a Moment" — the bridge from ephemeral to permanent.
+/// Story-style NOW viewer: progress bars, tap right/left to move, auto-advance, swipe down to close.
 struct NowViewerView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     let post: NowPost
+    @State private var index = 0
+    @State private var progress: Double = 0
+    @State private var paused = false
+    @State private var dragY: CGFloat = 0
+    private let seconds = 5.0
+
+    private var posts: [NowPost] { env.social.nowPosts }
+    private var current: NowPost { posts.indices.contains(index) ? posts[index] : post }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.black.ignoresSafeArea()
+            NowPostView(post: current, paused: $paused)
+                .id(current.id)
+            // Progress bars
+            HStack(spacing: 4) {
+                ForEach(posts.indices, id: \.self) { i in
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.white.opacity(0.3))
+                            Capsule().fill(.white).frame(width: g.size.width * (i < index ? 1 : i == index ? progress : 0))
+                        }
+                    }
+                    .frame(height: 3)
+                }
+            }
+            .padding(.horizontal, MSpacing.l).padding(.top, 8)
+            // Tap zones
+            HStack(spacing: 0) {
+                Color.clear.contentShape(Rectangle()).onTapGesture { go(-1) }
+                Color.clear.contentShape(Rectangle()).onTapGesture { go(1) }
+            }
+            .padding(.top, 90).padding(.bottom, 160)
+            .onLongPressGesture(minimumDuration: 0.15, pressing: { paused = $0 }, perform: {})
+        }
+        .offset(y: dragY)
+        .gesture(DragGesture().onChanged { if $0.translation.height > 0 { dragY = $0.translation.height } }.onEnded { if $0.translation.height > 120 { dismiss() } else { withAnimation(.spring(duration: 0.3)) { dragY = 0 } } })
+        .onAppear { index = posts.firstIndex { $0.id == post.id } ?? 0 }
+        .task(id: index) {
+            progress = 0
+            let step = 0.05
+            while progress < 1 {
+                try? await Task.sleep(for: .seconds(step))
+                if Task.isCancelled { return }
+                if !paused { progress = min(1, progress + step / seconds) }
+            }
+            go(1)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func go(_ delta: Int) {
+        let next = index + delta
+        if next < 0 { index = 0; progress = 0; return }
+        if next >= posts.count { dismiss(); return }
+        index = next
+    }
+}
+
+/// One NOW post: photo or ambient background, text, author, and "Save to a Moment".
+struct NowPostView: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let post: NowPost
+    @Binding var paused: Bool
     @State private var showSave = false
     @State private var showReport = false
 
@@ -75,7 +140,7 @@ struct NowViewerView: View {
                     } label: { Image(systemName: "ellipsis").foregroundStyle(.white).frame(width: 36, height: 36) }
                     Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(.white).frame(width: 36, height: 36) }.accessibilityLabel("Close").accessibilityIdentifier("nowClose")
                 }
-                .padding(MSpacing.l)
+                .padding(MSpacing.l).padding(.top, 14)
                 Spacer()
                 VStack(alignment: .leading, spacing: MSpacing.l) {
                     if !post.text.isEmpty { Text(post.text).font(.system(size: 28, weight: .bold)).foregroundStyle(.white).shadow(radius: 6) }
@@ -92,8 +157,10 @@ struct NowViewerView: View {
                 .padding(MSpacing.l)
             }
         }
-        .sheet(isPresented: $showSave) { SaveToMomentSheet(post: post) }
-        .sheet(isPresented: $showReport) { ReportSheet(userID: post.authorID) }
+        .sheet(isPresented: $showSave, onDismiss: { paused = false }) { SaveToMomentSheet(post: post) }
+        .sheet(isPresented: $showReport, onDismiss: { paused = false }) { ReportSheet(userID: post.authorID) }
+        .onChange(of: showSave) { _, v in if v { paused = true } }
+        .onChange(of: showReport) { _, v in if v { paused = true } }
     }
     private var hoursLeft: Int { max(0, Int(post.expiresAt.timeIntervalSinceNow / 3600)) }
 }

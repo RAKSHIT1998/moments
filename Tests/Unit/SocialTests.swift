@@ -277,6 +277,37 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertFalse(env.social.feed.contains { $0.moment.id == "m_goa" })
     }
 
+    func testCollectionsRoundTrip() async throws {
+        let (env, backend) = await makeSocial()
+        let created = await env.social.createCollection(title: "Goa trips", emoji: "✈️", momentIDs: ["m_goa"])
+        let c = try XCTUnwrap(created)
+        await env.social.toggle(momentID: "m_oldgoa", in: c.id)
+        XCTAssertEqual(env.social.collections.first?.momentIDs, ["m_goa", "m_oldgoa"])
+        XCTAssertEqual(env.social.moments(in: env.social.collections[0]).count, 2)
+        await env.social.toggle(momentID: "m_goa", in: c.id)
+        let persisted = try await backend.collections()
+        XCTAssertEqual(persisted.first?.momentIDs, ["m_oldgoa"], "persisted through the backend")
+        await env.social.rename(collectionID: c.id, title: "Goa", emoji: "🏖️")
+        XCTAssertEqual(env.social.collections[0].title, "Goa")
+        await env.social.deleteCollection(c.id)
+        XCTAssertTrue(env.social.collections.isEmpty)
+        let after = try await backend.collections()
+        XCTAssertTrue(after.isEmpty)
+    }
+
+    func testSuggestionsAndYearSummaryComeFromRealMoments() async throws {
+        let (env, _) = await makeSocial()
+        // Dev was at Sarah's 30th with me but I don't follow him; Rahul/Sarah are already followed.
+        XCTAssertEqual(env.social.peopleSuggestions.map(\.id), ["u_dev"])
+        await env.social.follow("u_dev")
+        XCTAssertTrue(env.social.peopleSuggestions.isEmpty)
+        let y = try XCTUnwrap(env.social.yearSummary())
+        XCTAssertEqual(y.moments, 2, "Goa '26 and Sarah's 30th this year; Goa '25 is last year")
+        XCTAssertEqual(y.places, 2)
+        XCTAssertEqual(y.topPerson, "Rahul Mehta")
+        XCTAssertNil(env.social.yearSummary(2020))
+    }
+
     func testMediaPipelineStripsMetadataAndBounds() throws {
         let big = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000)).image { ctx in UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000)) }.jpegData(compressionQuality: 1)!
         let p = try XCTUnwrap(MediaPipeline.preparePhoto(big))

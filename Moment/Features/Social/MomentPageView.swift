@@ -16,6 +16,12 @@ struct MomentPageView: View {
     @State private var commentText = ""
     @State private var showExport = false
     @State private var expanded: Contribution?
+    @State private var showCollections = false
+    @State private var showCard = false
+    @State private var showLiveCamera = false
+    @State private var burst: String?
+    @State private var scrollY: CGFloat = 0
+    @State private var tint: Color = MColor.accent
     @FocusState private var commentFocused: Bool
 
     private var moment: SocialMoment? { env.social.moments[momentID] }
@@ -30,18 +36,33 @@ struct MomentPageView: View {
                         hero(moment)
                         VStack(alignment: .leading, spacing: MSpacing.xl) {
                             meta(moment)
+                            stats(moment)
                             if !moment.description.isEmpty { Text(moment.description).font(MFont.body) }
-                            ReactionBar(momentID: moment.id, counts: moment.reactionCounts)
+                            ReactionBar(momentID: moment.id, counts: moment.reactionCounts, onReact: { burst = $0.emoji })
                             timeline(moment)
                             comments(moment)
                         }
                         .padding(.horizontal, MSpacing.l)
                         .padding(.bottom, 120)
                     }
+                    .background(GeometryReader { g in Color.clear.preference(key: ScrollYKey.self, value: g.frame(in: .named("momentScroll")).minY) })
                 }
-                .background(MColor.background)
+                .coordinateSpace(name: "momentScroll")
+                .onPreferenceChange(ScrollYKey.self) { scrollY = $0 }
+                .background {
+                    // The page takes on the Moment's own colour — a soft wash, never a flat fill.
+                    ZStack { MColor.background; LinearGradient(colors: [tint.opacity(0.22), .clear], startPoint: .top, endPoint: .center) }.ignoresSafeArea()
+                }
+                .task(id: moment.coverRef) { tint = await env.social.tint(for: moment) }
+                .reactionBurst($burst)
                 .safeAreaInset(edge: .bottom) { bottomBar(moment) }
                 .toolbar { toolbar(moment) }
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text(moment.title).font(MFont.headline).lineLimit(1).opacity(scrollY < -300 ? 1 : 0).animation(.easeInOut(duration: 0.2), value: scrollY < -300)
+                    }
+                }
+                .toolbarBackground(scrollY < -300 ? .visible : .hidden, for: .navigationBar)
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -53,8 +74,11 @@ struct MomentPageView: View {
         .sheet(isPresented: $showCloudSharing) { if let m = moment { CloudSharingView(momentID: m.id) } }
         .sheet(isPresented: $showReport) { ReportSheet(momentID: momentID, userID: moment?.creatorID) }
         .sheet(isPresented: $showInvitePicker) { InvitePickerSheet(momentID: momentID) }
+        .sheet(isPresented: $showCollections) { AddToCollectionSheet(momentID: momentID) }
+        .sheet(isPresented: $showCard) { if let m = moment { MomentCardSheet(moment: m) } }
+        .sheet(isPresented: $showLiveCamera) { CameraPicker { data in Task { await env.social.addSide(momentID: momentID, photos: [data], note: ""); env.toast("Added to the live Moment."); Haptics.saved() } } }
         .sheet(isPresented: $showExport) { if let m = moment { MomentExportSheet(moment: m) } }
-        .fullScreenCover(item: $expanded) { c in ContributionViewer(contribution: c) }
+        .fullScreenCover(item: $expanded) { c in MediaPagerView(momentID: momentID, startAt: c) }
         .confirmationDialog("Delete this Moment for everyone?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete Moment", role: .destructive) { Task { if await env.social.delete(momentID: momentID) { dismiss() } } }
         } message: { Text("Everyone who was invited loses access. Their own photos stay on their phones.") }
@@ -64,20 +88,22 @@ struct MomentPageView: View {
     // MARK: Sections
 
     private func hero(_ m: SocialMoment) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            SocialImage(ref: m.coverRef).frame(height: 420).frame(maxWidth: .infinity)
-            LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .center, endPoint: .bottom)
+        let stretch = max(0, scrollY)   // pull-down grows the cover instead of showing a gap
+        return ZStack(alignment: .bottomLeading) {
+            SocialImage(ref: m.coverRef).frame(height: 420 + stretch).frame(maxWidth: .infinity).offset(y: -stretch)
+            LinearGradient(colors: [.black.opacity(0.35), .clear, .clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: MSpacing.s) {
                 if m.isLive {
                     Label("HAPPENING NOW", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(.white)
                         .padding(.horizontal, 8).padding(.vertical, 4).background(MColor.danger, in: Capsule())
                 }
-                Text(m.title).font(.system(size: 34, weight: .bold)).tracking(-0.6).foregroundStyle(.white).lineLimit(3)
-                HStack(spacing: 6) {
-                    Text(m.dateLabel)
-                    if let p = m.locationName, !p.isEmpty { Text("·"); Text(p) }
+                Text(m.title).font(MFont.hero).tracking(-0.4).foregroundStyle(.white).lineLimit(3).shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+                HStack(spacing: MSpacing.s) {
+                    GlassPill(text: m.dateLabel, symbol: "calendar")
+                    if let p = m.locationName, !p.isEmpty { GlassPill(text: p, symbol: "mappin") }
+                    GlassPill(text: m.visibility.label, symbol: m.visibility.symbol)
                 }
-                .font(MFont.subheadline).foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white)
             }
             .padding(MSpacing.l)
         }
@@ -109,6 +135,25 @@ struct MomentPageView: View {
         }
     }
 
+    private func stats(_ m: SocialMoment) -> some View {
+        let all = env.social.allContributions(m.id)
+        let authors = Dictionary(grouping: all, by: \.authorName).mapValues(\.count)
+        let top = authors.max { $0.value < $1.value }
+        let span: String? = {
+            let times = all.map { $0.originalTimestamp ?? $0.createdAt }
+            guard let a = times.min(), let b = times.max(), b.timeIntervalSince(a) > 600 else { return nil }
+            let h = b.timeIntervalSince(a) / 3600
+            return h < 48 ? String(format: "%.0f h", h) : "\(Int(h / 24)) days"
+        }()
+        return HStack(spacing: MSpacing.s) {
+            StatTile(value: "\(m.memberIDs.count)", label: m.memberIDs.count == 1 ? "person" : "people", symbol: "person.2")
+            StatTile(value: "\(all.filter { $0.media != nil }.count)", label: "photos", symbol: "photo")
+            if let span { StatTile(value: span, label: "together", symbol: "clock") }
+            else if let top, all.count > 1 { StatTile(value: top.key == env.social.displayName ? "You" : String(top.key.split(separator: " ").first ?? ""), label: "added most", symbol: "star") }
+        }
+        .accessibilityIdentifier("momentStats")
+    }
+
     private func whoLine(_ m: SocialMoment) -> String {
         let others = m.memberNames.filter { $0 != env.social.displayName }
         if others.isEmpty { return isMember ? "Just you" : m.creatorName }
@@ -129,9 +174,32 @@ struct MomentPageView: View {
             }
             ForEach(entries) { entry in
                 VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text(entry.label.uppercased()).font(MFont.eyebrow).foregroundStyle(MColor.textTertiary).tracking(1)
-                    ForEach(entry.contributions) { c in
-                        ContributionCard(contribution: c, momentID: m.id, canRemove: c.authorID == env.social.myID || isOwner) { expanded = c }
+                    HStack(spacing: 6) {
+                        Text(entry.label.uppercased()).font(MFont.eyebrow).foregroundStyle(MColor.textTertiary).tracking(1)
+                        Rectangle().fill(MColor.separator).frame(height: 0.5)
+                    }
+                    let photos = entry.contributions.filter { ($0.kind == .photo || $0.kind == .video) && $0.uploadState == .uploaded }
+                    let others = entry.contributions.filter { !photos.contains($0) }
+                    if photos.count >= 3 {
+                        // Many photos in one stretch → a mosaic, each tile tappable, author on the tile.
+                        MosaicGrid(items: photos) { c in
+                            Button { expanded = c } label: {
+                                SocialImage(ref: c.media)
+                                    .overlay(alignment: .bottomLeading) {
+                                        HStack(spacing: 4) { PersonAvatar(name: c.authorName, size: 18); Text(c.authorID == env.social.myID ? "You" : c.authorName.split(separator: " ").first.map(String.init) ?? "").font(.caption2.weight(.semibold)).foregroundStyle(.white) }
+                                            .padding(6).background(.black.opacity(0.35), in: Capsule()).padding(6)
+                                    }
+                                    .overlay(alignment: .topTrailing) { if c.kind == .video { Image(systemName: "play.fill").font(.caption).foregroundStyle(.white).padding(6).background(.black.opacity(0.4), in: Circle()).padding(6) } }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(c.kind == .video ? "Video" : "Photo") by \(c.authorName)")
+                            .accessibilityIdentifier("contribution-\(c.id)")
+                        }
+                        ForEach(others) { c in ContributionCard(contribution: c, momentID: m.id, canRemove: c.authorID == env.social.myID || isOwner) { expanded = c } }
+                    } else {
+                        ForEach(entry.contributions) { c in
+                            ContributionCard(contribution: c, momentID: m.id, canRemove: c.authorID == env.social.myID || isOwner) { expanded = c }
+                        }
                     }
                 }
             }
@@ -150,7 +218,7 @@ struct MomentPageView: View {
                             Text(c.authorID == env.social.myID ? "You" : c.authorName).font(.subheadline.weight(.semibold))
                             Text(c.createdAt.formatted(.relative(presentation: .named))).font(MFont.caption).foregroundStyle(MColor.textTertiary)
                         }
-                        Text(c.text).font(MFont.body)
+                        MentionText(text: c.text)
                     }
                     Spacer()
                     Menu {
@@ -179,6 +247,10 @@ struct MomentPageView: View {
 
     private func bottomBar(_ m: SocialMoment) -> some View {
         HStack(spacing: MSpacing.m) {
+            if m.isLive, isMember, UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button { showLiveCamera = true } label: { Image(systemName: "camera.fill").font(.title3).frame(width: 52, height: 52) }
+                    .buttonStyle(SecondaryButtonStyle()).accessibilityLabel("Add a photo now")
+            }
             if isMember || m.visibility == .publicAll && m.allowsContributions {
                 NavigationLink(value: SocialRoute.addSide(m.id)) {
                     Label("ADD YOUR SIDE", systemImage: "plus").font(.headline.weight(.bold)).tracking(0.8).frame(maxWidth: .infinity)
@@ -201,6 +273,9 @@ struct MomentPageView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button("Share link", systemImage: "link") { Task { await shareLink(m) } }
+                Button("Share as a card", systemImage: "rectangle.portrait.on.rectangle.portrait") { showCard = true }
+                if isMember { Button("Add to collection", systemImage: "folder.badge.plus") { showCollections = true } }
+                if isMember { Button(env.social.isFeatured(m.id) ? "Unpin from profile" : "Pin to profile", systemImage: env.social.isFeatured(m.id) ? "pin.slash" : "pin") { env.social.toggleFeatured(m.id); env.toast(env.social.isFeatured(m.id) ? "Pinned to your profile." : "Unpinned.") } }
                 if m.allowsReshare || isMember { Button("Export as video / images", systemImage: "square.and.arrow.up") { showExport = true } }
                 if m.visibility == .publicAll || isMember { Button("Remix into a new Moment", systemImage: "wand.and.stars") { Task { await remix(m) } } }
                 Divider()
@@ -304,6 +379,7 @@ struct ContributionViewer: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     let contribution: Contribution
+    var embedded = false
     @State private var player: AVPlayer?
 
     var body: some View {
@@ -314,8 +390,10 @@ struct ContributionViewer: View {
             } else {
                 SocialImage(ref: contribution.media, contentMode: .fit).ignoresSafeArea()
             }
-            Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(.white).padding(12).background(.black.opacity(0.5), in: Circle()) }
-                .padding().accessibilityLabel("Close")
+            if !embedded {
+                Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(.white).padding(12).background(.black.opacity(0.5), in: Circle()) }
+                    .padding().accessibilityLabel("Close")
+            }
         }
         .task {
             guard contribution.kind == .video, let ref = contribution.media, let url = await env.social.videoURL(for: ref) else { return }
@@ -392,5 +470,95 @@ struct InvitePickerSheet: View {
                 }
             }
         }
+    }
+}
+
+
+private struct ScrollYKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+/// Swipe through every photo/video in the Moment; author, time and reactions on each.
+struct MediaPagerView: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let momentID: String
+    let startAt: Contribution
+    @State private var current: String = ""
+    @State private var burst: String?
+
+    private var items: [Contribution] { env.social.allContributions(momentID).filter { $0.kind == .photo || $0.kind == .video } }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.black.ignoresSafeArea()
+            TabView(selection: $current) {
+                ForEach(items) { c in
+                    ContributionViewer(contribution: c, embedded: true).tag(c.id)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea()
+            if let c = items.first(where: { $0.id == current }) {
+                VStack {
+                    HStack(spacing: MSpacing.s) {
+                        AvatarView(userID: c.authorID, name: c.authorName, size: 32)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(c.authorID == env.social.myID ? "You" : c.authorName).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            Text((c.originalTimestamp ?? c.createdAt).formatted(date: .abbreviated, time: .shortened)).font(MFont.caption).foregroundStyle(.white.opacity(0.8))
+                        }
+                        Spacer()
+                        Text("\((items.firstIndex { $0.id == c.id } ?? 0) + 1) / \(items.count)").font(MFont.caption).foregroundStyle(.white.opacity(0.8)).monospacedDigit()
+                        if env.social.moments[momentID]?.creatorID == env.social.myID, c.kind == .photo {
+                            Menu {
+                                Button("Set as cover", systemImage: "photo.badge.checkmark") { Task { await env.social.setCover(momentID: momentID, from: c); env.toast("Cover updated."); Haptics.saved() } }
+                            } label: { Image(systemName: "ellipsis").foregroundStyle(.white).frame(width: 36, height: 36).background(.black.opacity(0.4), in: Circle()) }
+                        }
+                        Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36).background(.black.opacity(0.4), in: Circle()) }.accessibilityLabel("Close")
+                    }
+                    .padding(MSpacing.l)
+                    Spacer()
+                    VStack(alignment: .leading, spacing: MSpacing.s) {
+                        if !c.caption.isEmpty { Text(c.caption).font(MFont.callout).foregroundStyle(.white) }
+                        ReactionBar(momentID: momentID, contributionID: c.id, counts: c.reactionCounts, compact: true, onReact: { burst = $0.emoji })
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(MSpacing.l)
+                    .background(LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom))
+                }
+            }
+        }
+        .reactionBurst($burst)
+        .onAppear { current = startAt.id }
+        .preferredColorScheme(.dark)
+    }
+}
+
+
+/// Comment text with @handles rendered as tappable links to profiles.
+struct MentionText: View {
+    @Environment(AppEnvironment.self) private var env
+    let text: String
+    @State private var open: SocialUser?
+    var body: some View {
+        Text(attributed).font(MFont.body)
+            .environment(\.openURL, OpenURLAction { url in
+                guard url.scheme == "mention" else { return .systemAction }
+                let handle = url.host() ?? ""
+                Task { if let u = (await env.social.search(people: handle)).first(where: { $0.handle == handle }) { open = u } }
+                return .handled
+            })
+            .navigationDestination(item: $open) { u in SocialProfileView(userID: u.id) }
+    }
+    private var attributed: AttributedString {
+        var out = AttributedString(text)
+        for m in text.allMatches(#"@([a-z0-9_]{2,20})"#) {
+            guard let r = out.range(of: m) else { continue }
+            out[r].foregroundColor = MColor.accent
+            out[r].font = MFont.body.weight(.semibold)
+            out[r].link = URL(string: "mention://\(m.dropFirst())")
+        }
+        return out
     }
 }

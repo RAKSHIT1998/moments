@@ -35,6 +35,7 @@
 		2EA5A1B8247A952EF34E3E0A /* Memory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362A6EE38786ECC0B45B06E0 /* Memory.swift */; };
 		2F8CD7E4C6531252971282F2 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464154532F0FB495D0569F60 /* AppIntents.framework */; };
 		2FCA17F74EDF90CD63046310 /* IntentClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AF5F99C875785ED4DEF9B7 /* IntentClassifier.swift */; };
+		30237EE6E8F409E5C2CD08D6 /* CollectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117AB0C48540E075181FF08E /* CollectionsView.swift */; };
 		30DCA2993B30609151FCADD1 /* ContactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23296DD1967CFBE1A9BBC3A7 /* ContactsService.swift */; };
 		30EBC49C2B586D2CD71372E2 /* ProfileViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35DF02CBAACFC80DBA64B3DE /* ProfileViews.swift */; };
 		317548CE115F3F4912ED2AC2 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B396A7FEE5C2AD0E6AE7B48 /* FeatureFlags.swift */; };
@@ -62,6 +63,7 @@
 		5338C1E7D0CFAC10CA8D0B0B /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189A91C2DEB446D7707DA1A7 /* SocialModels.swift */; };
 		54604703366BDE62F173CB3C /* StoryComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11279ABE43EDBC969725FF32 /* StoryComposer.swift */; };
 		5736D62CCE23E9A8DAAE7409 /* GiftIdea.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8017C1806616B4138412E1E /* GiftIdea.swift */; };
+		5771831F9A9EB8CD6568A12B /* SocialPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A5F365A8464F0635F14CBA /* SocialPolish.swift */; };
 		580BEC94A761DA5F2D6AD28D /* MediaPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AFFF965467D61700ADAB3A4 /* MediaPipeline.swift */; };
 		586AC5418F64B115245013E9 /* Date+Moment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD173617B88BAEBA6AC862A /* Date+Moment.swift */; };
 		594597866315601C8697C453 /* CaptureSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0620243E0CB2098944EEF87F /* CaptureSheet.swift */; };
@@ -89,6 +91,7 @@
 		87EBBF2ABD3801073ABEC314 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CCE6604C8AA23BE9032247 /* Person.swift */; };
 		88A6B9F362D93B01431CF4F2 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6A646F1DE414EA441ADB01 /* AppGroup.swift */; };
 		8C1D419962B265A4151AD993 /* UploadQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7BAE8ACD83B15C7EAD2A5D /* UploadQueue.swift */; };
+		8C3D54549413F71443C70F1F /* MomentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */; };
 		8C48BDFA001921C190F8A425 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03EE7A0BC02BAF0519F3FD9F /* Contacts.framework */; };
 		91A3470C495E6AE3A2195936 /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B317B3A7B19EC3A46F0BCC83 /* PeopleView.swift */; };
 		92E2060C773758E5F99FAC9A /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C76A24F401455CDDD4FBD9 /* SpotlightService.swift */; };
@@ -151,6 +154,7 @@
 		DE6E2269F563B21660F117C5 /* ModelSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F47CC79B86477F233E48F7 /* ModelSchema.swift */; };
 		E0C185D59FB14E5ABDFBCB51 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138469A6359AD25CB00CEAE2 /* OnboardingView.swift */; };
 		E0DEBBE3DD9C6DCD823BA5B2 /* PhotoMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8351DC4F38D2FFA323F3E9 /* PhotoMetadata.swift */; };
+		E13DB8C1AEC75D4839D32C10 /* ImageColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE17C8090CFD8B9147EE664 /* ImageColor.swift */; };
 		E2373A87064B4F2298A8FC8B /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39297A7D87A51444667E9B87 /* PhotosUI.framework */; };
 		E2379D9E578C8166808ABA5A /* StoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27C829D9BD2CCB12CBE38A0D /* StoryService.swift */; };
 		E2757A49197308447A4C360D /* PersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CCD337153CBB4FA6AEBB8C8 /* PersistenceTests.swift */; };
@@ -238,6 +242,7 @@
 		0FC5D075D8697D68AF2D5808 /* TextNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextNormalizer.swift; sourceTree = "<group>"; };
 		10EF72351F9CDF34B8F42CF6 /* MemoryRelation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryRelation.swift; sourceTree = "<group>"; };
 		11279ABE43EDBC969725FF32 /* StoryComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryComposer.swift; sourceTree = "<group>"; };
+		117AB0C48540E075181FF08E /* CollectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionsView.swift; sourceTree = "<group>"; };
 		12D44C102A18992D6104B360 /* MemoryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryRow.swift; sourceTree = "<group>"; };
 		138469A6359AD25CB00CEAE2 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		13EE0B8D68960F92E84C889B /* MomentWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentWidgetBundle.swift; sourceTree = "<group>"; };
@@ -260,6 +265,7 @@
 		2665995C5B2789C4B8BDAC58 /* AppLockController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockController.swift; sourceTree = "<group>"; };
 		2758C294DACD68F438B13F88 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
 		27C829D9BD2CCB12CBE38A0D /* StoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryService.swift; sourceTree = "<group>"; };
+		28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentCardView.swift; sourceTree = "<group>"; };
 		292987A08E9EB8675A8BA93E /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		2AF56C467F7B0A682E391BE1 /* InsightEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightEngine.swift; sourceTree = "<group>"; };
 		34476DA1F7DDCAF50DE09AE5 /* AppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntents.swift; sourceTree = "<group>"; };
@@ -349,6 +355,7 @@
 		BB401EAD089DCDE281C4A403 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		BCABA0FAAB9458BB5815B808 /* MomentShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MomentShareExtension.entitlements; sourceTree = "<group>"; };
 		BD5C4E1628757B967D4EFA41 /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
+		C7A5F365A8464F0635F14CBA /* SocialPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPolish.swift; sourceTree = "<group>"; };
 		C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialComponents.swift; sourceTree = "<group>"; };
 		CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryBackend.swift; sourceTree = "<group>"; };
 		CBB6ED0572B5EFBC45EB3918 /* StoryExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryExporter.swift; sourceTree = "<group>"; };
@@ -359,6 +366,7 @@
 		D67E5A60008179094BB66554 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		D94B1F2EED4289C996376872 /* TemporalParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporalParserTests.swift; sourceTree = "<group>"; };
 		DA3F06116693EADA1E347C0C /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
+		DAE17C8090CFD8B9147EE664 /* ImageColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageColor.swift; sourceTree = "<group>"; };
 		DBA2C9E27E77CF11BB1520AC /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		DC9CB43FF9178E3BC3723EA7 /* MomentStory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentStory.swift; sourceTree = "<group>"; };
 		DDAFAA4ABE33475EA7B5BB14 /* SocialBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialBackend.swift; sourceTree = "<group>"; };
@@ -679,6 +687,7 @@
 			isa = PBXGroup;
 			children = (
 				AF14D5A43B7EE1B3BA53078A /* CloudKitBackend.swift */,
+				DAE17C8090CFD8B9147EE664 /* ImageColor.swift */,
 				CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */,
 				3AFFF965467D61700ADAB3A4 /* MediaPipeline.swift */,
 				DDAFAA4ABE33475EA7B5BB14 /* SocialBackend.swift */,
@@ -726,8 +735,10 @@
 			isa = PBXGroup;
 			children = (
 				8F1F0F2A25A452A34A9667B1 /* AddSideView.swift */,
+				117AB0C48540E075181FF08E /* CollectionsView.swift */,
 				2758C294DACD68F438B13F88 /* DiscoverView.swift */,
 				D38D487C54357A09FE87A6AB /* InboxView.swift */,
+				28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */,
 				F77EA4C7C648B3B19E08F618 /* MomentPageView.swift */,
 				4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */,
 				7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */,
@@ -736,6 +747,7 @@
 				C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */,
 				6095FF6387263E8433445C6E /* SocialHomeView.swift */,
 				52CF4190AA7B1191468EEFE6 /* SocialOnboardingView.swift */,
+				C7A5F365A8464F0635F14CBA /* SocialPolish.swift */,
 			);
 			path = Social;
 			sourceTree = "<group>";
@@ -1130,6 +1142,7 @@
 				594597866315601C8697C453 /* CaptureSheet.swift in Sources */,
 				BE284946BB6F24660A216F11 /* Cards.swift in Sources */,
 				7C9B33D9A9F6FC4BDF31E97A /* CloudKitBackend.swift in Sources */,
+				30237EE6E8F409E5C2CD08D6 /* CollectionsView.swift in Sources */,
 				60055EC2744563371C87C806 /* Components.swift in Sources */,
 				30DCA2993B30609151FCADD1 /* ContactsService.swift in Sources */,
 				C0148922EF8461FFE5BFB648 /* ContextResolver.swift in Sources */,
@@ -1148,6 +1161,7 @@
 				5736D62CCE23E9A8DAAE7409 /* GiftIdea.swift in Sources */,
 				2733058E3DDD07CC1C2CD571 /* Haptics.swift in Sources */,
 				253B610AC9C3E34C8CCF3A25 /* HomeView.swift in Sources */,
+				E13DB8C1AEC75D4839D32C10 /* ImageColor.swift in Sources */,
 				FAE3D5587634EF1768F8909D /* ImportService.swift in Sources */,
 				F6622EA9DEBD444482E05D3C /* ImportanceEngine.swift in Sources */,
 				A573073C138D305C0B64A9EB /* InMemoryBackend.swift in Sources */,
@@ -1172,6 +1186,7 @@
 				10CFB8E5E33C71A72229D297 /* MockIntelligenceProvider.swift in Sources */,
 				DE6E2269F563B21660F117C5 /* ModelSchema.swift in Sources */,
 				6C305244AC139E93B4C7CE3C /* MomentApp.swift in Sources */,
+				8C3D54549413F71443C70F1F /* MomentCardView.swift in Sources */,
 				EFDABBED851392CE6E3DF100 /* MomentEditorView.swift in Sources */,
 				4BD8072CDD074BDB025C68E7 /* MomentPackage.swift in Sources */,
 				CDBB878F04FBA8EB9F54629D /* MomentPageView.swift in Sources */,
@@ -1211,6 +1226,7 @@
 				480E5542A3590C161B09E1D6 /* SocialHomeView.swift in Sources */,
 				5338C1E7D0CFAC10CA8D0B0B /* SocialModels.swift in Sources */,
 				78075C9B0407279F7E8D241C /* SocialOnboardingView.swift in Sources */,
+				5771831F9A9EB8CD6568A12B /* SocialPolish.swift in Sources */,
 				B514B173A2C89F1E4CEB33C6 /* SocialService.swift in Sources */,
 				7E8219B83E5B2FFF255B7848 /* Source.swift in Sources */,
 				37BDCAEDE90FDE5823CBD654 /* SpeechService.swift in Sources */,

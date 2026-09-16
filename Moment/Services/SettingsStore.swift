@@ -13,6 +13,8 @@ final class SettingsStore {
         useCloudAI = defaults.bool(forKey: "useCloudAI")
         requireBiometrics = defaults.bool(forKey: "requireBiometrics")
         notificationsEnabled = defaults.object(forKey: "notificationsEnabled") as? Bool ?? true
+        socialNotifications = defaults.object(forKey: "socialNotifications") as? Bool ?? true
+        featuredMomentIDs = defaults.stringArray(forKey: "featuredMomentIDs") ?? []
         dailyNotificationBudget = defaults.object(forKey: "dailyNotificationBudget") as? Int ?? 2
         lockScreenWidgetAllowed = defaults.bool(forKey: "lockScreenWidgetAllowed")
         analyticsEnabled = defaults.bool(forKey: "analyticsEnabled")
@@ -64,6 +66,10 @@ final class SettingsStore {
     var useCloudAI: Bool { didSet { defaults.set(useCloudAI, forKey: "useCloudAI") } }
     var requireBiometrics: Bool { didSet { defaults.set(requireBiometrics, forKey: "requireBiometrics") } }
     var notificationsEnabled: Bool { didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled") } }
+    /// "Rahul added 8 photos" style alerts for shared Moments.
+    var socialNotifications: Bool { didSet { defaults.set(socialNotifications, forKey: "socialNotifications") } }
+    /// Moments pinned to the top of your profile (private preference; up to 3).
+    var featuredMomentIDs: [String] { didSet { defaults.set(featuredMomentIDs, forKey: "featuredMomentIDs") } }
     var dailyNotificationBudget: Int { didSet { defaults.set(dailyNotificationBudget, forKey: "dailyNotificationBudget") } }
     var lockScreenWidgetAllowed: Bool { didSet { defaults.set(lockScreenWidgetAllowed, forKey: "lockScreenWidgetAllowed") } }
     var analyticsEnabled: Bool { didSet { defaults.set(analyticsEnabled, forKey: "analyticsEnabled") } }
@@ -88,6 +94,8 @@ final class SettingsStore {
         useCloudAI = false
         requireBiometrics = false
         notificationsEnabled = true
+        socialNotifications = true
+        featuredMomentIDs = []
         dailyNotificationBudget = 2
         lockScreenWidgetAllowed = false
         analyticsEnabled = false

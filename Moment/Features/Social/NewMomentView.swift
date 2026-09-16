@@ -26,6 +26,24 @@ struct NewMomentView: View {
 
     struct PhotoPick: Identifiable, Equatable { let id = UUID(); let data: Data; let image: UIImage; let capturedAt: Date? }
 
+    /// Built only from what's known (place, photo dates, people) — never invented.
+    private var suggestedTitles: [String] {
+        var out: [String] = []
+        let dates = photos.compactMap(\.capturedAt).sorted()
+        let year = Calendar.current.component(.year, from: dates.first ?? .now)
+        if !place.isBlank { out.append("\(place.trimmed) '\(String(year).suffix(2))") }
+        if let d = dates.first {
+            let weekday = d.formatted(.dateTime.weekday(.wide))
+            let hour = Calendar.current.component(.hour, from: d)
+            out.append(hour >= 18 ? "\(weekday) night" : hour < 11 ? "\(weekday) morning" : weekday)
+            if let last = dates.last, !Calendar.current.isDate(d, inSameDayAs: last) { out.append("\(d.formatted(.dateTime.month(.wide))) weekend") }
+        }
+        let names = people.map { $0.displayName.split(separator: " ").first.map(String.init) ?? $0.displayName }
+        if names.count == 1 { out.append("With \(names[0])") }
+        if names.count >= 2 { out.append("\(names[0]), \(names[1]) & co") }
+        return out
+    }
+
     private var dateRange: String? {
         let dates = photos.compactMap(\.capturedAt).sorted()
         guard let first = dates.first else { return nil }
@@ -39,9 +57,17 @@ struct NewMomentView: View {
                 VStack(alignment: .leading, spacing: MSpacing.s) {
                     Text("What are we remembering?").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                     TextField("Goa '26, Sarah's 30th, Sunday run…", text: $title, axis: .vertical)
-                        .font(.system(size: 30, weight: .bold)).tracking(-0.5).lineLimit(1...3)
+                        .font(MFont.hero).tracking(-0.4).lineLimit(1...3)
                         .focused($titleFocused)
                         .accessibilityIdentifier("newMomentTitle")
+                    if title.isBlank, !suggestedTitles.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: MSpacing.s) {
+                                ForEach(suggestedTitles, id: \.self) { t in Button(t) { title = t; Haptics.selection() }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("suggest-\(t)") }
+                            }
+                        }
+                        .transition(.opacity)
+                    }
                 }
                 photoSection
                 VStack(alignment: .leading, spacing: MSpacing.s) {

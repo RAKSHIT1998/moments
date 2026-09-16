@@ -50,6 +50,7 @@ struct ReactionBar: View {
     var contributionID: String? = nil
     let counts: [String: Int]
     var compact = false
+    var onReact: ((ReactionKind) -> Void)? = nil
     @State private var showAll = false
 
     private var shown: [ReactionKind] {
@@ -62,7 +63,10 @@ struct ReactionBar: View {
         HStack(spacing: MSpacing.s) {
             ForEach(shown, id: \.self) { kind in
                 let mine = env.social.myReaction(momentID: momentID, contributionID: contributionID) == kind
-                Button { Task { await env.social.react(momentID: momentID, contributionID: contributionID, kind: kind) } } label: {
+                Button {
+                    if !mine { Haptics.saved(); onReact?(kind) }
+                    Task { await env.social.react(momentID: momentID, contributionID: contributionID, kind: kind) }
+                } label: {
                     HStack(spacing: 4) {
                         Text(kind.emoji)
                         if let c = counts[kind.rawValue], c > 0 { Text("\(c)").font(MFont.caption).monospacedDigit() }
@@ -77,7 +81,7 @@ struct ReactionBar: View {
                 .accessibilityLabel("More reactions")
         }
         .sheet(isPresented: $showAll) {
-            ReactionPicker(momentID: momentID, contributionID: contributionID)
+            ReactionPicker(momentID: momentID, contributionID: contributionID, onReact: onReact)
                 .presentationDetents([.height(220)])
         }
     }
@@ -88,12 +92,14 @@ struct ReactionPicker: View {
     @Environment(\.dismiss) private var dismiss
     let momentID: String
     var contributionID: String?
+    var onReact: ((ReactionKind) -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: MSpacing.l) {
             Text("React").font(MFont.headline).padding(.top, MSpacing.l)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 84))], spacing: MSpacing.m) {
                 ForEach(ReactionKind.allCases, id: \.self) { kind in
                     Button {
+                        Haptics.saved(); onReact?(kind)
                         Task { await env.social.react(momentID: momentID, contributionID: contributionID, kind: kind) }
                         dismiss()
                     } label: {
@@ -116,31 +122,45 @@ struct ReactionPicker: View {
 /// A Moment in a list: cover, title, who was there, why it's here.
 struct MomentFeedCard: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let moment: SocialMoment
     var reason: String? = nil
+    @State private var tint: Color = MColor.accent
+    @State private var burst: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomLeading) {
                 SocialImage(ref: moment.coverRef).frame(height: 300).frame(maxWidth: .infinity)
-                LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom)
+                LinearGradient(colors: [.black.opacity(0.15), .clear, tint.opacity(0.35), .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: MSpacing.xs) {
                     if moment.isLive {
                         Label("LIVE", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(.white)
                             .padding(.horizontal, 8).padding(.vertical, 4).background(MColor.danger, in: Capsule())
                     }
-                    Text(moment.title).font(MFont.title).foregroundStyle(.white).lineLimit(2)
+                    Text(moment.title).font(MFont.heroSmall).foregroundStyle(.white).lineLimit(2).shadow(color: .black.opacity(0.3), radius: 6, y: 2)
                     HStack(spacing: 6) {
                         Text(moment.dateLabel)
                         if let p = moment.coarsePlace, !p.isEmpty { Text("·"); Text(p) }
                         if moment.mediaCount > 0 { Text("·"); Text("\(moment.mediaCount) photos") }
                     }
-                    .font(MFont.footnote).foregroundStyle(.white.opacity(0.85))
+                    .font(MFont.footnote).foregroundStyle(.white.opacity(0.9))
                 }
                 .padding(MSpacing.l)
+                if let mine = env.social.myReaction(momentID: moment.id) {
+                    Text(mine.emoji).font(.title3).padding(8).background(.ultraThinMaterial, in: Circle())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(MSpacing.m)
+                        .accessibilityLabel("You reacted \(mine.label)")
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                // Double-tap = core memory. Instant feedback, then the backend.
+                Haptics.saved(); burst = ReactionKind.core.emoji
+                Task { await env.social.react(momentID: moment.id, kind: .core) }
             }
             HStack(spacing: MSpacing.m) {
-                AvatarStack(names: moment.memberNames.map { $0 == env.social.displayName ? "You" : $0 })
+                AvatarStack(names: moment.memberNames.map { $0 == env.social.displayName ? "You" : $0 }, size: 30)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(peopleLine).font(MFont.subheadline).foregroundStyle(MColor.textPrimary).lineLimit(1)
                     if let reason { Text(reason).font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(2) }
@@ -156,7 +176,12 @@ struct MomentFeedCard: View {
         }
         .background(MColor.surface, in: RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
-        .shadow(color: MShadow.card.color, radius: MShadow.card.radius, y: MShadow.card.y)
+        .shadow(color: tint.opacity(0.18), radius: 18, y: 10)
+        .reactionBurst($burst)
+        .scrollTransition(.interactive, axis: .vertical) { content, phase in
+            content.scaleEffect(reduceMotion ? 1 : (phase.isIdentity ? 1 : 0.96)).opacity(phase.isIdentity ? 1 : 0.75)
+        }
+        .task(id: moment.coverRef) { tint = await env.social.tint(for: moment) }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("feedMoment-\(moment.id)")
     }

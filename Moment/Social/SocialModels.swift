@@ -232,6 +232,16 @@ struct SafetySettings: Codable, Sendable, Equatable {
     var allowDiscoverByLocation = false
 }
 
+/// A user-made album of Moments ("Goa trips", "2026"). Private to its owner.
+struct MomentCollection: Codable, Sendable, Equatable, Identifiable, Hashable {
+    var id: String
+    var ownerID: String
+    var title: String
+    var emoji: String
+    var momentIDs: [String]
+    var createdAt: Date
+}
+
 struct FeedPage<T: Sendable>: Sendable {
     var items: [T]
     var cursor: String?

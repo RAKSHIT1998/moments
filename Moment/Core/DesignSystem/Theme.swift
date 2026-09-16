@@ -39,6 +39,9 @@ enum MSpacing {
 /// Display sizes use tighter tracking; everything else stays default for legibility.
 enum MFont {
     static let display = Font.system(.largeTitle, design: .default, weight: .bold)
+    /// Moment titles: a touch of serif so an experience reads like a headline, not a filename.
+    static let hero = Font.system(size: 36, weight: .bold, design: .serif)
+    static let heroSmall = Font.system(.title2, design: .serif, weight: .bold)
     static let title = Font.system(.title2, design: .default, weight: .bold)
     static let headline = Font.system(.headline, design: .default, weight: .semibold)
     static let body = Font.system(.body)

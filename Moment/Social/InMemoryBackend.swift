@@ -28,6 +28,7 @@ actor InMemoryBackend: SocialBackend {
     var convos: [Conversation] = []
     var dms: [String: [DirectMessage]] = [:]
     var mediaBlobs: [String: Data] = [:]
+    var collectionsByID: [String: MomentCollection] = [:]
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
     var offline = false
@@ -160,6 +161,14 @@ actor InMemoryBackend: SocialBackend {
         moments[id] = m
     }
 
+    func setCover(momentID: String, data: Data) async throws -> SocialMoment {
+        try gate(); guard var m = moments[momentID] else { throw SocialError.notFound }
+        guard m.creatorID == me.id else { throw SocialError.notAllowed }
+        let id = "cover_\(UUID().uuidString)"; mediaBlobs[id] = data
+        m.coverRef = MediaRef(kind: .photo, localRef: nil, remoteID: id); moments[momentID] = m
+        return m
+    }
+
     // MARK: Feed / discover
     func feed(cursor: String?) async throws -> FeedPage<SocialMoment> {
         try gate()
@@ -277,6 +286,13 @@ actor InMemoryBackend: SocialBackend {
         let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: [me.id, userID], participantNames: [me.displayName, u.displayName], lastMessage: "", updatedAt: .now)
         convos.append(c); return c
     }
+
+    // MARK: Collections
+    func collections() async throws -> [MomentCollection] { try gate(); return collectionsByID.values.filter { $0.ownerID == me.id }.sorted { $0.createdAt < $1.createdAt } }
+    func saveCollection(_ c: MomentCollection) async throws -> MomentCollection {
+        try gate(); var out = c; out.ownerID = me.id; collectionsByID[c.id] = out; return out
+    }
+    func deleteCollection(id: String) async throws { try gate(); collectionsByID[id] = nil }
 
     // MARK: Media
     func download(_ ref: MediaRef) async throws -> Data {

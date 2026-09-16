@@ -54,6 +54,8 @@ extension View {
             case .followers(let id, let followers): FollowListView(userID: id, followers: followers)
             case .editProfile: EditProfileView()
             case .myMemories: PrivateMemoryHubView()
+            case .collections: CollectionsView()
+            case .collection(let id): CollectionDetailView(collectionID: id)
             }
         }
     }

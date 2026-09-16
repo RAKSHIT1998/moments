@@ -16,7 +16,9 @@ struct SocialHomeView: View {
                     UploadBanner()
                     nowStrip
                     if let oneYear = env.social.onThisDay.first { onThisDayCard(oneYear) }
-                    if env.social.feed.isEmpty && !env.social.isLoadingFeed {
+                    if env.social.feed.isEmpty && !env.social.hasLoadedOnce && env.social.accountStatus != .noAccount {
+                        SkeletonFeedCard(); SkeletonFeedCard()
+                    } else if env.social.feed.isEmpty && !env.social.isLoadingFeed {
                         emptyFeed
                     }
                     ForEach(env.social.feed, id: \.moment.id) { scored in
@@ -129,6 +131,8 @@ enum SocialRoute: Hashable {
     case followers(String, Bool)
     case editProfile
     case myMemories
+    case collections
+    case collection(String)
 }
 
 extension View {

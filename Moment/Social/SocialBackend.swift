@@ -27,6 +27,8 @@ protocol SocialBackend: AnyObject, Sendable {
     /// Accept an invitation link (opened from Messages/AirDrop/web). Returns the joined Moment.
     func acceptInvite(url: URL) async throws -> SocialMoment
     func leaveMoment(id: String) async throws
+    /// Owner picks any photo as the cover.
+    func setCover(momentID: String, data: Data) async throws -> SocialMoment
 
     // Feed / discover
     func feed(cursor: String?) async throws -> FeedPage<SocialMoment>
@@ -66,6 +68,11 @@ protocol SocialBackend: AnyObject, Sendable {
     func messages(conversationID: String) async throws -> [DirectMessage]
     func send(_ message: DirectMessage, mediaData: Data?) async throws -> DirectMessage
     func conversation(with userID: String) async throws -> Conversation
+
+    // Collections
+    func collections() async throws -> [MomentCollection]
+    func saveCollection(_ c: MomentCollection) async throws -> MomentCollection
+    func deleteCollection(id: String) async throws
 
     // Media
     func download(_ ref: MediaRef) async throws -> Data

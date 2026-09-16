@@ -39,6 +39,8 @@ final class SocialService {
     private(set) var blocked: Set<String> = []
     private(set) var muted: Set<String> = []
     private(set) var safety = SafetySettings()
+    private(set) var collections: [MomentCollection] = []
+    private(set) var hasLoadedOnce = false
     private var imageCache: [String: UIImage] = [:]
     private var lastContributionCounts: [String: Int] = [:]
 
@@ -90,7 +92,70 @@ final class SocialService {
         async let n: () = refreshNow()
         async let i: () = refreshInbox()
         async let s: () = refreshSafety()
-        _ = await (f, n, i, s)
+        async let c: () = refreshCollections()
+        _ = await (f, n, i, s, c)
+        hasLoadedOnce = true
+    }
+
+    // MARK: - Collections
+
+    func refreshCollections() async { collections = (try? await backend.collections()) ?? [] }
+
+    @discardableResult
+    func createCollection(title: String, emoji: String, momentIDs: [String] = []) async -> MomentCollection? {
+        let c = MomentCollection(id: "col_\(UUID().uuidString)", ownerID: myID, title: title.trimmed, emoji: emoji, momentIDs: momentIDs, createdAt: .now)
+        do { let saved = try await backend.saveCollection(c); collections.append(saved); return saved } catch { lastError = error.localizedDescription; return nil }
+    }
+
+    func toggle(momentID: String, in collectionID: String) async {
+        guard let i = collections.firstIndex(where: { $0.id == collectionID }) else { return }
+        var c = collections[i]
+        if let j = c.momentIDs.firstIndex(of: momentID) { c.momentIDs.remove(at: j) } else { c.momentIDs.append(momentID) }
+        collections[i] = c
+        do { collections[i] = try await backend.saveCollection(c) } catch { lastError = error.localizedDescription }
+    }
+
+    func rename(collectionID: String, title: String, emoji: String) async {
+        guard let i = collections.firstIndex(where: { $0.id == collectionID }) else { return }
+        collections[i].title = title.trimmed; collections[i].emoji = emoji
+        do { collections[i] = try await backend.saveCollection(collections[i]) } catch { lastError = error.localizedDescription }
+    }
+
+    func deleteCollection(_ id: String) async {
+        collections.removeAll { $0.id == id }
+        do { try await backend.deleteCollection(id: id) } catch { lastError = error.localizedDescription }
+    }
+
+    func moments(in c: MomentCollection) -> [SocialMoment] { c.momentIDs.compactMap { moments[$0] } }
+
+    // MARK: - Derived: people & year
+
+    /// People you were in Moments with but don't follow yet — the honest "suggested" list.
+    var peopleSuggestions: [(id: String, name: String, shared: Int)] {
+        var counts: [String: (String, Int)] = [:]
+        for m in moments.values where m.memberIDs.contains(myID) {
+            for (id, name) in zip(m.memberIDs, m.memberNames) where id != myID && !graph.following.contains(id) && !blocked.contains(id) {
+                counts[id] = (name, (counts[id]?.1 ?? 0) + 1)
+            }
+        }
+        return counts.map { (id: $0.key, name: $0.value.0, shared: $0.value.1) }.sorted { $0.shared > $1.shared }
+    }
+
+    struct YearSummary { var year: Int; var moments: Int; var people: Int; var places: Int; var photos: Int; var topPerson: String?; var topPlace: String?; var busiestMonth: String? }
+
+    /// Real numbers from the Moments you were part of this year. Nothing invented.
+    func yearSummary(_ year: Int = Calendar.current.component(.year, from: .now)) -> YearSummary? {
+        let cal = Calendar.current
+        let mine = moments.values.filter { $0.memberIDs.contains(myID) && cal.component(.year, from: $0.startAt ?? $0.createdAt) == year }
+        guard !mine.isEmpty else { return nil }
+        var people: [String: Int] = [:], places: [String: Int] = [:], months: [Int: Int] = [:]
+        for m in mine {
+            for (id, n) in zip(m.memberIDs, m.memberNames) where id != myID { people[n, default: 0] += 1 }
+            if let p = m.coarsePlace, !p.isEmpty { places[p, default: 0] += 1 }
+            months[cal.component(.month, from: m.startAt ?? m.createdAt), default: 0] += 1
+        }
+        let busiest = months.max { $0.value < $1.value }.map { cal.monthSymbols[$0.key - 1] }
+        return YearSummary(year: year, moments: mine.count, people: people.count, places: places.count, photos: mine.reduce(0) { $0 + $1.mediaCount }, topPerson: people.max { $0.value < $1.value }?.key, topPlace: places.max { $0.value < $1.value }?.key, busiestMonth: busiest)
     }
 
     func updateProfile(displayName: String, handle: String, bio: String, avatar: Data?) async -> Bool {
@@ -233,6 +298,37 @@ final class SocialService {
             let c = Contribution(id: UUID().uuidString, momentID: momentID, authorID: author.id, authorName: author.displayName, kind: .text, media: nil, caption: note.trimmed, createdAt: .now, originalTimestamp: nil, reactionCounts: [:], commentCount: 0, uploadState: .pending)
             queue.enqueue(.contribution(c))
         }
+    }
+
+    func setCover(momentID: String, from contribution: Contribution) async {
+        guard let img = await image(for: contribution.media), let data = MediaPipeline.thumbnail(img.jpegData(compressionQuality: 0.9) ?? Data(), side: 1080) else { return }
+        do { moments[momentID] = try await backend.setCover(momentID: momentID, data: data); imageCache[momentID + "/cover"] = nil } catch { lastError = error.localizedDescription }
+    }
+
+    func isFeatured(_ id: String) -> Bool { settings.featuredMomentIDs.contains(id) }
+    func toggleFeatured(_ id: String) {
+        if let i = settings.featuredMomentIDs.firstIndex(of: id) { settings.featuredMomentIDs.remove(at: i) }
+        else { settings.featuredMomentIDs = Array((settings.featuredMomentIDs + [id]).suffix(3)) }
+    }
+    var featured: [SocialMoment] { settings.featuredMomentIDs.compactMap { moments[$0] } }
+
+    /// Title / place / people search over Moments you can see.
+    func search(moments query: String) -> [SocialMoment] {
+        let q = query.lowercased().trimmed
+        guard !q.isEmpty else { return momentsImIn }
+        return moments.values.filter { m in
+            m.title.lowercased().contains(q) || (m.coarsePlace?.lowercased().contains(q) ?? false) || m.memberNames.contains { $0.lowercased().contains(q) } || m.description.lowercased().contains(q)
+        }.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// Cached dominant colour per cover, so pages and cards can take on the Moment's own tint.
+    private var colorCache: [String: Color] = [:]
+    func tint(for moment: SocialMoment) async -> Color {
+        let key = moment.coverRef?.remoteID ?? moment.coverRef?.localRef ?? moment.id
+        if let c = colorCache[key] { return c }
+        guard let img = await image(for: moment.coverRef), let c = ImageColor.dominant(img) else { return MColor.accent }
+        colorCache[key] = c
+        return c
     }
 
     func update(_ m: SocialMoment) async -> Bool {
@@ -492,7 +588,7 @@ final class SocialService {
     /// so your own uploads never produce a "new additions" alert.
     private func detectNewContributions(_ items: [SocialMoment], notify: Bool) {
         for m in items where m.memberIDs.contains(myID) {
-            if notify, let old = lastContributionCounts[m.id], m.contributionCount > old, m.memberIDs.count > 1 {
+            if notify, settings.socialNotifications, let old = lastContributionCounts[m.id], m.contributionCount > old, m.memberIDs.count > 1 {
                 let content = UNMutableNotificationContent()
                 content.title = m.title
                 content.body = "\(m.contributionCount - old) new \(m.contributionCount - old == 1 ? "addition" : "additions") from people who were there"

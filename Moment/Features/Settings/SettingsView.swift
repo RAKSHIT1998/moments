@@ -131,6 +131,10 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text("Only genuinely useful ones — a birthday coming up with a gift idea saved, a promise going stale, a plan whose time is near. Never “come back to MOMENT”.")
             }
+            Section("Shared Moments") {
+                Toggle("When people add to a Moment I'm in", isOn: $settings.socialNotifications)
+                Text("One alert per Moment that grew — who and how many, never the photos.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            }
             Section("Privacy") {
                 Toggle("Show details in notifications", isOn: $settings.notificationDetails)
                 Text("Off by default: notifications only say that something matters. Turn on to see the name and what it's about, e.g. “Sarah's birthday is in 7 days”.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)

@@ -18,6 +18,23 @@ struct DiscoverView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: MSpacing.l) {
+                    if query.isBlank, !env.social.peopleSuggestions.isEmpty {
+                        Text("PEOPLE YOU WERE THERE WITH").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: MSpacing.s) {
+                                ForEach(env.social.peopleSuggestions.prefix(8), id: \.id) { p in
+                                    NavigationLink(value: SocialRoute.profile(p.id)) {
+                                        HStack(spacing: MSpacing.s) {
+                                            AvatarView(userID: p.id, name: p.name, size: 36)
+                                            VStack(alignment: .leading, spacing: 1) { Text(p.name).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary).lineLimit(1); Text("\(p.shared) Moments together").font(.caption2).foregroundStyle(MColor.textSecondary) }
+                                        }
+                                        .padding(MSpacing.m).background(MColor.surface, in: Capsule())
+                                    }
+                                    .buttonStyle(PressScaleStyle())
+                                }
+                            }
+                        }
+                    }
                     if !people.isEmpty {
                         Text("PEOPLE").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                         ForEach(people) { u in

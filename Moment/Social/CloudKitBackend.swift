@@ -310,6 +310,15 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         do { try await sharedDB.deleteRecord(withID: shareRef.recordID) } catch { throw map(error) }
     }
 
+    func setCover(momentID: String, data: Data) async throws -> SocialMoment {
+        let (record, db) = try await momentRecord(id: momentID)
+        guard db === privateDB else { throw SocialError.notAllowed }
+        if let url = try? Self.tempFile(data, ext: "jpg") { record["cover"] = CKAsset(fileURL: url) }
+        let saved = try await save(record, in: db)
+        coverCache[record.recordID.recordName + "/cover"] = nil
+        return try await moment(from: saved)
+    }
+
     // MARK: - Feed / Discover
 
     func feed(cursor: String?) async throws -> FeedPage<SocialMoment> {
@@ -615,6 +624,30 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         share.addParticipant(part)
         do { _ = try await privateDB.modifyRecords(saving: [r, share], deleting: []) } catch { throw map(error) }
         return Conversation(id: r.recordID.recordName, participantIDs: [me.id, userID], participantNames: [me.displayName, other.displayName], lastMessage: "", updatedAt: .now)
+    }
+
+    // MARK: - Collections (private DB, default zone)
+
+    func collections() async throws -> [MomentCollection] {
+        let me = try await currentUser()
+        let q = CKQuery(recordType: "Collection", predicate: NSPredicate(value: true))
+        q.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        return try await query(q, in: privateDB, limit: 200).map { r in
+            MomentCollection(id: r.recordID.recordName, ownerID: me.id, title: r["title"] as? String ?? "", emoji: r["emoji"] as? String ?? "📁", momentIDs: r["momentIDs"] as? [String] ?? [], createdAt: r.creationDate ?? .now)
+        }
+    }
+
+    func saveCollection(_ c: MomentCollection) async throws -> MomentCollection {
+        let id = CKRecord.ID(recordName: c.id)
+        let r = (try? await privateDB.record(for: id)) ?? CKRecord(recordType: "Collection", recordID: id)
+        r["title"] = c.title; r["emoji"] = c.emoji; r["momentIDs"] = c.momentIDs
+        let saved = try await save(r, in: privateDB)
+        var out = c; out.createdAt = saved.creationDate ?? c.createdAt
+        return out
+    }
+
+    func deleteCollection(id: String) async throws {
+        do { try await privateDB.deleteRecord(withID: CKRecord.ID(recordName: id)) } catch { throw map(error) }
     }
 
     // MARK: - Media
