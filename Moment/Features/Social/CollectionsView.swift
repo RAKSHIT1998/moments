@@ -197,9 +197,9 @@ struct YearCard: View {
         .accessibilityIdentifier("yearCard")
     }
     private func big(_ v: String, _ l: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) { Text(v).font(.system(size: 34, weight: .bold, design: .rounded)).foregroundStyle(.white); Text(l).font(MFont.caption).foregroundStyle(.white.opacity(0.85)) }
+        VStack(alignment: .leading, spacing: 0) { Text(v).font(.system(size: 34, weight: .bold, design: .rounded)).foregroundStyle(MColor.overlayLight); Text(l).font(MFont.caption).foregroundStyle(MColor.overlayLight.opacity(0.85)) }
     }
     private func line(_ k: String, _ v: String) -> some View {
-        HStack(spacing: 6) { Text(k).font(MFont.footnote).foregroundStyle(.white.opacity(0.8)); Text(v).font(.footnote.weight(.semibold)).foregroundStyle(.white) }
+        HStack(spacing: 6) { Text(k).font(MFont.footnote).foregroundStyle(MColor.overlayLight.opacity(0.8)); Text(v).font(.footnote.weight(.semibold)).foregroundStyle(MColor.overlayLight) }
     }
 }

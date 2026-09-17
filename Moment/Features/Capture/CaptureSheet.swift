@@ -142,7 +142,7 @@ struct CaptureSheet: View {
         HStack(spacing: MSpacing.m) {
             Image(systemName: symbol)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(highlighted ? Color.white : MColor.accent)
+                .foregroundStyle(highlighted ? MColor.overlayLight : MColor.accent)
                 .frame(width: MIcon.tile, height: MIcon.tile)
                 .background {
                     if highlighted { RoundedRectangle(cornerRadius: 14, style: .continuous).fill(MColor.accentGradient) }

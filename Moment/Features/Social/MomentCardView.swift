@@ -22,10 +22,10 @@ struct MomentCardView: View {
                 }
                 .font(.system(size: 14, weight: .medium)).foregroundStyle(MColor.overlayLight.opacity(0.9))
                 HStack(spacing: 8) {
-                    HStack(spacing: -8) { ForEach(Array(moment.memberNames.prefix(4).enumerated()), id: \.offset) { _, n in PersonAvatar(name: n, size: 26).overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5)) } }
-                    Text(peopleLine).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                    HStack(spacing: -8) { ForEach(Array(moment.memberNames.prefix(4).enumerated()), id: \.offset) { _, n in PersonAvatar(name: n, size: 26).overlay(Circle().strokeBorder(MColor.overlayLight.opacity(0.9), lineWidth: 1.5)) } }
+                    Text(peopleLine).font(.system(size: 13, weight: .semibold)).foregroundStyle(MColor.overlayLight)
                     Spacer()
-                    Text("MOMENT").font(.system(size: 11, weight: .heavy)).tracking(2).foregroundStyle(.white.opacity(0.8))
+                    Text("MOMENT").font(.system(size: 11, weight: .heavy)).tracking(2).foregroundStyle(MColor.overlayLight.opacity(0.8))
                 }
             }
             .padding(22)
