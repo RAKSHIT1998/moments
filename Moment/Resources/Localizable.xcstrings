@@ -360,6 +360,9 @@
     "A line about you" : {
 
     },
+    "A minute now, then it's just Moments. Skip anything — you can do it later from Settings." : {
+
+    },
     "A Moment" : {
 
     },
@@ -714,6 +717,9 @@
     "Details (optional)" : {
 
     },
+    "DEV" : {
+
+    },
     "Discard" : {
 
     },
@@ -771,6 +777,9 @@
     "Example" : {
 
     },
+    "Explore with sample data" : {
+
+    },
     "Export" : {
 
     },
@@ -799,6 +808,12 @@
 
     },
     "Failed" : {
+
+    },
+    "Fictional friends (Rahul, Sarah, Dev…), a Goa trip, a birthday, a live sunset, NOW posts, a group and private memories — so every screen has something in it. Nothing is uploaded; switch it off in Settings." : {
+
+    },
+    "Fictional people and Moments on an in-process backend. Turning it off deletes them and returns to iCloud." : {
 
     },
     "Find your people." : {
@@ -1049,7 +1064,13 @@
     "Load demo data (DEBUG)" : {
 
     },
+    "Load sample data" : {
+
+    },
     "Loading photos…" : {
+
+    },
+    "Loading…" : {
 
     },
     "Lock MOMENT with %@" : {
@@ -1065,6 +1086,9 @@
 
     },
     "Make it a Moment" : {
+
+    },
+    "Make it yours." : {
 
     },
     "Make something worth sharing." : {
@@ -1668,10 +1692,16 @@
     "Right now" : {
 
     },
+    "Run setup again" : {
+
+    },
     "Same event?" : {
 
     },
     "Same template, your memories." : {
+
+    },
+    "Sample data (development)" : {
 
     },
     "Sample photos" : {
@@ -1779,10 +1809,16 @@
     "Set reminder" : {
 
     },
+    "SET UP ONCE" : {
+
+    },
     "Set up your profile" : {
 
     },
     "Settings" : {
+
+    },
+    "Setup" : {
 
     },
     "Share a Moment" : {
@@ -1873,6 +1909,9 @@
 
     },
     "Skip" : {
+
+    },
+    "Skip for now" : {
 
     },
     "Something went wrong" : {
