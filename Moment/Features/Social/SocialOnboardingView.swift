@@ -25,7 +25,7 @@ struct SocialOnboardingView: View {
                     ForEach(pages.indices, id: \.self) { i in
                         VStack(alignment: .leading, spacing: MSpacing.xl) {
                             Spacer()
-                            Image(systemName: pages[i].symbol).font(.system(size: 30, weight: .semibold)).foregroundStyle(.white)
+                            Image(systemName: pages[i].symbol).font(.system(size: 30, weight: .semibold)).foregroundStyle(MColor.overlayLight)
                                 .frame(width: 68, height: 68).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                                 .shadow(color: MColor.accent.opacity(0.35), radius: 16, y: 8).accessibilityHidden(true)
                             Text(pages[i].title).font(.system(.largeTitle, weight: .bold)).tracking(-0.6).accessibilityAddTraits(.isHeader)

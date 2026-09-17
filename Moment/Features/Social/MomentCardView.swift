@@ -14,13 +14,13 @@ struct MomentCardView: View {
             .frame(width: 360, height: 450).clipped()
             LinearGradient(colors: [.black.opacity(0.1), .clear, tint.opacity(0.4), .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 10) {
-                if moment.isLive { Text("HAPPENING NOW").font(.system(size: 11, weight: .bold)).tracking(1.2).foregroundStyle(.white).padding(.horizontal, 8).padding(.vertical, 4).background(.red, in: Capsule()) }
-                Text(moment.title).font(.system(size: 34, weight: .bold, design: .serif)).foregroundStyle(.white).lineLimit(3).minimumScaleFactor(0.7)
+                if moment.isLive { Text("HAPPENING NOW").font(.system(size: 11, weight: .bold)).tracking(1.2).foregroundStyle(MColor.overlayLight).padding(.horizontal, 8).padding(.vertical, 4).background(.red, in: Capsule()) }
+                Text(moment.title).font(.system(size: 34, weight: .bold, design: .serif)).foregroundStyle(MColor.overlayLight).lineLimit(3).minimumScaleFactor(0.7)
                 HStack(spacing: 6) {
                     Text(moment.dateLabel)
                     if let p = moment.coarsePlace, !p.isEmpty { Text("·"); Text(p) }
                 }
-                .font(.system(size: 14, weight: .medium)).foregroundStyle(.white.opacity(0.9))
+                .font(.system(size: 14, weight: .medium)).foregroundStyle(MColor.overlayLight.opacity(0.9))
                 HStack(spacing: 8) {
                     HStack(spacing: -8) { ForEach(Array(moment.memberNames.prefix(4).enumerated()), id: \.offset) { _, n in PersonAvatar(name: n, size: 26).overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5)) } }
                     Text(peopleLine).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)

@@ -223,7 +223,7 @@ struct SocialProfileView: View {
     private var myMemoriesCard: some View {
         Button { showMemories = true } label: {
             HStack(spacing: MSpacing.m) {
-                Image(systemName: "lock.shield").font(.title2).foregroundStyle(.white).frame(width: MIcon.tile, height: MIcon.tile).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Image(systemName: "lock.shield").font(.title2).foregroundStyle(MColor.overlayLight).frame(width: MIcon.tile, height: MIcon.tile).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("My private memory").font(MFont.headline).foregroundStyle(MColor.textPrimary)
                     Text("Screenshots, promises, plans, gift ideas — on-device only. \(env.storage.memoryCount) memories.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)

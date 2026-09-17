@@ -24,7 +24,7 @@ struct OnboardingView: View {
                             Spacer()
                             Image(systemName: pages[i].symbol)
                                 .font(.system(size: 30, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(MColor.overlayLight)
                                 .frame(width: 68, height: 68)
                                 .background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                                 .shadow(color: MColor.accent.opacity(0.35), radius: 16, y: 8)

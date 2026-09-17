@@ -45,7 +45,7 @@ struct AddSideView: View {
                         #endif
                         ForEach(photos) { p in
                             Image(uiImage: p.image).resizable().scaledToFill().frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
-                                .overlay(alignment: .topTrailing) { Button { photos.removeAll { $0.id == p.id } } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white, .black.opacity(0.6)) }.padding(4) }
+                                .overlay(alignment: .topTrailing) { Button { photos.removeAll { $0.id == p.id } } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(MColor.overlayLight, MColor.overlayDark.opacity(0.6)) }.padding(4) }
                         }
                         ForEach(videoURLs, id: \.self) { _ in
                             ZStack { RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous).fill(MColor.fill).frame(width: 96, height: 96); Image(systemName: "video.fill") }

@@ -31,7 +31,7 @@ struct MomentReplayView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if items.isEmpty {
-                ContentUnavailableView("Nothing to replay yet", systemImage: "play.slash", description: Text("Add a few sides first.")).foregroundStyle(.white)
+                ContentUnavailableView("Nothing to replay yet", systemImage: "play.slash", description: Text("Add a few sides first.")).foregroundStyle(MColor.overlayLight)
             } else {
                 let beat = items[min(index, items.count - 1)]
                 ZStack {
@@ -39,13 +39,13 @@ struct MomentReplayView: View {
                     case .media(let c):
                         SocialImage(ref: c.media, contentMode: .fill).ignoresSafeArea()
                             .scaleEffect(reduceMotion ? 1 : 1 + progress * 0.06)
-                            .overlay(LinearGradient(colors: [.black.opacity(0.5), .clear, .clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+                            .overlay(LinearGradient(colors: [MColor.overlayDark.opacity(0.5), .clear, .clear, MColor.overlayDark.opacity(0.7)], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
                     case .note(let c):
                         AmbientBackdrop(intensity: 1.5).ignoresSafeArea()
-                        Text("“\(c.caption)”").font(.system(size: 30, weight: .semibold, design: .serif)).foregroundStyle(.white).multilineTextAlignment(.center).padding(MSpacing.xxl)
+                        Text(""\(c.caption)"").font(.system(size: 30, weight: .semibold, design: .serif)).foregroundStyle(MColor.overlayLight).multilineTextAlignment(.center).padding(MSpacing.xxl)
                     case .joined(let name):
-                        Color.black
-                        VStack(spacing: MSpacing.m) { PersonAvatar(name: name, size: 88); Text("\(name) joined").font(MFont.heroSmall).foregroundStyle(.white) }
+                        MColor.overlayDark
+                        VStack(spacing: MSpacing.m) { PersonAvatar(name: name, size: 88); Text("\(name) joined").font(MFont.heroSmall).foregroundStyle(MColor.overlayLight) }
                     }
                 }
                 .id(beat.id)
@@ -55,28 +55,28 @@ struct MomentReplayView: View {
                 VStack {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(env.social.moments[momentID]?.title ?? "").font(MFont.headline).foregroundStyle(.white)
-                            Text(beat.time.formatted(date: .omitted, time: .shortened)).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundStyle(.white).monospacedDigit().contentTransition(.numericText())
+                            Text(env.social.moments[momentID]?.title ?? "").font(MFont.headline).foregroundStyle(MColor.overlayLight)
+                            Text(beat.time.formatted(date: .omitted, time: .shortened)).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundStyle(MColor.overlayLight).monospacedDigit().contentTransition(.numericText())
                         }
                         Spacer()
-                        Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36).background(.black.opacity(0.4), in: Circle()) }.accessibilityLabel("Close")
+                        Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(MColor.overlayLight).frame(width: 36, height: 36).background(MColor.overlayDark.opacity(0.4), in: Circle()) }.accessibilityLabel("Close")
                     }
                     .padding(MSpacing.l)
                     Spacer()
                     VStack(alignment: .leading, spacing: MSpacing.s) {
                         if case .media(let c) = beat.kind {
-                            HStack(spacing: 8) { PersonAvatar(name: c.authorName, size: 28); Text(c.authorID == env.social.myID ? "You" : c.authorName).font(.subheadline.weight(.semibold)).foregroundStyle(.white); if !c.caption.isEmpty { Text("· \(c.caption)").font(MFont.footnote).foregroundStyle(.white.opacity(0.85)).lineLimit(1) } }
+                            HStack(spacing: 8) { PersonAvatar(name: c.authorName, size: 28); Text(c.authorID == env.social.myID ? "You" : c.authorName).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.overlayLight); if !c.caption.isEmpty { Text("· \(c.caption)").font(MFont.footnote).foregroundStyle(MColor.overlayLight.opacity(0.85)).lineLimit(1) } }
                         }
                         HStack(spacing: 4) {
                             ForEach(items.indices, id: \.self) { i in
-                                Capsule().fill(.white.opacity(i < index ? 1 : i == index ? 0.9 : 0.3)).frame(height: 3)
-                                    .overlay(alignment: .leading) { if i == index { GeometryReader { g in Capsule().fill(.white).frame(width: g.size.width * progress) } } }
+                                Capsule().fill(MColor.overlayLight.opacity(i < index ? 1 : i == index ? 0.9 : 0.3)).frame(height: 3)
+                                    .overlay(alignment: .leading) { if i == index { GeometryReader { g in Capsule().fill(MColor.overlayLight).frame(width: g.size.width * progress) } } }
                             }
                         }
                         HStack {
-                            Button { playing.toggle() } label: { Image(systemName: playing ? "pause.fill" : "play.fill").foregroundStyle(.white).frame(width: 44, height: 44) }.accessibilityLabel(playing ? "Pause" : "Play")
+                            Button { playing.toggle() } label: { Image(systemName: playing ? "pause.fill" : "play.fill").foregroundStyle(MColor.overlayLight).frame(width: 44, height: 44) }.accessibilityLabel(playing ? "Pause" : "Play")
                             Spacer()
-                            Text("\(index + 1) / \(items.count)").font(MFont.caption).foregroundStyle(.white.opacity(0.8)).monospacedDigit()
+                            Text("\(index + 1) / \(items.count)").font(MFont.caption).foregroundStyle(MColor.overlayLight.opacity(0.8)).monospacedDigit()
                         }
                     }
                     .padding(MSpacing.l)

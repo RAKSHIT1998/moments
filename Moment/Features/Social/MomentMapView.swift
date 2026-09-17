@@ -22,7 +22,7 @@ struct MomentMapView: View {
                         ZStack {
                             Circle().fill(MColor.accentGradient).frame(width: 44, height: 44).shadow(color: MColor.accent.opacity(0.4), radius: 8, y: 4)
                             if let cover = pin.moments.first?.coverRef { SocialImage(ref: cover).frame(width: 40, height: 40).clipShape(Circle()) }
-                            Text("\(pin.moments.count)").font(.caption2.weight(.bold)).foregroundStyle(.white).padding(4).background(MColor.accent, in: Circle()).offset(x: 16, y: -16)
+                            Text("\(pin.moments.count)").font(.caption2.weight(.bold)).foregroundStyle(MColor.overlayLight).padding(4).background(MColor.accent, in: Circle()).offset(x: 16, y: -16)
                         }
                         .onTapGesture { selected = pin }
                     }

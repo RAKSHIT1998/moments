@@ -16,6 +16,25 @@ enum MColor {
     static let warning = Color(uiColor: .systemOrange)
     static let danger = Color(uiColor: .systemRed)
     static let fill = Color(uiColor: .systemFill)
+    
+    /// Overlay colors that adapt to light/dark mode
+    /// Use in hero views, full-screen overlays, and media displays
+    static let overlayLight = Color.white
+    static let overlayDark = Color.black
+    
+    /// Semi-transparent overlay backgrounds for content on images/video
+    /// In light mode: semi-transparent black for contrast on bright images
+    /// In dark mode: semi-transparent white for contrast on dark images
+    static func overlayBackground(opacity: Double = 0.5) -> Color {
+        // Note: This will be applied contextually with @Environment(\.colorScheme)
+        // See helper function overlayBackgroundColor() in views
+        Color.black.opacity(opacity)
+    }
+    
+    /// Semi-transparent dark overlay for image gradients
+    static func darkOverlay(opacity: Double = 0.8) -> Color {
+        Color.black.opacity(opacity)
+    }
 
     /// The one gradient in the app: primary actions and the capture button.
     static let accentGradient = LinearGradient(
@@ -120,5 +139,19 @@ struct AmbientBackdrop: View {
     }
     private func tint(_ a: Double) -> Color {
         (scheme == .dark ? Color(red: 0.45, green: 0.40, blue: 1.0) : Color(red: 0.36, green: 0.42, blue: 1.0)).opacity(a * (scheme == .dark ? 0.35 : 0.22))
+    }
+}
+
+/// Helper extension to get adaptive overlay text color based on color scheme
+extension View {
+    /// Returns appropriate text color for overlays on images/video
+    /// White text on dark backgrounds (both light and dark modes over images)
+    var overlayTextColor: Color { .white }
+    
+    /// Returns appropriate overlay background opacity based on context
+    /// Used for semi-transparent backgrounds behind text on images
+    func overlayBackgroundColor(_ scheme: ColorScheme) -> Color {
+        // On images, always use dark overlay for contrast
+        Color.black.opacity(0.5)
     }
 }

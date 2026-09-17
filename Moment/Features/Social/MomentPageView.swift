@@ -105,24 +105,24 @@ struct MomentPageView: View {
                 .blur(radius: hidden ? 28 : 0).animation(.easeOut(duration: 0.6), value: hidden)
             if hidden {
                 VStack(spacing: MSpacing.m) {
-                    Text("You had to be there.").font(MFont.heroSmall).foregroundStyle(.white)
+                    Text("You had to be there.").font(MFont.heroSmall).foregroundStyle(MColor.overlayLight)
                     Button { withAnimation { revealed = true }; Haptics.saved() } label: { Label("Reveal", systemImage: "eye") }.buttonStyle(ChipButtonStyle(prominent: true, light: true)).accessibilityIdentifier("reveal")
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            LinearGradient(colors: [.black.opacity(0.35), .clear, .clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [MColor.darkOverlay(opacity: 0.35), .clear, .clear, MColor.darkOverlay(opacity: 0.8)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: MSpacing.s) {
                 if m.isLive {
-                    Label("HAPPENING NOW", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(.white)
+                    Label("HAPPENING NOW", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(MColor.overlayLight)
                         .padding(.horizontal, 8).padding(.vertical, 4).background(MColor.danger, in: Capsule())
                 }
-                Text(m.title).font(MFont.hero).tracking(-0.4).foregroundStyle(.white).lineLimit(3).shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+                Text(m.title).font(MFont.hero).tracking(-0.4).foregroundStyle(MColor.overlayLight).lineLimit(3).shadow(color: MColor.overlayDark.opacity(0.35), radius: 8, y: 2)
                 HStack(spacing: MSpacing.s) {
                     GlassPill(text: m.dateLabel, symbol: "calendar")
                     if let p = m.locationName, !p.isEmpty { GlassPill(text: p, symbol: "mappin") }
                     GlassPill(text: m.visibility.label, symbol: m.visibility.symbol)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(MColor.overlayLight)
             }
             .padding(MSpacing.l)
         }
@@ -274,10 +274,10 @@ struct MomentPageView: View {
                             Button { expanded = c } label: {
                                 SocialImage(ref: c.media)
                                     .overlay(alignment: .bottomLeading) {
-                                        HStack(spacing: 4) { PersonAvatar(name: c.authorName, size: 18); Text(c.authorID == env.social.myID ? "You" : c.authorName.split(separator: " ").first.map(String.init) ?? "").font(.caption2.weight(.semibold)).foregroundStyle(.white) }
-                                            .padding(6).background(.black.opacity(0.35), in: Capsule()).padding(6)
+                                        HStack(spacing: 4) { PersonAvatar(name: c.authorName, size: 18); Text(c.authorID == env.social.myID ? "You" : c.authorName.split(separator: " ").first.map(String.init) ?? "").font(.caption2.weight(.semibold)).foregroundStyle(MColor.overlayLight) }
+                                            .padding(6).background(MColor.overlayDark.opacity(0.35), in: Capsule()).padding(6)
                                     }
-                                    .overlay(alignment: .topTrailing) { if c.kind == .video { Image(systemName: "play.fill").font(.caption).foregroundStyle(.white).padding(6).background(.black.opacity(0.4), in: Circle()).padding(6) } }
+                                    .overlay(alignment: .topTrailing) { if c.kind == .video { Image(systemName: "play.fill").font(.caption).foregroundStyle(MColor.overlayLight).padding(6).background(MColor.overlayDark.opacity(0.4), in: Circle()).padding(6) } }
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("\(c.kind == .video ? "Video" : "Photo") by \(c.authorName)")
@@ -440,7 +440,7 @@ struct ContributionCard: View {
                         SocialImage(ref: contribution.media).frame(height: 320).frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
                         if contribution.kind == .video {
-                            Image(systemName: "play.fill").font(.title3).foregroundStyle(.white).padding(10).background(.black.opacity(0.5), in: Circle()).padding(MSpacing.m)
+                            Image(systemName: "play.fill").font(.title3).foregroundStyle(MColor.overlayLight).padding(10).background(MColor.overlayDark.opacity(0.5), in: Circle()).padding(MSpacing.m)
                         }
                     }
                 }
@@ -474,14 +474,14 @@ struct ContributionViewer: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
+            MColor.overlayDark.ignoresSafeArea()
             if contribution.kind == .video {
-                if let player { VideoPlayer(player: player).ignoresSafeArea() } else { ProgressView().tint(.white) }
+                if let player { VideoPlayer(player: player).ignoresSafeArea() } else { ProgressView().tint(MColor.overlayLight) }
             } else {
                 SocialImage(ref: contribution.media, contentMode: .fit).ignoresSafeArea()
             }
             if !embedded {
-                Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(.white).padding(12).background(.black.opacity(0.5), in: Circle()) }
+                Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(MColor.overlayLight).padding(12).background(MColor.overlayDark.opacity(0.5), in: Circle()) }
                     .padding().accessibilityLabel("Close")
             }
         }
@@ -582,7 +582,7 @@ struct MediaPagerView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.black.ignoresSafeArea()
+            MColor.overlayDark.ignoresSafeArea()
             TabView(selection: $current) {
                 ForEach(items) { c in
                     ContributionViewer(contribution: c, embedded: true).tag(c.id)
@@ -595,27 +595,27 @@ struct MediaPagerView: View {
                     HStack(spacing: MSpacing.s) {
                         AvatarView(userID: c.authorID, name: c.authorName, size: 32)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(c.authorID == env.social.myID ? "You" : c.authorName).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                            Text((c.originalTimestamp ?? c.createdAt).formatted(date: .abbreviated, time: .shortened)).font(MFont.caption).foregroundStyle(.white.opacity(0.8))
+                            Text(c.authorID == env.social.myID ? "You" : c.authorName).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.overlayLight)
+                            Text((c.originalTimestamp ?? c.createdAt).formatted(date: .abbreviated, time: .shortened)).font(MFont.caption).foregroundStyle(MColor.overlayLight.opacity(0.8))
                         }
                         Spacer()
-                        Text("\((items.firstIndex { $0.id == c.id } ?? 0) + 1) / \(items.count)").font(MFont.caption).foregroundStyle(.white.opacity(0.8)).monospacedDigit()
+                        Text("\((items.firstIndex { $0.id == c.id } ?? 0) + 1) / \(items.count)").font(MFont.caption).foregroundStyle(MColor.overlayLight.opacity(0.8)).monospacedDigit()
                         if env.social.moments[momentID]?.creatorID == env.social.myID, c.kind == .photo {
                             Menu {
                                 Button("Set as cover", systemImage: "photo.badge.checkmark") { Task { await env.social.setCover(momentID: momentID, from: c); env.toast("Cover updated."); Haptics.saved() } }
-                            } label: { Image(systemName: "ellipsis").foregroundStyle(.white).frame(width: 36, height: 36).background(.black.opacity(0.4), in: Circle()) }
+                            } label: { Image(systemName: "ellipsis").foregroundStyle(MColor.overlayLight).frame(width: 36, height: 36).background(MColor.overlayDark.opacity(0.4), in: Circle()) }
                         }
-                        Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36).background(.black.opacity(0.4), in: Circle()) }.accessibilityLabel("Close")
+                        Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(MColor.overlayLight).frame(width: 36, height: 36).background(MColor.overlayDark.opacity(0.4), in: Circle()) }.accessibilityLabel("Close")
                     }
                     .padding(MSpacing.l)
                     Spacer()
                     VStack(alignment: .leading, spacing: MSpacing.s) {
-                        if !c.caption.isEmpty { Text(c.caption).font(MFont.callout).foregroundStyle(.white) }
+                        if !c.caption.isEmpty { Text(c.caption).font(MFont.callout).foregroundStyle(MColor.overlayLight) }
                         ReactionBar(momentID: momentID, contributionID: c.id, counts: c.reactionCounts, compact: true, onReact: { burst = $0.emoji })
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(MSpacing.l)
-                    .background(LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom))
+                    .background(LinearGradient(colors: [.clear, MColor.overlayDark.opacity(0.6)], startPoint: .top, endPoint: .bottom))
                 }
             }
         }

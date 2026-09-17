@@ -132,13 +132,13 @@ struct MomentFeedCard: View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomLeading) {
                 SocialImage(ref: moment.coverRef).frame(height: 300).frame(maxWidth: .infinity)
-                LinearGradient(colors: [.black.opacity(0.15), .clear, tint.opacity(0.35), .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [MColor.overlayDark.opacity(0.15), .clear, tint.opacity(0.35), MColor.overlayDark.opacity(0.75)], startPoint: .top, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: MSpacing.xs) {
                     if moment.isLive {
-                        Label("LIVE", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(.white)
+                        Label("LIVE", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(MColor.overlayLight)
                             .padding(.horizontal, 8).padding(.vertical, 4).background(MColor.danger, in: Capsule())
                     }
-                    Text(moment.title).font(MFont.heroSmall).foregroundStyle(.white).lineLimit(2).shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+                    Text(moment.title).font(MFont.heroSmall).foregroundStyle(MColor.overlayLight).lineLimit(2).shadow(color: MColor.overlayDark.opacity(0.3), radius: 6, y: 2)
                     HStack(spacing: 6) {
                         Text(moment.dateLabel)
                         if let p = moment.coarsePlace, !p.isEmpty { Text("·"); Text(p) }

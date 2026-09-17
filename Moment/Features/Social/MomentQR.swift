@@ -81,7 +81,7 @@ struct QRScannerView: View {
                 } else {
                     ContentUnavailableView("Scanner unavailable", systemImage: "qrcode.viewfinder", description: Text("This device can't scan here. Open the link from Messages or Photos instead."))
                 }
-                Text(status).font(MFont.callout).foregroundStyle(.white).padding(.horizontal, 14).padding(.vertical, 10).background(.black.opacity(0.55), in: Capsule()).padding(.bottom, 40)
+                Text(status).font(MFont.callout).foregroundStyle(MColor.overlayLight).padding(.horizontal, 14).padding(.vertical, 10).background(MColor.overlayDark.opacity(0.55), in: Capsule()).padding(.bottom, 40)
             }
             .navigationTitle("Scan to join")
             .navigationBarTitleDisplayMode(.inline)

@@ -58,7 +58,7 @@ struct PersonProfileView: View {
                 if memories.count >= 2 {
                     NavigationLink(value: Route.friendship(p.id)) {
                         HStack(spacing: MSpacing.m) {
-                            Image(systemName: "person.2.fill").font(.body.weight(.semibold)).foregroundStyle(.white).frame(width: 34, height: 34).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: MRadius.icon, style: .continuous))
+                            Image(systemName: "person.2.fill").font(.body.weight(.semibold)).foregroundStyle(MColor.overlayLight).frame(width: 34, height: 34).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: MRadius.icon, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) { Text("You + \(p.displayName)").font(MFont.headline); Text("\(memories.count) shared moments · make it a Moment").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
                             Spacer(); Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(MColor.textTertiary)
                         }.momentCard(padding: MSpacing.m)
