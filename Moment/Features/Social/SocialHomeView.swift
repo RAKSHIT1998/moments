@@ -8,6 +8,7 @@ struct SocialHomeView: View {
     @State private var showNowComposer = false
     @State private var showAnyoneUp = false
     @State private var showScanner = false
+    @State private var showStart = false
     @State private var selectedNow: NowPost?
 
     var body: some View {
@@ -17,6 +18,7 @@ struct SocialHomeView: View {
                     AccountBanner()
                     UploadBanner()
                     nowStrip
+                    startActivityCard
                     AnyoneUpSection(showComposer: $showAnyoneUp)
                     liveSection
                     if let tm = env.social.timeMachine.first, let m = tm.moments.first { TimeMachineCard(yearsAgo: tm.yearsAgo, moment: m) }
@@ -51,6 +53,7 @@ struct SocialHomeView: View {
             .sheet(isPresented: $showNowComposer) { NowComposerView() }
             .sheet(isPresented: $showAnyoneUp) { AnyoneUpComposer() }
             .sheet(isPresented: $showScanner) { QRScannerView() }
+            .sheet(isPresented: $showStart) { StartActivityView() }
             .fullScreenCover(item: $selectedNow) { post in NowViewerView(post: post) }
         }
         .modifier(SocialErrorAlert())
@@ -92,6 +95,26 @@ struct SocialHomeView: View {
                 .padding(.vertical, 4)
             }
         }
+    }
+
+    /// The fun part: one tap, a QR, and everyone at the table is in.
+    private var startActivityCard: some View {
+        HStack(spacing: MSpacing.m) {
+            Button { showStart = true } label: {
+                HStack(spacing: MSpacing.m) {
+                    Image(systemName: "qrcode").font(.title2.weight(.semibold)).foregroundStyle(.white).frame(width: 48, height: 48).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Start an activity").font(MFont.headline).foregroundStyle(MColor.textPrimary)
+                        Text("Get a QR. People scan, they're in.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    }
+                    Spacer()
+                }
+            }
+            .buttonStyle(.plain).accessibilityIdentifier("startActivityCard")
+            Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder").font(.title2).foregroundStyle(MColor.accent).frame(width: 48, height: 48).background(MColor.accentSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous)) }
+                .buttonStyle(PressScaleStyle()).accessibilityLabel("Scan to join")
+        }
+        .momentCard(padding: MSpacing.m)
     }
 
     private func feedRow(_ scored: FeedRanker.Scored) -> some View {

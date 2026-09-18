@@ -77,6 +77,7 @@ struct CreateTab: View {
     @Environment(AppEnvironment.self) private var env
     @Binding var tab: RootTab
     @State private var generation = 0
+    @State private var showStart = false
     var body: some View {
         NavigationStack {
             NewMomentView(initial: env.social.remixDraft) { m in
@@ -86,6 +87,19 @@ struct CreateTab: View {
                 env.social.pendingMomentID = m.id
             }
             .socialDestinations()
+            .safeAreaInset(edge: .top) {
+                Button { showStart = true } label: {
+                    HStack(spacing: MSpacing.m) {
+                        Image(systemName: "qrcode").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        VStack(alignment: .leading, spacing: 1) { Text("Happening right now?").font(MFont.headline).foregroundStyle(MColor.textPrimary); Text("Start an activity and show a QR instead").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+                        Spacer(); Image(systemName: "chevron.right").foregroundStyle(MColor.textTertiary)
+                    }
+                    .padding(MSpacing.m).background(MColor.surface, in: RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
+                    .padding(.horizontal, MSpacing.l).padding(.top, MSpacing.s)
+                }
+                .buttonStyle(PressScaleStyle()).accessibilityIdentifier("createStartActivity")
+            }
+            .sheet(isPresented: $showStart) { StartActivityView() }
         }
         .id("\(generation)-\(env.social.remixDraft?.remixedFromID ?? "new")")
     }

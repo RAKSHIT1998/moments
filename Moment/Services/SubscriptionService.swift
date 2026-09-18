@@ -14,6 +14,10 @@ final class SubscriptionService {
     enum Tier: Equatable { case free, pro }
 
     static let freeMemoryLimit = 100
+    /// Hosting limits for QR activities. Free is deliberately generous — charging comes later, and
+    /// this is the one place the number lives.
+    static let freeEventAttendees = 100
+    static let freeOpenEventsPerMonth = 10
 
     private(set) var products: [Product] = []
     private(set) var tier: Tier = .free
@@ -87,6 +91,9 @@ final class SubscriptionService {
     }
 
     /// Free tier: 100 memories. The check is only for *creating new* memories; viewing/exporting/deleting is never gated.
+    /// Can this host admit one more person? Pro: always. Free: up to `freeEventAttendees`.
+    func canAdmit(attendees: Int) -> Bool { isPro || attendees < Self.freeEventAttendees }
+
     func canCreateMemory(currentCount: Int) -> Bool {
         isPro || currentCount < Self.freeMemoryLimit
     }

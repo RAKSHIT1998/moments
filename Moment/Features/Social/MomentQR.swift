@@ -72,6 +72,7 @@ struct QRScannerView: View {
                         guard let url = URL(string: code) else { status = "That's not a link."; return }
                         if SocialService.isInviteURL(url) {
                             status = "Joining…"
+                            env.analytics.track(.qrScanned)
                             Task { await env.social.acceptInvite(url); dismiss() }
                         } else if url.scheme == "moment" {
                             env.handle(url: url); dismiss()

@@ -12,6 +12,7 @@ final class SocialService {
     private let media: MediaStore
     private let settings: SettingsStore
     private let analytics: AnalyticsService
+    var subscriptions: SubscriptionService = SubscriptionService()
 
     // Session
     private(set) var accountStatus: AccountStatus = .unknown
@@ -298,6 +299,31 @@ final class SocialService {
         } catch { lastError = error.localizedDescription; return nil }
     }
 
+    /// One tap: a live, open Moment for whatever is happening right now — the QR is the invite.
+    func startActivity(title: String, kind: ActivityKind, place: String?, openToAnyone: Bool) async -> SocialMoment? {
+        var input = NewMomentInput(title: title.isBlank ? kind.defaultTitle : title.trimmed, visibility: openToAnyone ? .group : .friends, templateID: "activity.\(kind.rawValue)", isLive: true)
+        input.locationName = place
+        input.startAt = .now
+        guard let m = await createMoment(input) else { return nil }
+        // Make the link exist immediately so the QR is scannable the second the screen appears.
+        _ = await shareLink(momentID: m.id)
+        analytics.track(.activityStarted, category: kind.rawValue)
+        return moments[m.id] ?? m
+    }
+
+    enum ActivityKind: String, CaseIterable, Sendable {
+        case party, trip, dinner, wedding, concert, run, festival, game, meetup, other
+        var emoji: String { switch self { case .party: "🎉"; case .trip: "✈️"; case .dinner: "🍽️"; case .wedding: "💍"; case .concert: "🎶"; case .run: "🏃"; case .festival: "🎪"; case .game: "🏟️"; case .meetup: "☕️"; case .other: "✨" } }
+        var label: String { rawValue.capitalizedFirst }
+        var defaultTitle: String {
+            let day = Date.now.formatted(.dateTime.weekday(.wide))
+            switch self {
+            case .party: return "\(day) night"; case .trip: return "The trip"; case .dinner: return "Dinner"; case .wedding: return "The wedding"; case .concert: return "The show"
+            case .run: return "\(day) run"; case .festival: return "The festival"; case .game: return "Match day"; case .meetup: return "\(day) meetup"; case .other: return "Right now"
+            }
+        }
+    }
+
     /// ADD YOUR SIDE: photos, a video, a note — attributed to you, in the same Moment.
     func addSide(momentID: String, photos: [Data], videoURLs: [URL] = [], note: String) async {
         guard let me else { return }
@@ -325,6 +351,10 @@ final class SocialService {
 
     /// "I WAS THERE" on a Moment you can see but weren't invited to.
     func join(momentID: String) async -> Bool {
+        if let m = moments[momentID], !subscriptions.canAdmit(attendees: m.memberIDs.count) {
+            lastError = "This activity is full (\(SubscriptionService.freeEventAttendees) people). The host can lift the limit with MOMENT Pro."
+            return false
+        }
         do {
             let m = try await backend.join(momentID: momentID); moments[momentID] = m
             analytics.track(.momentJoined); Haptics.completed()
@@ -503,6 +533,12 @@ final class SocialService {
     func acceptInvite(_ url: URL) async {
         do {
             let m = try await backend.acceptInvite(url: url)
+            // Free-tier attendee cap (the host's plan is enforced server-side once there is a server).
+            if !subscriptions.canAdmit(attendees: m.memberIDs.count - 1) {
+                try? await backend.leaveMoment(id: m.id)
+                pendingInviteError = "This activity is full (\(SubscriptionService.freeEventAttendees) people)."
+                return
+            }
             moments[m.id] = m
             analytics.track(.sharedMomentOpened)
             analytics.track(.contextualInviteAccepted)

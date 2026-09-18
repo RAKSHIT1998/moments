@@ -67,6 +67,7 @@ final class AppEnvironment {
         self.stories = StoryService(storage: storage, media: media, importer: importer, settings: settings, analytics: analytics, subscriptions: subscriptions)
         self.flags = FeatureFlags()
         self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media, settings: settings), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
+        social.subscriptions = subscriptions
         actions.onChange = { [weak self] in self?.surface.noteDataChanged() }
         search.changeToken = { [weak self] in self?.surface.changeToken ?? 0 }
         importer.onChange = { [weak self] in self?.surface.noteDataChanged() }

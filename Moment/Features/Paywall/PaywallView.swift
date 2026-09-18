@@ -33,6 +33,7 @@ struct PaywallView: View {
                     feature("Voice memory")
                     feature("Contextual people, plans and promises")
                     feature("Home and Lock Screen widgets")
+                    feature("Host bigger activities: more than \(SubscriptionService.freeEventAttendees) people per QR")
                 }.momentCard()
 
                 if !env.subscriptions.isPro {

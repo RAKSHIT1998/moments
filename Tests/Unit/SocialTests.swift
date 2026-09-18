@@ -385,6 +385,24 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(p.people, 3)
     }
 
+    func testStartActivityGivesScannableLinkAndOthersJoinUntilFull() async throws {
+        let (env, backend) = await makeSocial()
+        let started = await env.social.startActivity(title: "", kind: .party, place: "Bandra", openToAnyone: true)
+        let m = try XCTUnwrap(started)
+        XCTAssertTrue(m.isLive)
+        XCTAssertEqual(m.templateID, "activity.party")
+        XCTAssertTrue(m.title.hasSuffix("night"), "default title from the activity kind")
+        let link = try XCTUnwrap(m.shareURL, "QR needs a link the moment the host screen appears")
+        XCTAssertNotNil(MomentQR.make(link.absoluteString))
+        // Someone scans: they accept the link and are in.
+        try await backend.acting(as: "u_dev") { b in _ = try await b.acceptInvite(url: link) }
+        await env.social.loadMoment(m.id)
+        XCTAssertTrue(env.social.moments[m.id]!.memberIDs.contains("u_dev"))
+        // Free tier caps attendees; the seam for charging later.
+        XCTAssertTrue(env.subscriptions.canAdmit(attendees: SubscriptionService.freeEventAttendees - 1))
+        XCTAssertFalse(env.subscriptions.canAdmit(attendees: SubscriptionService.freeEventAttendees))
+    }
+
     func testMediaPipelineStripsMetadataAndBounds() throws {
         let big = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000)).image { ctx in UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000)) }.jpegData(compressionQuality: 1)!
         let p = try XCTUnwrap(MediaPipeline.preparePhoto(big))
