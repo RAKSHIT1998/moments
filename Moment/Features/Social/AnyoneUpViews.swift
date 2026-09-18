@@ -60,6 +60,11 @@ struct AnyoneUpSection: View {
 
 /// One-screen "I'm up for…" composer: pick an activity, optional line and place, how long it lasts.
 struct AnyoneUpComposer: View {
+    var body: some View { NavigationStack { AnyoneUpComposerBody() }.presentationDetents([.large]) }
+}
+
+/// Pushed inside Create, or wrapped in its own stack from NOW.
+struct AnyoneUpComposerBody: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var activity: NowPost.Activity = .drinks
@@ -67,7 +72,6 @@ struct AnyoneUpComposer: View {
     @State private var place = ""
     @State private var hours = 4.0
     var body: some View {
-        NavigationStack {
             VStack(alignment: .leading, spacing: MSpacing.l) {
                 Text("What are you up for?").font(MFont.title)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 96))], spacing: MSpacing.s) {
@@ -94,10 +98,7 @@ struct AnyoneUpComposer: View {
             .background(MColor.background)
             .navigationTitle("I'm up for…").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Post") { Task { if await env.social.postNow(text: text, photo: nil, place: place.isBlank ? nil : place, activity: activity, hours: hours) { Haptics.completed(); dismiss() } } }.accessibilityIdentifier("postStatus") }
             }
-        }
-        .presentationDetents([.large])
     }
 }

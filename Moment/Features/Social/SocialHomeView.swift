@@ -1,8 +1,7 @@
 import SwiftUI
-import PhotosUI
 
-/// Home: NOW (what's happening right now) on top, then Moments ranked by who you know and
-/// what you were part of. Not a scroll of strangers.
+/// Home: calm. A greeting, who's out right now, then the Moments — large, photographic, few.
+/// Sections are typography and space, not boxes. One dominant action per screen: open a Moment.
 struct SocialHomeView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var showNowComposer = false
@@ -14,40 +13,32 @@ struct SocialHomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: MSpacing.l) {
+                LazyVStack(alignment: .leading, spacing: MSpacing.section) {
+                    greeting
                     AccountBanner()
                     UploadBanner()
-                    nowStrip
-                    startActivityCard
-                    AnyoneUpSection(showComposer: $showAnyoneUp)
+                    nowRow
                     liveSection
-                    if let tm = env.social.timeMachine.first, let m = tm.moments.first { TimeMachineCard(yearsAgo: tm.yearsAgo, moment: m) }
-                    if env.social.feed.isEmpty && !env.social.hasLoadedOnce && env.social.accountStatus != .noAccount {
-                        SkeletonFeedCard(); SkeletonFeedCard()
-                    } else if env.social.feed.isEmpty && !env.social.isLoadingFeed {
-                        emptyFeed
-                    }
-                    let mine = env.social.feed.filter { $0.moment.memberIDs.contains(env.social.myID) && !$0.moment.isLive }
-                    let friends = env.social.feed.filter { !$0.moment.memberIDs.contains(env.social.myID) && !$0.moment.isLive }
-                    if !mine.isEmpty { sectionHeader("YOUR MOMENTS", "Experiences you were part of") }
-                    ForEach(mine, id: \.moment.id) { scored in feedRow(scored) }
-                    if !friends.isEmpty { sectionHeader("FRIENDS & DISCOVER", "Where your people were") }
-                    ForEach(friends, id: \.moment.id) { scored in feedRow(scored) }
+                    momentsSection
+                    forYouSection
+                    memoriesSection
                 }
-                .padding(.horizontal, MSpacing.l)
+                .padding(.horizontal, MSpacing.page)
                 .padding(.bottom, 96)
             }
             .background(MColor.background)
-            .navigationTitle("Moments")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder") }.accessibilityLabel("Scan a Moment QR").accessibilityIdentifier("scanQR")
+                    Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder").fontWeight(.light) }.accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(value: SocialRoute.newMoment) { Image(systemName: "plus.circle.fill").font(.title3) }
-                        .accessibilityLabel("New Moment").accessibilityIdentifier("newMoment")
+                    NavigationLink(value: SocialRoute.inbox) {
+                        Image(systemName: env.social.unreadActivity > 0 ? "bell.badge" : "bell").fontWeight(.light)
+                    }
+                    .accessibilityLabel("Inbox\(env.social.unreadActivity > 0 ? ", \(env.social.unreadActivity) new" : "")").accessibilityIdentifier("inboxButton")
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             .refreshable { await env.social.refreshAll() }
             .socialDestinations()
             .sheet(isPresented: $showNowComposer) { NowComposerView() }
@@ -59,137 +50,137 @@ struct SocialHomeView: View {
         .modifier(SocialErrorAlert())
     }
 
-    private var nowStrip: some View {
-        VStack(alignment: .leading, spacing: MSpacing.s) {
-            HStack {
-                Text("NOW").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
-                Text("· gone in 24h").font(MFont.caption).foregroundStyle(MColor.textTertiary)
+    // MARK: Sections
+
+    private var greeting: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(timeGreeting).font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+            Text(env.social.displayName == "You" ? "Moments" : env.social.displayName.split(separator: " ").first.map(String.init) ?? "Moments").displayStyle()
+        }
+        .padding(.top, MSpacing.s)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var timeGreeting: String {
+        let h = Calendar.current.component(.hour, from: .now)
+        return h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 22 ? "Good evening" : "Good night"
+    }
+
+    /// NOW as presence, not a feed: avatars, a word each.
+    private var nowRow: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Now").sectionLabel()
+                Spacer()
+                NavigationLink(value: SocialRoute.now) { Text("See who's out").font(.subheadline.weight(.medium)).foregroundStyle(MColor.textSecondary) }
             }
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: MSpacing.m) {
-                    Button { showNowComposer = true } label: {
+                HStack(alignment: .top, spacing: MSpacing.l) {
+                    Button { showAnyoneUp = true } label: {
                         VStack(spacing: 6) {
                             ZStack {
-                                Circle().fill(MColor.accentGradient).frame(width: 60, height: 60)
-                                Image(systemName: "plus").font(.title3.weight(.bold)).foregroundStyle(.white)
+                                Circle().strokeBorder(MColor.separator, style: StrokeStyle(lineWidth: 1, dash: [4, 4])).frame(width: 56, height: 56)
+                                Image(systemName: "plus").font(.body.weight(.light)).foregroundStyle(MColor.textPrimary)
                             }
                             Text("You").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                         }
                     }
-                    .buttonStyle(PressScaleStyle())
-                    .accessibilityLabel("Post to NOW").accessibilityIdentifier("nowCompose")
-                    ForEach(env.social.nowPosts.filter { !$0.isStatus }) { post in
-                        Button { selectedNow = post } label: {
+                    .buttonStyle(PressScaleStyle()).accessibilityLabel("Say what you're up to").accessibilityIdentifier("nowCompose")
+                    ForEach(env.social.nowPosts.prefix(12)) { post in
+                        Button { if post.isStatus { showAnyoneUp = false; env.social.pendingNowID = post.id } else { selectedNow = post } } label: {
                             VStack(spacing: 6) {
-                                PersonAvatar(name: post.authorName, size: 56)
-                                    .overlay(Circle().strokeBorder(post.savedToMomentID == nil ? MColor.accent : MColor.textTertiary, lineWidth: 2.5).padding(-3))
-                                Text(post.authorID == env.social.myID ? "You" : post.authorName.split(separator: " ").first.map(String.init) ?? post.authorName).font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1)
+                                AvatarView(userID: post.authorID, name: post.authorName, size: 56)
+                                    .overlay(alignment: .bottomTrailing) { if post.isStatus { Text(post.activity.emoji).font(.caption2).padding(3).background(MColor.background, in: Circle()) } }
+                                Text(post.authorID == env.social.myID ? "You" : post.authorName.split(separator: " ").first.map(String.init) ?? post.authorName).font(MFont.caption).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                                Text(post.isStatus ? post.activity.label : "Posted").font(.caption2).foregroundStyle(MColor.textTertiary).lineLimit(1)
                             }
                             .frame(width: 64)
                         }
                         .buttonStyle(PressScaleStyle())
-                        .accessibilityLabel("\(post.authorName): \(post.text)")
+                        .accessibilityLabel("\(post.authorName): \(post.isStatus ? post.activity.line : post.text)")
                         .accessibilityIdentifier("now-\(post.id)")
                     }
-                }
-                .padding(.vertical, 4)
-            }
-        }
-    }
-
-    /// The fun part: one tap, a QR, and everyone at the table is in.
-    private var startActivityCard: some View {
-        HStack(spacing: MSpacing.m) {
-            Button { showStart = true } label: {
-                HStack(spacing: MSpacing.m) {
-                    Image(systemName: "qrcode").font(.title2.weight(.semibold)).foregroundStyle(.white).frame(width: 48, height: 48).background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Start an activity").font(MFont.headline).foregroundStyle(MColor.textPrimary)
-                        Text("Get a QR. People scan, they're in.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
-                    }
-                    Spacer()
+                    if env.social.nowPosts.isEmpty { Text("Nobody's out yet.").font(MFont.footnote).foregroundStyle(MColor.textTertiary).padding(.top, 18) }
                 }
             }
-            .buttonStyle(.plain).accessibilityIdentifier("startActivityCard")
-            Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder").font(.title2).foregroundStyle(MColor.accent).frame(width: 48, height: 48).background(MColor.accentSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous)) }
-                .buttonStyle(PressScaleStyle()).accessibilityLabel("Scan to join")
         }
-        .momentCard(padding: MSpacing.m)
     }
 
-    private func feedRow(_ scored: FeedRanker.Scored) -> some View {
-        NavigationLink(value: SocialRoute.moment(scored.moment.id)) {
-            MomentFeedCard(moment: scored.moment, reason: scored.reason)
-        }
-        .buttonStyle(PressScaleStyle())
-        .onAppear { env.social.markSeen(scored.moment.id) }
-    }
-
-    private func sectionHeader(_ title: String, _ sub: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-            Text(sub).font(MFont.footnote).foregroundStyle(MColor.textTertiary)
-        }
-        .padding(.top, MSpacing.s)
-    }
-
-    /// Moments happening right now that you can join — the "Moment Together" entry point.
     @ViewBuilder private var liveSection: some View {
         let live = env.social.feed.map(\.moment).filter(\.isLive)
         if !live.isEmpty {
-            VStack(alignment: .leading, spacing: MSpacing.s) {
-                HStack(spacing: 6) {
-                    Circle().fill(MColor.danger).frame(width: 8, height: 8)
-                    Text("HAPPENING NOW").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-                }
+            VStack(alignment: .leading, spacing: MSpacing.m) {
+                Text("Happening now").sectionLabel()
                 ForEach(live) { m in
-                    HStack(spacing: MSpacing.m) {
-                        SocialImage(ref: m.coverRef).frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(m.title).font(MFont.headline).lineLimit(1)
-                            Text("\(m.creatorName.split(separator: " ").first.map(String.init) ?? m.creatorName) started it · \(m.memberIDs.count) in · \(m.contributionCount) added").font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
-                        }
-                        Spacer()
-                        if m.memberIDs.contains(env.social.myID) {
-                            NavigationLink(value: SocialRoute.addSide(m.id)) { Text("ADD") }.buttonStyle(ChipButtonStyle(prominent: true))
-                        } else {
-                            Button("JOIN") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("joinLive-\(m.id)")
+                    NavigationLink(value: SocialRoute.moment(m.id)) {
+                        HStack(spacing: MSpacing.m) {
+                            SocialImage(ref: m.coverRef).frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(m.title).font(MFont.headline).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                                Text("\(m.memberIDs.count) \(m.memberIDs.count == 1 ? "person" : "people") · \(m.creatorName.split(separator: " ").first.map(String.init) ?? "")").font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
+                            }
+                            Spacer()
+                            if m.memberIDs.contains(env.social.myID) { Text("Add your side").font(.subheadline.weight(.medium)).foregroundStyle(MColor.textSecondary) }
+                            else { Button("Join") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("joinLive-\(m.id)") }
                         }
                     }
-                    .momentCard(padding: MSpacing.m)
-                    .overlay(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous).strokeBorder(MColor.danger.opacity(0.25), lineWidth: 1))
-                    .onTapGesture { env.social.pendingMomentID = m.id }
+                    .buttonStyle(.plain)
                 }
             }
             .accessibilityIdentifier("liveSection")
         }
     }
 
-    private func onThisDayCard(_ m: SocialMoment) -> some View {
-        NavigationLink(value: SocialRoute.moment(m.id)) {
-            HStack(spacing: MSpacing.m) {
-                SocialImage(ref: m.coverRef).frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("ONE YEAR AGO").font(MFont.eyebrow).foregroundStyle(MColor.accent)
-                    Text(m.title).font(MFont.headline).foregroundStyle(MColor.textPrimary)
-                    Text("with \(m.memberNames.filter { $0 != env.social.displayName }.joined(separator: ", "))").font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(MColor.textTertiary)
+    private var momentsSection: some View {
+        let mine = env.social.feed.filter { $0.moment.memberIDs.contains(env.social.myID) && !$0.moment.isLive }
+        return VStack(alignment: .leading, spacing: MSpacing.l) {
+            Text("Moments").sectionLabel()
+            if env.social.feed.isEmpty && !env.social.hasLoadedOnce && env.social.accountStatus != .noAccount {
+                SkeletonFeedCard()
+            } else if mine.isEmpty && env.social.hasLoadedOnce {
+                EmptyMoments()
             }
-            .momentCard()
+            ForEach(mine, id: \.moment.id) { scored in feedRow(scored) }
         }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityIdentifier("onThisDay")
     }
 
-    private var emptyFeed: some View {
-        VStack(alignment: .leading, spacing: MSpacing.m) {
-            Text("Nothing here yet.").font(MFont.title)
-            Text("Make a Moment from something that happened and invite the people who were there. Their side shows up next to yours.").font(MFont.body).foregroundStyle(MColor.textSecondary)
-            NavigationLink(value: SocialRoute.newMoment) { Text("Make your first Moment").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle())
+    @ViewBuilder private var forYouSection: some View {
+        let others = env.social.feed.filter { !$0.moment.memberIDs.contains(env.social.myID) && !$0.moment.isLive }
+        if !others.isEmpty {
+            VStack(alignment: .leading, spacing: MSpacing.l) {
+                Text("For you").sectionLabel()
+                ForEach(others.prefix(6), id: \.moment.id) { scored in feedRow(scored) }
+                NavigationLink(value: SocialRoute.discover) { Text("More to discover →").font(.subheadline.weight(.medium)).foregroundStyle(MColor.textSecondary) }
+            }
         }
-        .momentCard()
+    }
+
+    @ViewBuilder private var memoriesSection: some View {
+        if let tm = env.social.timeMachine.first, let m = tm.moments.first {
+            VStack(alignment: .leading, spacing: MSpacing.l) {
+                Text("Memories").sectionLabel()
+                TimeMachineCard(yearsAgo: tm.yearsAgo, moment: m)
+            }
+        }
+    }
+
+    private func feedRow(_ scored: FeedRanker.Scored) -> some View {
+        NavigationLink(value: SocialRoute.moment(scored.moment.id)) { MomentFeedCard(moment: scored.moment) }
+            .buttonStyle(PressScaleStyle())
+            .onAppear { env.social.markSeen(scored.moment.id) }
+    }
+}
+
+/// "Your first one starts here."
+struct EmptyMoments: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            Text("No Moments yet").font(MFont.title)
+            Text("Your first one starts here.").font(MFont.body).foregroundStyle(MColor.textSecondary)
+            NavigationLink(value: SocialRoute.newMoment) { Text("Create Moment").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle())
+        }
+        .padding(.vertical, MSpacing.l)
         .accessibilityIdentifier("emptyFeed")
     }
 }
@@ -219,6 +210,9 @@ enum SocialRoute: Hashable {
     case map
     case passport
     case scan
+    case inbox
+    case discover
+    case now
 }
 
 extension View {

@@ -23,6 +23,7 @@ struct MomentPageView: View {
     @State private var showQR = false
     @State private var revealed = false
     @State private var mergeCandidate: SocialMoment?
+    @State private var showDetails = false
     @State private var showLiveCamera = false
     @State private var burst: String?
     @State private var scrollY: CGFloat = 0
@@ -39,18 +40,25 @@ struct MomentPageView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: MSpacing.xl) {
                         hero(moment)
-                        VStack(alignment: .leading, spacing: MSpacing.xl) {
+                        VStack(alignment: .leading, spacing: MSpacing.section) {
                             meta(moment)
-                            stats(moment)
+                            if !moment.description.isEmpty { Text(moment.description).font(MFont.body).foregroundStyle(MColor.textPrimary) }
                             if let candidate = mergeCandidate { mergeCard(moment, candidate) }
-                            if !moment.description.isEmpty { Text(moment.description).font(MFont.body) }
-                            ReactionBar(momentID: moment.id, counts: moment.reactionCounts, onReact: { burst = $0.emoji })
-                            if let h = env.social.highlights(for: moment.id), h.mostReacted != nil || h.mostActiveHour != nil { highlightsCard(h) }
+                            if isMember { yourSide(moment) }
                             perspectives(moment)
                             timeline(moment)
+                            DisclosureGroup(isExpanded: $showDetails) {
+                                VStack(alignment: .leading, spacing: MSpacing.xl) {
+                                    stats(moment)
+                                    if let h = env.social.highlights(for: moment.id), h.mostReacted != nil || h.mostActiveHour != nil { highlightsCard(h) }
+                                    ReactionBar(momentID: moment.id, counts: moment.reactionCounts, onReact: { burst = $0.emoji })
+                                }
+                                .padding(.top, MSpacing.l)
+                            } label: { Text("Details").sectionLabel() }
+                            .tint(MColor.textSecondary)
                             comments(moment)
                         }
-                        .padding(.horizontal, MSpacing.l)
+                        .padding(.horizontal, MSpacing.page)
                         .padding(.bottom, 120)
                     }
                     .background(GeometryReader { g in Color.clear.preference(key: ScrollYKey.self, value: g.frame(in: .named("momentScroll")).minY) })
@@ -101,7 +109,7 @@ struct MomentPageView: View {
         let stretch = max(0, scrollY)   // pull-down grows the cover instead of showing a gap
         let hidden = m.isTeaser && !isMember && !revealed
         return ZStack(alignment: .bottomLeading) {
-            SocialImage(ref: m.coverRef).frame(height: 420 + stretch).frame(maxWidth: .infinity).offset(y: -stretch)
+            SocialImage(ref: m.coverRef).frame(height: 520 + stretch).frame(maxWidth: .infinity).offset(y: -stretch)
                 .blur(radius: hidden ? 28 : 0).animation(.easeOut(duration: 0.6), value: hidden)
             if hidden {
                 VStack(spacing: MSpacing.m) {
@@ -110,21 +118,16 @@ struct MomentPageView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            LinearGradient(colors: [MColor.darkOverlay(opacity: 0.35), .clear, .clear, MColor.darkOverlay(opacity: 0.8)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [.black.opacity(0.25), .clear, .clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: MSpacing.s) {
                 if m.isLive {
-                    Label("HAPPENING NOW", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(MColor.overlayLight)
-                        .padding(.horizontal, 8).padding(.vertical, 4).background(MColor.danger, in: Capsule())
+                    HStack(spacing: 6) { Circle().fill(.white).frame(width: 6, height: 6); Text("Live").font(MFont.caption) }.foregroundStyle(.white.opacity(0.9))
                 }
-                Text(m.title).font(MFont.hero).tracking(-0.4).foregroundStyle(MColor.overlayLight).lineLimit(3).shadow(color: MColor.overlayDark.opacity(0.35), radius: 8, y: 2)
-                HStack(spacing: MSpacing.s) {
-                    GlassPill(text: m.dateLabel, symbol: "calendar")
-                    if let p = m.locationName, !p.isEmpty { GlassPill(text: p, symbol: "mappin") }
-                    GlassPill(text: m.visibility.label, symbol: m.visibility.symbol)
-                }
-                .foregroundStyle(MColor.overlayLight)
+                Text(m.title).font(MFont.hero).tracking(-0.8).foregroundStyle(.white).lineLimit(3)
+                Text([m.memberIDs.count == 1 ? "1 person" : "\(m.memberIDs.count) people", m.dateLabel, m.coarsePlace].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+                    .font(MFont.subheadline).foregroundStyle(.white.opacity(0.85))
             }
-            .padding(MSpacing.l)
+            .padding(MSpacing.page).padding(.bottom, MSpacing.s)
         }
         .ignoresSafeArea(edges: .top)
         .accessibilityElement(children: .combine)
@@ -135,30 +138,29 @@ struct MomentPageView: View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
             NavigationLink(value: SocialRoute.members(m.id)) {
                 HStack(spacing: MSpacing.m) {
-                    AvatarStack(names: m.memberNames, size: 32)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(whoLine(m)).font(MFont.headline).foregroundStyle(MColor.textPrimary)
-                        Text("\(m.contributionCount) \(m.contributionCount == 1 ? "side" : "sides") · \(m.mediaCount) photos · \(m.visibility.label)").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
-                    }
+                    AvatarStack(names: m.memberNames, size: 30)
+                    Text(whoLine(m)).font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(MColor.textTertiary)
                 }
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("momentMembers")
-            if isMember, m.isGroup {
-                Text("You were there too.").font(MFont.callout).foregroundStyle(MColor.accent)
-            } else if !isMember {
+            if !isMember {
                 HStack(spacing: MSpacing.m) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Were you there?").font(MFont.headline)
-                        Text("Join to add your side. Your photos stay yours.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
-                    }
+                    Text("Were you there?").font(MFont.body)
                     Spacer()
-                    Button("I WAS THERE") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("iWasThere")
+                    Button("I was there") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("iWasThere")
                 }
-                .momentCard(padding: MSpacing.m)
             }
+        }
+    }
+
+    /// The signature interaction: a quiet prompt, one button.
+    private func yourSide(_ m: SocialMoment) -> some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            Text("Your side").sectionLabel()
+            Text("Got photos from this?").font(MFont.title)
+            NavigationLink(value: SocialRoute.addSide(m.id)) { Text("Add Your Side").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("addYourSide")
         }
     }
 
@@ -183,9 +185,9 @@ struct MomentPageView: View {
 
     private func whoLine(_ m: SocialMoment) -> String {
         let others = m.memberNames.filter { $0 != env.social.displayName }
+        let n = m.memberIDs.count
         if others.isEmpty { return isMember ? "Just you" : m.creatorName }
-        if isMember { return others.count <= 2 ? others.joined(separator: ", ") + " + you" : "\(others[0]), \(others[1]) + \(others.count - 1) more" }
-        return others.count <= 3 ? others.joined(separator: ", ") : "\(others[0]), \(others[1]) + \(others.count - 2) more"
+        return "\(n) \(n == 1 ? "person was" : "people were") there"
     }
 
     /// Everyone / one person: the same night from each side.
@@ -213,7 +215,7 @@ struct MomentPageView: View {
 
     private func highlightsCard(_ h: SocialService.Highlights) -> some View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
-            HStack { Text("THE MOMENT").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.accent); Spacer(); Button { showReplay = true } label: { Label("Replay", systemImage: "play.circle") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("replay") }
+            HStack { Text("The Moment").sectionLabel(); Spacer(); Button { showReplay = true } label: { Label("Replay", systemImage: "play") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("replay") }
             if let c = h.mostReacted {
                 Button { expanded = c } label: {
                     HStack(spacing: MSpacing.m) {
@@ -254,18 +256,14 @@ struct MomentPageView: View {
         let entries = MomentTimeline.build(all)
         return VStack(alignment: .leading, spacing: MSpacing.l) {
             if all.isEmpty {
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text("No sides yet.").font(MFont.headline)
+                VStack(alignment: .leading, spacing: MSpacing.xs) {
+                    Text("No sides yet").font(MFont.title)
                     Text(isMember ? "Add photos, a video or a note. Everyone who was there sees it here." : "Waiting for the people who were there.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
                 }
-                .momentCard()
             }
             ForEach(entries) { entry in
                 VStack(alignment: .leading, spacing: MSpacing.s) {
-                    HStack(spacing: 6) {
-                        Text(entry.label.uppercased()).font(MFont.eyebrow).foregroundStyle(MColor.textTertiary).tracking(1)
-                        Rectangle().fill(MColor.separator).frame(height: 0.5)
-                    }
+                    Text(entry.label).font(MFont.title).foregroundStyle(MColor.textPrimary).padding(.top, MSpacing.s)
                     let photos = entry.contributions.filter { ($0.kind == .photo || $0.kind == .video) && $0.uploadState == .uploaded }
                     let others = entry.contributions.filter { !photos.contains($0) }
                     if photos.count >= 3 {
@@ -333,18 +331,19 @@ struct MomentPageView: View {
         }
     }
 
-    private func bottomBar(_ m: SocialMoment) -> some View {
+    @ViewBuilder private func bottomBar(_ m: SocialMoment) -> some View {
+        if isMember, !m.isLive { EmptyView() } else { bottomBarContent(m) }
+    }
+
+    private func bottomBarContent(_ m: SocialMoment) -> some View {
         HStack(spacing: MSpacing.m) {
             if m.isLive, isMember, UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button { showLiveCamera = true } label: { Image(systemName: "camera.fill").font(.title3).frame(width: 52, height: 52) }
                     .buttonStyle(SecondaryButtonStyle()).accessibilityLabel("Add a photo now")
             }
             if isMember || m.visibility == .publicAll && m.allowsContributions {
-                NavigationLink(value: SocialRoute.addSide(m.id)) {
-                    Label("ADD YOUR SIDE", systemImage: "plus").font(.headline.weight(.bold)).tracking(0.8).frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .accessibilityIdentifier("addYourSide")
+                NavigationLink(value: SocialRoute.addSide(m.id)) { Text("Add Your Side").frame(maxWidth: .infinity) }
+                    .buttonStyle(PrimaryButtonStyle())
             } else if m.visibility == .publicAll {
                 Button { Task { await remix(m) } } label: { Label("Remix", systemImage: "wand.and.stars").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle())
             }
@@ -421,7 +420,7 @@ struct ContributionCard: View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
             HStack(spacing: MSpacing.s) {
                 NavigationLink(value: SocialRoute.profile(contribution.authorID)) { PersonAvatar(name: contribution.authorName, size: 28) }.buttonStyle(.plain)
-                Text(contribution.authorID == env.social.myID ? "You" : contribution.authorName).font(.subheadline.weight(.semibold))
+                Text(contribution.authorID == env.social.myID ? "You" : contribution.authorName).font(.subheadline.weight(.medium)).foregroundStyle(MColor.textSecondary)
                 Spacer()
                 switch contribution.uploadState {
                 case .pending, .uploading: Label("Uploading", systemImage: "icloud.and.arrow.up").font(MFont.caption).foregroundStyle(MColor.textTertiary)
@@ -437,7 +436,7 @@ struct ContributionCard: View {
             case .photo, .video:
                 Button(action: onOpen) {
                     ZStack(alignment: .bottomTrailing) {
-                        SocialImage(ref: contribution.media).frame(height: 320).frame(maxWidth: .infinity)
+                        SocialImage(ref: contribution.media).frame(height: 400).frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
                         if contribution.kind == .video {
                             Image(systemName: "play.fill").font(.title3).foregroundStyle(MColor.overlayLight).padding(10).background(MColor.overlayDark.opacity(0.5), in: Circle()).padding(MSpacing.m)
@@ -451,13 +450,12 @@ struct ContributionCard: View {
                 Label("Voice note", systemImage: "waveform").font(MFont.callout)
                     .padding(MSpacing.m).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
             case .text:
-                Text(contribution.caption).font(.title3.weight(.medium)).padding(MSpacing.l)
+                Text(contribution.caption).font(MFont.title).foregroundStyle(MColor.textPrimary).padding(.vertical, MSpacing.s)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MColor.accentSoft, in: RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
             }
             ReactionBar(momentID: momentID, contributionID: contribution.id, counts: contribution.reactionCounts, compact: true)
         }
-        .momentCard(padding: MSpacing.m)
+        .padding(.vertical, MSpacing.s)
         .sheet(isPresented: $showReport) { ReportSheet(momentID: momentID, contributionID: contribution.id, userID: contribution.authorID) }
         .accessibilityIdentifier("contribution-\(contribution.id)")
     }

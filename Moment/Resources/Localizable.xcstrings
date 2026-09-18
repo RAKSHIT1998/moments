@@ -420,6 +420,9 @@
     "Add person" : {
 
     },
+    "Add photo" : {
+
+    },
     "Add photos, a video or a note. Everyone who was there sees it here." : {
 
     },
@@ -439,6 +442,9 @@
 
     },
     "Add your side of the memory — a photo, a line, your version of what happened. %@ will see it when you send it back." : {
+
+    },
+    "added" : {
 
     },
     "Adding…" : {
@@ -483,6 +489,9 @@
     "Anyone who scans gets the invite link. They join with their own iCloud account and add their side." : {
 
     },
+    "Anyone with the QR can join" : {
+
+    },
     "Anything you want to remember" : {
 
     },
@@ -501,6 +510,9 @@
     "At the right time" : {
 
     },
+    "Automatic" : {
+
+    },
     "Back" : {
 
     },
@@ -511,6 +523,9 @@
 
     },
     "Before %@" : {
+
+    },
+    "Best for parties, weddings, events. Up to %lld people on the free plan." : {
 
     },
     "Bio" : {
@@ -750,6 +765,15 @@
     "Edit profile" : {
 
     },
+    "End" : {
+
+    },
+    "End — keep the Moment" : {
+
+    },
+    "End this activity?" : {
+
+    },
     "Every Moment lands here with its source, in the order it happened." : {
 
     },
@@ -822,6 +846,9 @@
     "First came up %@." : {
 
     },
+    "Fixed. Choose Automatic to follow your iPhone again." : {
+
+    },
     "Follow" : {
 
     },
@@ -829,6 +856,9 @@
 
     },
     "Following" : {
+
+    },
+    "Follows your iPhone's Light/Dark setting, including schedules. Text, cards and colours adapt automatically." : {
 
     },
     "Format" : {
@@ -868,6 +898,9 @@
           }
         }
       }
+    },
+    "Get a QR. People scan, they're in." : {
+
     },
     "Gift actions" : {
 
@@ -918,6 +951,12 @@
 
     },
     "Happening now (LIVE)" : {
+
+    },
+    "Happening right now?" : {
+
+    },
+    "here" : {
 
     },
     "Here's exactly where they live and what leaves this iPhone." : {
@@ -1169,6 +1208,9 @@
     "Messages" : {
 
     },
+    "Minimise" : {
+
+    },
     "Model: %@. Stored only in this device's Keychain." : {
 
     },
@@ -1413,6 +1455,9 @@
 
     },
     "ONE YEAR AGO" : {
+
+    },
+    "Only friends you follow back can join, even with the QR." : {
 
     },
     "Only genuinely useful ones — a birthday coming up with a gift idea saved, a promise going stale, a plan whose time is near. Never “come back to MOMENT”." : {
@@ -1936,10 +1981,25 @@
     "STAMPS" : {
 
     },
+    "Start & show QR" : {
+
+    },
     "Start a new Moment" : {
 
     },
+    "Start an activity" : {
+
+    },
+    "START AN ACTIVITY" : {
+
+    },
+    "Start an activity and show a QR instead" : {
+
+    },
     "Start with photos" : {
+
+    },
+    "Starting…" : {
 
     },
     "Status" : {
@@ -1949,9 +2009,6 @@
 
     },
     "Support & feedback" : {
-
-    },
-    "System" : {
 
     },
     "System permission: %@" : {
@@ -1975,6 +2032,9 @@
     "THE MOMENT" : {
 
     },
+    "The Moment is live until you end it. Everyone keeps their own photos; you can remove anything from your activity." : {
+
+    },
     "The Moments inside stay where they are." : {
 
     },
@@ -1982,6 +2042,9 @@
 
     },
     "The passport is built from your own Moments on this device. It's private unless you share a card." : {
+
+    },
+    "The QR stops admitting people. Everything added stays in the Moment." : {
 
     },
     "The story" : {
@@ -2200,6 +2263,9 @@
     "What's happening right now?" : {
 
     },
+    "What's happening?" : {
+
+    },
     "What's worth remembering?" : {
 
     },
@@ -2228,6 +2294,9 @@
 
     },
     "Where, roughly (city or area)" : {
+
+    },
+    "Where, roughly (optional)" : {
 
     },
     "Who can see it" : {
@@ -2276,6 +2345,9 @@
 
     },
     "You can also tell me things: “Remember that Rahul likes Japanese food.”" : {
+
+    },
+    "You get a QR. People scan it and they're in — their photos land next to yours." : {
 
     },
     "You had to be there." : {

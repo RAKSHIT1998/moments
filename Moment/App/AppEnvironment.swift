@@ -141,10 +141,11 @@ final class AppEnvironment {
 }
 
 enum RootTab: String, CaseIterable, Identifiable {
-    case home, discover, create, inbox, profile
+    case home, discover, create, now, profile
     var id: String { rawValue }
-    var label: String { switch self { case .home: "Home"; case .discover: "Discover"; case .create: "New"; case .inbox: "Inbox"; case .profile: "You" } }
-    var symbol: String { switch self { case .home: "house"; case .discover: "safari"; case .create: "plus"; case .inbox: "tray"; case .profile: "person.crop.circle" } }
+    var label: String { switch self { case .home: "Home"; case .discover: "Discover"; case .create: "Create"; case .now: "Now"; case .profile: "Profile" } }
+    var symbol: String { switch self { case .home: "house"; case .discover: "safari"; case .create: "plus.circle"; case .now: "sparkle"; case .profile: "person.crop.circle" } }
+    static let inbox = RootTab.home
     /// Old deep links (`moment://search`, `vault`) still land somewhere sensible.
     static let search = RootTab.profile
     static let vault = RootTab.profile

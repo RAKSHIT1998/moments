@@ -8,12 +8,12 @@ struct PrimaryButtonStyle: ButtonStyle {
             .font(MFont.headline)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .foregroundStyle(.white)
+            .foregroundStyle(tint == nil ? MColor.onInk : Color.white)
             .background {
-                if let tint { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tint) }
-                else { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(MColor.accentGradient) }
+                // The one primary action: solid ink. No gradient, no glow.
+                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(tint ?? MColor.ink)
             }
-            .shadow(color: (tint ?? MColor.accent).opacity(configuration.isPressed ? 0.1 : 0.25), radius: 12, y: 6)
+            .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.985 : 1)
             .animation(reduceMotion ? nil : .spring(duration: 0.25), value: configuration.isPressed)
             .contentShape(Rectangle())
@@ -27,7 +27,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .foregroundStyle(MColor.textPrimary)
-            .background(MColor.fill.opacity(configuration.isPressed ? 0.6 : 1), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MColor.separator, lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Rectangle())
     }
 }
@@ -39,14 +40,14 @@ struct ChipButtonStyle: ButtonStyle {
     var light = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.subheadline.weight(.semibold))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 9)
+            .font(.subheadline.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .frame(minHeight: MTouch.minimum - 8)
-            .foregroundStyle(light ? (prominent ? MColor.accent : Color.white) : (prominent ? Color.white : MColor.accent))
+            .foregroundStyle(light ? (prominent ? Color.black : Color.white) : (prominent ? MColor.onInk : MColor.textPrimary))
             .background {
-                if light { Capsule().fill(prominent ? Color.white : Color.white.opacity(0.22)) }
-                else if prominent { Capsule().fill(MColor.accentGradient) } else { Capsule().fill(MColor.accentSoft) }
+                if light { Capsule().fill(prominent ? Color.white : Color.white.opacity(0.18)) }
+                else if prominent { Capsule().fill(MColor.ink) } else { Capsule().strokeBorder(MColor.separator, lineWidth: 1) }
             }
             .opacity(configuration.isPressed ? 0.7 : 1)
             .contentShape(Capsule())
@@ -59,10 +60,10 @@ struct SectionHeader: View {
     var action: (() -> Void)? = nil
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title).font(MFont.title)
+            Text(title).sectionLabel()
             Spacer()
             if let actionTitle, let action {
-                Button(actionTitle, action: action).font(.subheadline.weight(.semibold))
+                Button(actionTitle, action: action).font(.subheadline.weight(.medium)).foregroundStyle(MColor.textSecondary)
             }
         }
         .padding(.horizontal, MSpacing.l)
@@ -140,9 +141,9 @@ struct PersonAvatar: View {
     var body: some View {
         Text(initials)
             .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
+            .foregroundStyle(MColor.onInk)
             .frame(width: size, height: size)
-            .background(MColor.accentGradient.opacity(0.9), in: Circle())
+            .background(MColor.ink.opacity(0.85), in: Circle())
             .accessibilityHidden(true)
     }
     private var initials: String {

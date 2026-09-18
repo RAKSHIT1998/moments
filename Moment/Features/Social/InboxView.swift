@@ -4,10 +4,14 @@ import PhotosUI
 /// Inbox: activity on your Moments, invitations, and messages.
 struct InboxView: View {
     @Environment(AppEnvironment.self) private var env
+    var embedded = false
     @State private var segment = 0
 
     var body: some View {
-        NavigationStack {
+        Group { if embedded { content } else { NavigationStack { content.socialDestinations() } } }
+    }
+
+    private var content: some View {
             VStack(spacing: 0) {
                 Picker("Inbox", selection: $segment) { Text("Activity").tag(0); Text("Invites").tag(1); Text("Messages").tag(2) }
                     .pickerStyle(.segmented).padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.s)
@@ -25,8 +29,6 @@ struct InboxView: View {
             .navigationTitle("Inbox")
             .refreshable { await env.social.refreshInbox() }
             .task { await env.social.refreshInbox(); await env.social.markActivityRead() }
-            .socialDestinations()
-        }
     }
 
     @ViewBuilder private var activity: some View {

@@ -55,7 +55,7 @@ struct ReactionBar: View {
 
     private var shown: [ReactionKind] {
         let used = ReactionKind.allCases.filter { (counts[$0.rawValue] ?? 0) > 0 }
-        let base = used.isEmpty ? [ReactionKind.core, .forgot, .unreal] : used
+        let base = used.isEmpty ? [ReactionKind.core] : used
         return compact ? Array(base.prefix(3)) : base
     }
 
@@ -119,84 +119,56 @@ struct ReactionPicker: View {
     }
 }
 
-/// A Moment in a list: cover, title, who was there, why it's here.
+/// A Moment in a list: the photograph, a title, one line of context. Nothing else.
 struct MomentFeedCard: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let moment: SocialMoment
     var reason: String? = nil
-    @State private var tint: Color = MColor.accent
     @State private var burst: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
             ZStack(alignment: .bottomLeading) {
-                SocialImage(ref: moment.coverRef).frame(height: 300).frame(maxWidth: .infinity)
-                LinearGradient(colors: [MColor.overlayDark.opacity(0.15), .clear, tint.opacity(0.35), MColor.overlayDark.opacity(0.75)], startPoint: .top, endPoint: .bottom)
-                VStack(alignment: .leading, spacing: MSpacing.xs) {
-                    if moment.isLive {
-                        Label("LIVE", systemImage: "dot.radiowaves.left.and.right").font(MFont.eyebrow).foregroundStyle(MColor.overlayLight)
-                            .padding(.horizontal, 8).padding(.vertical, 4).background(MColor.danger, in: Capsule())
-                    }
-                    Text(moment.title).font(MFont.heroSmall).foregroundStyle(MColor.overlayLight).lineLimit(2).shadow(color: MColor.overlayDark.opacity(0.3), radius: 6, y: 2)
-                    HStack(spacing: 6) {
-                        Text(moment.dateLabel)
-                        if let p = moment.coarsePlace, !p.isEmpty { Text("·"); Text(p) }
-                        if moment.mediaCount > 0 { Text("·"); Text("\(moment.mediaCount) photos") }
-                    }
-                    .font(MFont.footnote).foregroundStyle(.white.opacity(0.9))
+                SocialImage(ref: moment.coverRef).frame(height: 360).frame(maxWidth: .infinity)
+                    .blur(radius: moment.isTeaser && !moment.memberIDs.contains(env.social.myID) ? 24 : 0)
+                LinearGradient(colors: [.clear, .clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                if moment.isLive {
+                    HStack(spacing: 5) { Circle().fill(.white).frame(width: 6, height: 6); Text("Live").font(MFont.caption).foregroundStyle(.white) }
+                        .padding(.horizontal, 10).padding(.vertical, 5).background(.black.opacity(0.35), in: Capsule())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(MSpacing.m)
                 }
-                .padding(MSpacing.l)
-                if let mine = env.social.myReaction(momentID: moment.id) {
-                    Text(mine.emoji).font(.title3).padding(8).background(.ultraThinMaterial, in: Circle())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(MSpacing.m)
-                        .accessibilityLabel("You reacted \(mine.label)")
-                }
+                Text(moment.title).font(MFont.heroSmall).foregroundStyle(.white).lineLimit(2).padding(MSpacing.l)
             }
+            .clipShape(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
-                // Double-tap = core memory. Instant feedback, then the backend.
                 Haptics.saved(); burst = ReactionKind.core.emoji
                 Task { await env.social.react(momentID: moment.id, kind: .core) }
             }
-            HStack(spacing: MSpacing.m) {
-                AvatarStack(names: moment.memberNames.map { $0 == env.social.displayName ? "You" : $0 }, size: 30)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(peopleLine).font(MFont.subheadline).foregroundStyle(MColor.textPrimary).lineLimit(1)
-                    if let reason { Text(reason).font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(2) }
-                }
+            HStack(spacing: MSpacing.s) {
+                AvatarStack(names: moment.memberNames, size: 22, max: 3)
+                Text(metaLine).font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
                 Spacer()
-                if moment.memberIDs.contains(env.social.myID) {
-                    Text("ADD YOUR SIDE").font(MFont.eyebrow).foregroundStyle(MColor.accent)
-                } else {
-                    Image(systemName: moment.visibility.symbol).foregroundStyle(MColor.textTertiary)
-                }
+                Text("See Moment →").font(.subheadline.weight(.medium)).foregroundStyle(MColor.textPrimary)
             }
-            .padding(MSpacing.l)
+            .padding(.horizontal, 2)
         }
-        .background(MColor.surface, in: RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
-        .shadow(color: tint.opacity(0.18), radius: 18, y: 10)
         .reactionBurst($burst)
         .scrollTransition(.interactive, axis: .vertical) { content, phase in
-            content.scaleEffect(reduceMotion ? 1 : (phase.isIdentity ? 1 : 0.96)).opacity(phase.isIdentity ? 1 : 0.75)
+            content.opacity(phase.isIdentity ? 1 : 0.85).scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.985)
         }
-        .task(id: moment.coverRef) { tint = await env.social.tint(for: moment) }
         .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(moment.title). \(metaLine)")
         .accessibilityIdentifier("feedMoment-\(moment.id)")
     }
 
-    private var peopleLine: String {
-        let others = moment.memberNames.filter { $0 != env.social.displayName }.map { $0.split(separator: " ").first.map(String.init) ?? $0 }
-        let me = moment.memberIDs.contains(env.social.myID)
-        switch (others.count, me) {
-        case (0, _): return "Just you"
-        case (1, true): return "\(others[0]) + you"
-        case (2, true): return "\(others[0]), \(others[1]) + you"
-        case (_, true): return "\(others[0]), \(others[1]) + \(others.count - 2 + 1) more"
-        case (1, false): return others[0]
-        default: return "\(others[0]) + \(others.count - 1)"
-        }
+    private var metaLine: String {
+        var parts: [String] = ["\(moment.memberIDs.count) \(moment.memberIDs.count == 1 ? "person" : "people")"]
+        if let s = moment.startAt, let e = moment.endAt, let d = Calendar.current.dateComponents([.day], from: s, to: e).day, d >= 1 { parts.append("\(d + 1) days") }
+        else { parts.append(moment.dateLabel) }
+        if let p = moment.coarsePlace, !p.isEmpty { parts.append(p) }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -206,10 +178,10 @@ struct MomentTile: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             SocialImage(ref: moment.coverRef).aspectRatio(1, contentMode: .fill)
-            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom)
+            LinearGradient(colors: [.clear, .clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 2) {
-                Text(moment.title).font(.subheadline.weight(.semibold)).foregroundStyle(.white).lineLimit(2)
-                Text("\(moment.memberIDs.count) \(moment.memberIDs.count == 1 ? "person" : "people") · \(moment.dateLabel)").font(.caption2).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
+                Text(moment.title).font(.subheadline.weight(.medium)).foregroundStyle(.white).lineLimit(2)
+                Text("\(moment.memberIDs.count) \(moment.memberIDs.count == 1 ? "person" : "people")").font(.caption2).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
             }
             .padding(MSpacing.s)
         }
@@ -234,7 +206,8 @@ struct AccountBanner: View {
                 Spacer()
                 Button("Retry") { Task { await env.social.start() } }.buttonStyle(ChipButtonStyle())
             }
-            .momentCard()
+            .padding(.vertical, MSpacing.m)
+            .overlay(Rectangle().fill(MColor.separator).frame(height: 0.5), alignment: .bottom)
             .accessibilityIdentifier("accountBanner")
         }
     }
@@ -283,7 +256,8 @@ struct SocialErrorAlert: ViewModifier {
     @Environment(AppEnvironment.self) private var env
     func body(content: Content) -> some View {
         content.alert("Something went wrong", isPresented: Binding(get: { env.social.lastError != nil }, set: { _ in env.social.clearError() })) {
-            Button("OK") {}
+            Button("Try again") { Task { await env.social.refreshAll() } }
+            Button("OK", role: .cancel) {}
         } message: { Text(env.social.lastError ?? "") }
     }
 }

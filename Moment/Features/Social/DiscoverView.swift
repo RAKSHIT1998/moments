@@ -4,6 +4,7 @@ import SwiftUI
 /// something, you find it.
 struct DiscoverView: View {
     @Environment(AppEnvironment.self) private var env
+    var embedded = false
     @State private var query = ""
     @State private var place: String?
     @State private var results: [SocialMoment] = []
@@ -15,7 +16,10 @@ struct DiscoverView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        Group { if embedded { content } else { NavigationStack { content.socialDestinations() } } }
+    }
+
+    private var content: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: MSpacing.l) {
                     if query.isBlank, !env.social.peopleSuggestions.isEmpty {
@@ -72,8 +76,6 @@ struct DiscoverView: View {
             .searchable(text: $query, prompt: "Places, Moments, @people")
             .task(id: query) { await search() }
             .refreshable { await search() }
-            .socialDestinations()
-        }
     }
 
     private func search() async {

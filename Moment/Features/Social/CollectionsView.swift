@@ -176,9 +176,9 @@ struct YearCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
             HStack {
-                Text("YOUR \(String(summary.year)) IN MOMENTS").font(MFont.eyebrow).tracking(1).foregroundStyle(.white.opacity(0.85))
+                Text("\(String(summary.year)) in Moments").font(MFont.eyebrow).tracking(1.4).textCase(.uppercase).foregroundStyle(MColor.onInk.opacity(0.7))
                 Spacer()
-                Image(systemName: "sparkles").foregroundStyle(.white.opacity(0.85))
+                Image(systemName: "sparkles").foregroundStyle(MColor.onInk.opacity(0.7))
             }
             HStack(spacing: MSpacing.l) {
                 big("\(summary.moments)", "Moments"); big("\(summary.people)", "people"); big("\(summary.places)", "places")
@@ -190,9 +190,7 @@ struct YearCard: View {
             }
         }
         .padding(MSpacing.l)
-        .background(MColor.accentGradient, in: RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous).strokeBorder(.white.opacity(0.2), lineWidth: 0.5))
-        .shadow(color: MShadow.accent.color, radius: MShadow.accent.radius, y: MShadow.accent.y)
+        .background(MColor.ink, in: RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("yearCard")
     }

@@ -37,7 +37,8 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["momentHero"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["You were there too."].exists)
         XCTAssertTrue(app.otherElements["contribution-c_m_goa_1"].firstMatch.waitForExistence(timeout: 5), "Rahul's side is in the timeline")
-        XCTAssertTrue(app.buttons["addYourSide"].exists)
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["addYourSide"].waitForExistence(timeout: 5))
         app.buttons["addYourSide"].tap()
         XCTAssertTrue(app.buttons["sideSamplePhotos"].waitForExistence(timeout: 5))
         app.buttons["sideSamplePhotos"].tap()
@@ -50,7 +51,8 @@ final class MomentUITests: XCTestCase {
 
     func testCreateMomentAndInvite() {
         waitForFeed()
-        app.tabBars.buttons["New"].tap()
+        app.tabBars.buttons["Create"].tap()
+        XCTAssertTrue(app.buttons["create-moment"].waitForExistence(timeout: 5)); app.buttons["create-moment"].tap()
         let title = app.textViews["newMomentTitle"].firstMatch.exists ? app.textViews["newMomentTitle"].firstMatch : app.textFields["newMomentTitle"].firstMatch
         XCTAssertTrue(title.waitForExistence(timeout: 5))
         title.tap(); title.typeText("Rooftop Friday")
@@ -70,6 +72,8 @@ final class MomentUITests: XCTestCase {
     func testReactCommentAndModeration() {
         waitForFeed()
         app.otherElements["feedMoment-m_goa"].firstMatch.tap()
+        app.swipeUp(); app.swipeUp()
+        if app.buttons["Details"].firstMatch.waitForExistence(timeout: 5) { app.buttons["Details"].firstMatch.tap() }
         XCTAssertTrue(app.buttons["react-core"].firstMatch.waitForExistence(timeout: 10))
         app.buttons["react-core"].firstMatch.tap()
         XCTAssertTrue(app.buttons["react-core"].firstMatch.label.contains("selected"))
@@ -84,6 +88,8 @@ final class MomentUITests: XCTestCase {
 
     func testNowPostAndSaveToMoment() {
         waitForFeed()
+        app.tabBars.buttons["Now"].tap()
+        XCTAssertTrue(app.buttons["nowCompose"].waitForExistence(timeout: 5))
         app.buttons["nowCompose"].tap()
         let field = app.textViews["nowText"].firstMatch.exists ? app.textViews["nowText"].firstMatch : app.textFields["nowText"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -103,7 +109,7 @@ final class MomentUITests: XCTestCase {
         waitForFeed()
         app.tabBars.buttons["Discover"].tap()
         XCTAssertTrue(app.otherElements["tile-m_sunset"].firstMatch.waitForExistence(timeout: 10), "public Moments are discoverable")
-        app.tabBars.buttons["Inbox"].tap()
+        app.buttons["inboxButton"].tap()
         XCTAssertTrue(app.otherElements["activity-a1"].firstMatch.waitForExistence(timeout: 10) || app.buttons["activity-a1"].firstMatch.waitForExistence(timeout: 2))
         app.buttons["Invites"].tap()
         XCTAssertTrue(app.buttons["invite-inv1"].firstMatch.waitForExistence(timeout: 5))
@@ -138,7 +144,7 @@ final class MomentUITests: XCTestCase {
 
     func testSafetySettingsAndPrivateMemoryStillWork() {
         waitForFeed()
-        app.tabBars.buttons["You"].tap()
+        app.tabBars.buttons["Profile"].tap()
         XCTAssertTrue(app.buttons["safetyLink"].waitForExistence(timeout: 10))
         app.buttons["safetyLink"].tap()
         XCTAssertTrue(app.switches["privateAccount"].firstMatch.waitForExistence(timeout: 5))
@@ -185,11 +191,12 @@ final class MomentUITests: XCTestCase {
         app.buttons["nowCompose"].tap(); sleep(1); snap("06-now-compose"); app.buttons["Cancel"].tap()
         if app.buttons["now-n1"].exists { app.buttons["now-n1"].tap(); sleep(1); snap("07-now-viewer"); app.buttons["nowClose"].tap() }
         app.tabBars.buttons["Discover"].tap(); sleep(1); snap("08-discover")
-        app.tabBars.buttons["New"].tap(); sleep(1); snap("09-new-moment")
-        app.tabBars.buttons["Inbox"].tap(); sleep(1); snap("10-inbox")
+        app.tabBars.buttons["Create"].tap()
+        XCTAssertTrue(app.buttons["create-moment"].waitForExistence(timeout: 5)); app.buttons["create-moment"].tap(); sleep(1); snap("09-new-moment")
+        app.buttons["inboxButton"].tap(); sleep(1); snap("10-inbox")
         app.buttons["Messages"].tap(); sleep(1); snap("11-messages")
         if app.buttons["conversation-conv_rahul"].firstMatch.exists { app.buttons["conversation-conv_rahul"].firstMatch.tap(); sleep(1); snap("12-conversation"); app.navigationBars.buttons.element(boundBy: 0).tap() }
-        app.tabBars.buttons["You"].tap(); sleep(1); snap("13-profile")
+        app.tabBars.buttons["Profile"].tap(); sleep(1); snap("13-profile")
         app.buttons["safetyLink"].tap(); sleep(1); snap("14-safety"); app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["myMemories"].tap(); _ = app.staticTexts["homeHeadline"].waitForExistence(timeout: 20); sleep(1); snap("15-private-home")
         app.buttons["memoriesDone"].tap()

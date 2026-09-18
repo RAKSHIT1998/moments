@@ -12,9 +12,9 @@ struct SocialOnboardingView: View {
     @FocusState private var nameFocused: Bool
 
     private let pages: [(title: String, body: String, symbol: String)] = [
-        ("Be there.\nRemember it.", "MOMENT is for the things that actually happened — with the people who were there.", "person.3"),
-        ("Every Moment has more than one side.", "You make it. They add theirs. One place, everyone's photos, nobody's lost in a group chat.", "square.stack.3d.up"),
-        ("NOW is for right now.", "Post what's happening. It's gone in 24 hours — unless it was worth keeping.", "bolt")
+        ("This is where life happens.", "Not what you posted. What happened — with the people who were there.", "camera"),
+        ("One Moment.\nEveryone's story.", "You start it. They add their side. One memory, every angle.", "square.stack"),
+        ("Let's make your first one.", "A few photos is enough. We'll suggest the rest.", "plus")
     ]
 
     var body: some View {
@@ -60,7 +60,7 @@ struct SocialOnboardingView: View {
     private var profile: some View {
         VStack(alignment: .leading, spacing: MSpacing.xl) {
             Spacer()
-            Text("What should people call you?").font(.system(.largeTitle, weight: .bold)).tracking(-0.6)
+            Text("What should people call you?").font(MFont.hero).tracking(-0.8)
             VStack(spacing: MSpacing.m) {
                 TextField("Your name", text: $name).font(.title2).focused($nameFocused).padding(MSpacing.l)
                     .background(MColor.surface, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))

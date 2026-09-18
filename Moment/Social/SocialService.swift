@@ -49,6 +49,7 @@ final class SocialService {
     /// Navigation targets set by deep links / notifications.
     var pendingMomentID: String?
     var pendingInviteError: String?
+    var pendingNowID: String?
     /// Pre-filled input when remixing someone's Moment.
     var remixDraft: NewMomentInput?
     var unreadActivity: Int { activity.filter { !$0.read }.count }

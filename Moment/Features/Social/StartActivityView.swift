@@ -3,6 +3,10 @@ import SwiftUI
 /// "Start an activity": pick what's happening, name it, tap once — you get a QR on screen.
 /// Anyone with MOMENT scans it, lands in the Moment and adds their side. No photos needed to start.
 struct StartActivityView: View {
+    var body: some View { NavigationStack { StartActivityBody() } }
+}
+
+struct StartActivityBody: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var kind: SocialService.ActivityKind = .party
@@ -13,11 +17,10 @@ struct StartActivityView: View {
     @State private var started: SocialMoment?
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: MSpacing.xl) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("START AN ACTIVITY").font(MFont.eyebrow).tracking(1.5).foregroundStyle(MColor.accent)
+                        Text("Event").sectionLabel()
                         Text("What's happening?").displayStyle()
                         Text("You get a QR. People scan it and they're in — their photos land next to yours.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     }
@@ -54,10 +57,8 @@ struct StartActivityView: View {
             }
             .background(MColor.background)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .fullScreenCover(item: $started, onDismiss: { dismiss() }) { m in HostQRView(momentID: m.id) }
             .modifier(SocialErrorAlert())
-        }
     }
 
     private func start() async {

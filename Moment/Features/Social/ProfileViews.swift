@@ -31,11 +31,12 @@ struct SocialProfileView: View {
                 if isMe { myMemoriesCard }
                 momentsGrid
             }
-            .padding(MSpacing.l)
+            .padding(MSpacing.page)
             .padding(.bottom, 80)
         }
         .background(MColor.background)
-        .navigationTitle(isMe ? "You" : (user?.displayName ?? ""))
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -62,53 +63,33 @@ struct SocialProfileView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: MSpacing.m) {
-            // Banner: the most recent cover, blurred, so every profile has a feel without uploading anything extra.
-            ZStack(alignment: .bottomLeading) {
-                Group {
-                    if let cover = moments.first?.coverRef { SocialImage(ref: cover).blur(radius: 18).saturation(1.2) } else { AmbientBackdrop(intensity: 1.4) }
-                }
-                .frame(height: 120).frame(maxWidth: .infinity).clipped()
-                .overlay(LinearGradient(colors: [.clear, MColor.background.opacity(0.9)], startPoint: .top, endPoint: .bottom))
-                .clipShape(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
-                ZStack {
-                    if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 84, height: 84).clipShape(Circle()) }
-                    else { PersonAvatar(name: user?.displayName ?? "?", size: 84) }
-                }
-                .overlay(Circle().strokeBorder(MColor.background, lineWidth: 4))
-                .offset(x: MSpacing.l, y: 28)
+        VStack(alignment: .leading, spacing: MSpacing.l) {
+            ZStack {
+                if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 96, height: 96).clipShape(Circle()) }
+                else { PersonAvatar(name: user?.displayName ?? "?", size: 96) }
             }
-            .padding(.bottom, 28)
-            HStack(alignment: .center, spacing: MSpacing.l) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(user?.displayName ?? "…").font(MFont.title)
-                    HStack(spacing: 6) {
-                        Text("@\(user?.handle ?? "")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                        if user?.isPrivateAccount == true { Image(systemName: "lock").font(.caption).foregroundStyle(MColor.textTertiary) }
-                    }
-                    if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.callout) }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(user?.displayName ?? "…").displayStyle()
+                HStack(spacing: 6) {
+                    Text("@\(user?.handle ?? "")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                    if user?.isPrivateAccount == true { Image(systemName: "lock").font(.caption).foregroundStyle(MColor.textTertiary) }
                 }
-                Spacer()
+                if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.body).foregroundStyle(MColor.textPrimary).padding(.top, 4) }
             }
-            HStack(spacing: MSpacing.l) {
-                stat("\(moments.count)", "Moments")
-                stat("\(Set(moments.flatMap(\.memberIDs)).subtracting([userID]).count)", "People")
-                stat("\(Set(moments.compactMap(\.coarsePlace)).count)", "Places")
-                if isMe {
-                    NavigationLink(value: SocialRoute.followers(userID, false)) { stat("\(env.social.graph.following.count)", "Following") }.buttonStyle(.plain)
-                    NavigationLink(value: SocialRoute.followers(userID, true)) { stat("\(env.social.graph.followers.count)", "Followers") }.buttonStyle(.plain)
-                }
-            }
+            Text("\(moments.count) Moments · \(Set(moments.flatMap(\.memberIDs)).subtracting([userID]).count) people · \(Set(moments.compactMap(\.coarsePlace)).count) places")
+                .font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             if isMe {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: MSpacing.s) {
-                        NavigationLink(value: SocialRoute.editProfile) { Label("Edit profile", systemImage: "pencil") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("editProfile")
-                        NavigationLink(value: SocialRoute.groups) { Label("Groups", systemImage: "person.3") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("groupsLink")
-                        NavigationLink(value: SocialRoute.passport) { Label("Passport", systemImage: "book.closed") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("passportLink")
-                        NavigationLink(value: SocialRoute.map) { Label("Map", systemImage: "map") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("mapLink")
-                        NavigationLink(value: SocialRoute.timeMachine) { Label("Time Machine", systemImage: "clock.arrow.circlepath") }.buttonStyle(ChipButtonStyle())
-                        NavigationLink(value: SocialRoute.safety) { Label("Privacy & safety", systemImage: "shield") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("safetyLink")
+                    HStack(spacing: MSpacing.l) {
+                        NavigationLink(value: SocialRoute.passport) { Text("Passport") }.accessibilityIdentifier("passportLink")
+                        NavigationLink(value: SocialRoute.map) { Text("Map") }.accessibilityIdentifier("mapLink")
+                        NavigationLink(value: SocialRoute.groups) { Text("Groups") }.accessibilityIdentifier("groupsLink")
+                        NavigationLink(value: SocialRoute.followers(userID, false)) { Text("People") }
+                        NavigationLink(value: SocialRoute.timeMachine) { Text("Time Machine") }
+                        NavigationLink(value: SocialRoute.editProfile) { Text("Edit") }.accessibilityIdentifier("editProfile")
+                        NavigationLink(value: SocialRoute.safety) { Text("Privacy") }.accessibilityIdentifier("safetyLink")
                     }
+                    .font(.subheadline.weight(.medium)).foregroundStyle(MColor.textPrimary)
                 }
             }
         }
@@ -152,7 +133,7 @@ struct SocialProfileView: View {
 
     private var featuredRow: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
-            Text("PINNED").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+            Text("Pinned").sectionLabel()
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: MSpacing.s) {
                     ForEach(env.social.featured) { m in
@@ -167,7 +148,7 @@ struct SocialProfileView: View {
     private var collectionsRow: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
             HStack {
-                Text("COLLECTIONS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                Text("Collections").sectionLabel()
                 Spacer()
                 NavigationLink(value: SocialRoute.collections) { Text(env.social.collections.isEmpty ? "Create" : "See all").font(MFont.caption.weight(.semibold)) }.accessibilityIdentifier("collectionsLink")
             }
@@ -201,7 +182,7 @@ struct SocialProfileView: View {
 
     private var suggestionsRow: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
-            Text("PEOPLE YOU WERE THERE WITH").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+            Text("People you were there with").sectionLabel()
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: MSpacing.s) {
                     ForEach(env.social.peopleSuggestions.prefix(8), id: \.id) { p in
@@ -240,7 +221,7 @@ struct SocialProfileView: View {
     private var momentsGrid: some View {
         let shown = isMe && !query.isBlank ? env.social.search(moments: query) : moments
         return VStack(alignment: .leading, spacing: MSpacing.s) {
-            Text(isMe ? "YOUR LIFE IN MOMENTS" : "MOMENTS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+            Text("Moments").sectionLabel()
             if isMe {
                 HStack(spacing: MSpacing.s) {
                     Image(systemName: "magnifyingglass").foregroundStyle(MColor.textTertiary)

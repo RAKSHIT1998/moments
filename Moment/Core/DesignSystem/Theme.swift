@@ -2,16 +2,21 @@ import SwiftUI
 
 /// Semantic color system. Built on system colors so Dark Mode, Increase Contrast and
 /// Reduce Transparency all work, with a warm neutral ground and a single indigo→violet accent.
+/// Quiet luxury: ivory / charcoal grounds, soft-ink text, one muted accent. Every value is an
+/// adaptive colour set, so Light, Dark, Increase Contrast and Reduce Transparency all work.
 enum MColor {
     static let background = Color("Canvas")
-    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
-    static let surfaceSecondary = Color(uiColor: .tertiarySystemGroupedBackground)
-    static let textPrimary = Color(uiColor: .label)
+    static let surface = Color("Surface")
+    static let surfaceSecondary = Color("SurfaceSecondary")
+    static let textPrimary = Color("Ink")
     static let textSecondary = Color(uiColor: .secondaryLabel)
     static let textTertiary = Color(uiColor: .tertiaryLabel)
-    static let separator = Color(uiColor: .separator)
+    static let separator = Color("Hairline")
     static let accent = Color.accentColor
-    static let accentSoft = Color.accentColor.opacity(0.12)
+    static let accentSoft = Color.accentColor.opacity(0.10)
+    /// Solid ink for the one primary action on a screen; inverts with the theme.
+    static let ink = Color("Ink")
+    static let onInk = Color("Canvas")
     static let success = Color(uiColor: .systemGreen)
     static let warning = Color(uiColor: .systemOrange)
     static let danger = Color(uiColor: .systemRed)
@@ -36,9 +41,9 @@ enum MColor {
         Color.black.opacity(opacity)
     }
 
-    /// The one gradient in the app: primary actions and the capture button.
+    /// Kept for avatars and a few hero surfaces; deliberately near-flat — one accent, no rainbow.
     static let accentGradient = LinearGradient(
-        colors: [Color.accentColor, Color(red: 0.55, green: 0.36, blue: 0.98)],
+        colors: [Color.accentColor, Color.accentColor.opacity(0.82)],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 }
@@ -50,25 +55,28 @@ enum MSpacing {
     static let l: CGFloat = 16
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
-    static let cardRadius: CGFloat = 24
+    static let cardRadius: CGFloat = 20
     static let chipRadius: CGFloat = 12
+    /// Editorial gutters: content breathes.
+    static let page: CGFloat = 20
+    static let section: CGFloat = 36
 }
 
 /// Typography built on system text styles so Dynamic Type scales everything.
 /// Display sizes use tighter tracking; everything else stays default for legibility.
 enum MFont {
-    static let display = Font.system(.largeTitle, design: .default, weight: .bold)
-    /// Moment titles: a touch of serif so an experience reads like a headline, not a filename.
-    static let hero = Font.system(size: 36, weight: .bold, design: .serif)
-    static let heroSmall = Font.system(.title2, design: .serif, weight: .bold)
-    static let title = Font.system(.title2, design: .default, weight: .bold)
+    /// Strict hierarchy: display · large title · title · body · secondary · caption. Semibold, not bold.
+    static let display = Font.system(.largeTitle, design: .default, weight: .semibold)
+    static let hero = Font.system(size: 38, weight: .semibold, design: .default)
+    static let heroSmall = Font.system(.title2, design: .default, weight: .semibold)
+    static let title = Font.system(.title2, design: .default, weight: .semibold)
     static let headline = Font.system(.headline, design: .default, weight: .semibold)
     static let body = Font.system(.body)
     static let callout = Font.system(.callout)
     static let subheadline = Font.system(.subheadline)
     static let footnote = Font.system(.footnote)
-    static let caption = Font.system(.caption, weight: .medium)
-    static let eyebrow = Font.system(.caption, weight: .semibold)
+    static let caption = Font.system(.caption, weight: .regular)
+    static let eyebrow = Font.system(.caption, weight: .medium)
     static let mono = Font.system(.footnote, design: .monospaced)
 }
 
@@ -89,7 +97,12 @@ extension View {
 
     /// Display text: large, bold, slightly tightened.
     func displayStyle() -> some View {
-        self.font(MFont.display).tracking(-0.6)
+        self.font(MFont.display).tracking(-0.8)
+    }
+
+    /// Section label: small, letter-spaced, quiet. Structure through type, not boxes.
+    func sectionLabel() -> some View {
+        self.font(MFont.eyebrow).tracking(1.4).textCase(.uppercase).foregroundStyle(MColor.textSecondary)
     }
 }
 
@@ -102,11 +115,9 @@ private struct CardModifier: ViewModifier {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(MColor.surface, in: RoundedRectangle(cornerRadius: MSpacing.cardRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: MSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(scheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04), lineWidth: 1)
-            )
-            .shadow(color: scheme == .dark || reduceTransparency ? .clear : Color.black.opacity(0.05), radius: 14, y: 6)
+            .overlay(RoundedRectangle(cornerRadius: MSpacing.cardRadius, style: .continuous).strokeBorder(MColor.separator.opacity(0.7), lineWidth: 0.5))
+            // A whisper of depth in light mode only; dark mode relies on the hairline.
+            .shadow(color: scheme == .dark || reduceTransparency ? .clear : Color.black.opacity(0.035), radius: 10, y: 4)
     }
 }
 
@@ -131,8 +142,8 @@ struct AmbientBackdrop: View {
                     tint(0.20), tint(0.06), tint(0.02),
                     tint(0.04), tint(0.01), tint(0.0)
                 ])
-                .opacity(intensity)
-                .blur(radius: 40)
+                .opacity(intensity * 0.6)
+                .blur(radius: 60)
                 .allowsHitTesting(false)
             }
         }

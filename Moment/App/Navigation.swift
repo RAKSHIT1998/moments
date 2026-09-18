@@ -63,6 +63,9 @@ extension View {
             case .map: MomentMapView()
             case .passport: PassportView()
             case .scan: QRScannerView()
+            case .inbox: InboxView(embedded: true)
+            case .discover: DiscoverView(embedded: true)
+            case .now: NowView(embedded: true)
             }
         }
     }
@@ -81,12 +84,11 @@ struct CaptureFAB: View {
                 Image(systemName: "plus").font(.headline.weight(.bold))
                 Text("MOMENT").font(.headline.weight(.bold)).tracking(1.2)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(MColor.onInk)
             .padding(.horizontal, 22)
             .padding(.vertical, 15)
-            .background(MColor.accentGradient, in: Capsule())
-            .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
-            .shadow(color: MColor.accent.opacity(0.40), radius: 16, y: 8)
+            .background(MColor.ink, in: Capsule())
+            .shadow(color: .black.opacity(0.18), radius: 14, y: 8)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Capture a Moment")
