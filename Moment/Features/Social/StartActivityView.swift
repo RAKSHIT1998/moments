@@ -9,6 +9,10 @@ struct StartActivityView: View {
 struct StartActivityBody: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
+    var venue: SocialPlace? = nil
+    @State private var pickedVenue: SocialPlace?
+    @State private var showPlace = false
+    @State private var isPublic = false
     @State private var kind: SocialService.ActivityKind = .party
     @State private var title = ""
     @State private var place = ""
@@ -38,8 +42,18 @@ struct StartActivityBody: View {
                     TextField(kind.defaultTitle, text: $title).font(MFont.heroSmall).textFieldStyle(.plain).padding(MSpacing.m)
                         .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
                         .accessibilityIdentifier("activityTitle")
-                    TextField("Where, roughly (optional)", text: $place).textFieldStyle(.plain).padding(MSpacing.m)
-                        .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
+                    Button { showPlace = true } label: {
+                        HStack { Image(systemName: "mappin.and.ellipse").foregroundStyle(MColor.textSecondary); Text(pickedVenue?.name ?? "Where is it? (optional)").foregroundStyle(pickedVenue == nil ? MColor.textSecondary : MColor.textPrimary); Spacer() }
+                            .padding(MSpacing.m).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    Toggle(isOn: $isPublic) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Show on Nearby").font(MFont.headline)
+                            Text("People around \(pickedVenue?.name ?? "the place") see it and can join. Great for cafés, venues, public events.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                        }
+                    }
+                    .tint(MColor.accent).disabled(pickedVenue == nil)
                     Toggle(isOn: $openToAnyone) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Anyone with the QR can join").font(MFont.headline)
@@ -57,6 +71,8 @@ struct StartActivityBody: View {
             }
             .background(MColor.background)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { if pickedVenue == nil { pickedVenue = venue } }
+            .sheet(isPresented: $showPlace) { PlacePickerSheet(selected: $pickedVenue) }
             .fullScreenCover(item: $started, onDismiss: { dismiss() }) { m in HostQRView(momentID: m.id) }
             .modifier(SocialErrorAlert())
     }
@@ -64,7 +80,7 @@ struct StartActivityBody: View {
     private func start() async {
         starting = true
         defer { starting = false }
-        if let m = await env.social.startActivity(title: title, kind: kind, place: place.isBlank ? nil : place, openToAnyone: openToAnyone) {
+        if let m = await env.social.startActivity(title: title, kind: kind, place: pickedVenue?.name ?? (place.isBlank ? nil : place), venue: pickedVenue, openToAnyone: openToAnyone, isPublic: isPublic && pickedVenue != nil) {
             Haptics.completed()
             started = m
         }

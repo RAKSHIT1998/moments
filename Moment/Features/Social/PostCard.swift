@@ -46,7 +46,9 @@ struct MomentPostCard: View {
                     NavigationLink(value: SocialRoute.profile(moment.creatorID)) { Text(moment.creatorName).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary) }.buttonStyle(.plain)
                     if moment.isLive { Text("· Live").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.danger) }
                 }
-                if let p = moment.coarsePlace, !p.isEmpty { Text(p).font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+                if let place = moment.place {
+                    NavigationLink(value: SocialRoute.place(place)) { Text(place.name).font(MFont.caption).foregroundStyle(MColor.textSecondary) }.buttonStyle(.plain)
+                } else if let p = moment.coarsePlace, !p.isEmpty { Text(p).font(MFont.caption).foregroundStyle(MColor.textSecondary) }
                 else { Text(moment.dateLabel).font(MFont.caption).foregroundStyle(MColor.textSecondary) }
             }
             Spacer()

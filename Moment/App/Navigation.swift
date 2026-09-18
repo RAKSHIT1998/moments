@@ -67,6 +67,8 @@ extension View {
             case .messages: InboxView(embedded: true, segment: 2)
             case .discover: DiscoverView(embedded: true)
             case .now: NowView(embedded: true)
+            case .nearby: NearbyView(embedded: true)
+            case .place(let p): PlaceView(place: p)
             }
         }
     }

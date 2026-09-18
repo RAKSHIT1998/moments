@@ -22,6 +22,8 @@ struct NewMomentView: View {
     @State private var people: [SocialUser] = []
     @State private var showPeople = false
     @State private var showCamera = false
+    @State private var showPlace = false
+    @State private var venue: SocialPlace?
     @State private var creating = false
     @State private var created: SocialMoment?
     @FocusState private var titleFocused: Bool
@@ -33,7 +35,7 @@ struct NewMomentView: View {
         var out: [String] = []
         let dates = photos.compactMap(\.capturedAt).sorted()
         let year = Calendar.current.component(.year, from: dates.first ?? .now)
-        if !place.isBlank { out.append("\(place.trimmed) '\(String(year).suffix(2))") }
+        if let v = venue { out.append("\(v.name) '\(String(year).suffix(2))") } else if !place.isBlank { out.append("\(place.trimmed) '\(String(year).suffix(2))") }
         if let d = dates.first {
             let weekday = d.formatted(.dateTime.weekday(.wide))
             let hour = Calendar.current.component(.hour, from: d)
@@ -76,9 +78,18 @@ struct NewMomentView: View {
                     Text("WHEN & WHERE").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                     if let dateRange { Label(dateRange, systemImage: "calendar").font(MFont.callout).foregroundStyle(MColor.textPrimary) }
                     else { Text("Dates come from your photos.").font(MFont.footnote).foregroundStyle(MColor.textTertiary) }
-                    TextField("Place (city-level, e.g. Goa)", text: $place).textFieldStyle(.plain).padding(MSpacing.m)
-                        .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
-                        .accessibilityIdentifier("newMomentPlace")
+                    Button { showPlace = true } label: {
+                        HStack {
+                            Image(systemName: "mappin.and.ellipse").foregroundStyle(MColor.textSecondary)
+                            if let venue { VStack(alignment: .leading, spacing: 1) { Text(venue.name).foregroundStyle(MColor.textPrimary); if !venue.area.isEmpty { Text(venue.area).font(MFont.caption).foregroundStyle(MColor.textSecondary) } } }
+                            else { Text("Add a place — café, beach, venue").foregroundStyle(MColor.textSecondary) }
+                            Spacer()
+                            if venue != nil { Button { venue = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(MColor.textTertiary) }.accessibilityLabel("Remove place") }
+                        }
+                        .padding(MSpacing.m).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("newMomentPlace")
                     TextField("A line about it (optional)", text: $description, axis: .vertical).lineLimit(1...3).textFieldStyle(.plain).padding(MSpacing.m)
                         .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
                 }
@@ -117,7 +128,7 @@ struct NewMomentView: View {
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
-            if let initial, title.isEmpty { title = initial.title; description = initial.description; visibility = initial.visibility }
+            if let initial, title.isEmpty { title = initial.title; description = initial.description; visibility = initial.visibility; venue = initial.place }
             if let groupID, let g = env.social.groups.first(where: { $0.id == groupID }), people.isEmpty {
                 // A group Moment: everyone in the group is invited from the start.
                 for (id, name) in zip(g.memberIDs, g.memberNames) where id != env.social.myID { people.append(SocialUser(id: id, displayName: name, handle: "", bio: "", avatarRef: nil, isPrivateAccount: false, momentCount: 0, sharedCount: 0, placeCount: 0, peopleCount: 0, createdAt: .now)) }
@@ -127,6 +138,7 @@ struct NewMomentView: View {
         }
         .onChange(of: pickerItems) { _, items in Task { await load(items) } }
         .sheet(isPresented: $showPeople) { PeoplePickerSheet(selected: $people) }
+        .sheet(isPresented: $showPlace) { PlacePickerSheet(selected: $venue) }
         .sheet(isPresented: $showCamera) { CameraPicker { data in if let img = UIImage(data: data) { photos.append(PhotoPick(data: data, image: img, capturedAt: .now)) } } }
         .navigationDestination(item: $created) { m in MomentPageView(momentID: m.id) }
         .modifier(SocialErrorAlert())
@@ -219,6 +231,7 @@ struct NewMomentView: View {
         var input = initial ?? SocialService.NewMomentInput(title: title)
         input.title = title; input.description = description; input.visibility = visibility; input.isLive = isLive; input.isTeaser = isTeaser
         input.locationName = place.isBlank ? nil : place.trimmed
+        input.place = venue
         input.photos = photos.map(\.data); input.videoURLs = videoURLs
         guard let m = await env.social.createMoment(input) else { return }
         if !people.isEmpty { _ = await env.social.shareLink(momentID: m.id, with: people.map(\.id)) }

@@ -48,6 +48,7 @@
 		3624A4217F332DAE365613CF /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E67AB191F9FF477B99FD522 /* AppConfig.swift */; };
 		377749D1E3509033666B30B0 /* EngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7B98EB14EF47593C878F20 /* EngineTests.swift */; };
 		37BDCAEDE90FDE5823CBD654 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E19B651898264EAFB49C34 /* SpeechService.swift */; };
+		3A5B310FA521D72BC375BC45 /* NearbyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85AA650345DA9A7C1180B73 /* NearbyViews.swift */; };
 		3C31AFDF1B8AFF9CB66DE34C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5FF9AC8204B47BB0C54BFD5 /* Assets.xcassets */; };
 		3D27469E7D1AADF7308A37B5 /* AnalysisResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233C70AD418E6A99105CA0BE /* AnalysisResult.swift */; };
 		3E37A8DB56E53CA53A00BAB6 /* NewMomentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */; };
@@ -147,6 +148,7 @@
 		C7DE4FF4D0C26E69EEA9CFC0 /* BiometricLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15EB92990089E986ADF8CFB5 /* BiometricLock.swift */; };
 		C862DCB798E16B1A30049AC2 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2758C294DACD68F438B13F88 /* DiscoverView.swift */; };
 		C87A4B7A5F49B361FA1724AB /* ScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D0F4607A79E985EC89BA42 /* ScaleTests.swift */; };
+		C8B98D9AE950A37085D5380A /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4044A98C2B9BD83976C6F03 /* LocationService.swift */; };
 		CDBB878F04FBA8EB9F54629D /* MomentPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77EA4C7C648B3B19E08F618 /* MomentPageView.swift */; };
 		CF47084FFF98974F12A83AB4 /* TemporalParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D94B1F2EED4289C996376872 /* TemporalParserTests.swift */; };
 		D0D19DE602E0142F0EC04DC7 /* DocumentScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0023DDD1C78FCBCA68BD9C3 /* DocumentScannerView.swift */; };
@@ -374,8 +376,10 @@
 		BB401EAD089DCDE281C4A403 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		BCABA0FAAB9458BB5815B808 /* MomentShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MomentShareExtension.entitlements; sourceTree = "<group>"; };
 		BD5C4E1628757B967D4EFA41 /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
+		C4044A98C2B9BD83976C6F03 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		C7A5F365A8464F0635F14CBA /* SocialPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPolish.swift; sourceTree = "<group>"; };
 		C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialComponents.swift; sourceTree = "<group>"; };
+		C85AA650345DA9A7C1180B73 /* NearbyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbyViews.swift; sourceTree = "<group>"; };
 		C968E2C58941908662506CAB /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
 		CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryBackend.swift; sourceTree = "<group>"; };
 		CBB6ED0572B5EFBC45EB3918 /* StoryExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryExporter.swift; sourceTree = "<group>"; };
@@ -711,6 +715,7 @@
 				AF14D5A43B7EE1B3BA53078A /* CloudKitBackend.swift */,
 				DAE17C8090CFD8B9147EE664 /* ImageColor.swift */,
 				CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */,
+				C4044A98C2B9BD83976C6F03 /* LocationService.swift */,
 				3AFFF965467D61700ADAB3A4 /* MediaPipeline.swift */,
 				DDAFAA4ABE33475EA7B5BB14 /* SocialBackend.swift */,
 				189A91C2DEB446D7707DA1A7 /* SocialModels.swift */,
@@ -768,6 +773,7 @@
 				075796B622629115456247AA /* MomentQR.swift */,
 				78CDDCC14CAA01CA8B94AD72 /* MomentReplayView.swift */,
 				4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */,
+				C85AA650345DA9A7C1180B73 /* NearbyViews.swift */,
 				7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */,
 				C968E2C58941908662506CAB /* NowView.swift */,
 				5C3152B7F4E2A271743F15FE /* NowViews.swift */,
@@ -1208,6 +1214,7 @@
 				2FCA17F74EDF90CD63046310 /* IntentClassifier.swift in Sources */,
 				11499A659031F3AD0D3768DA /* Keychain.swift in Sources */,
 				34D5121280A98C4D9D753485 /* LocalIntelligenceProvider.swift in Sources */,
+				C8B98D9AE950A37085D5380A /* LocationService.swift in Sources */,
 				5D054DAA2BA1AF82479F3EE4 /* Log.swift in Sources */,
 				580BEC94A761DA5F2D6AD28D /* MediaPipeline.swift in Sources */,
 				E616BBB79F63CC1C781B3D4D /* MediaStore.swift in Sources */,
@@ -1233,6 +1240,7 @@
 				D5EC1F0A13BC8D5B159BBB2B /* MomentViewerView.swift in Sources */,
 				F6380C89DA9184446A464620 /* MomentsHubView.swift in Sources */,
 				0C5C103168D6547093BC820E /* Navigation.swift in Sources */,
+				3A5B310FA521D72BC375BC45 /* NearbyViews.swift in Sources */,
 				3E37A8DB56E53CA53A00BAB6 /* NewMomentView.swift in Sources */,
 				B01FBD9272DFCB8AF5A074F4 /* NotificationService.swift in Sources */,
 				199E9E5FFC854B102224E503 /* NowView.swift in Sources */,

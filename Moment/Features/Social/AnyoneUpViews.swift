@@ -15,7 +15,7 @@ struct NowStatusRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(mine ? "You" : post.authorName.split(separator: " ").first.map(String.init) ?? post.authorName) \(mine ? post.activity.line.replacingOccurrences(of: "is ", with: "are ").replacingOccurrences(of: "wants", with: "want") : post.activity.line)").font(MFont.headline)
-                Text([post.text.isEmpty ? nil : post.text, post.coarsePlace, post.createdAt.formatted(.relative(presentation: .named))].compactMap { $0 }.joined(separator: " · "))
+                Text([post.text.isEmpty ? nil : post.text, post.place?.name ?? post.coarsePlace, post.createdAt.formatted(.relative(presentation: .named))].compactMap { $0 }.joined(separator: " · "))
                     .font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
                 if !post.joinerNames.isEmpty {
                     HStack(spacing: 6) { AvatarStack(names: post.joinerNames, size: 18); Text("\(post.joinerNames.count) in").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
@@ -67,6 +67,9 @@ struct AnyoneUpComposer: View {
 struct AnyoneUpComposerBody: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
+    var venue: SocialPlace? = nil
+    @State private var pickedVenue: SocialPlace?
+    @State private var showPlace = false
     @State private var activity: NowPost.Activity = .drinks
     @State private var text = ""
     @State private var place = ""
@@ -86,7 +89,13 @@ struct AnyoneUpComposerBody: View {
                     }
                 }
                 TextField("Anyone out? (optional)", text: $text).textFieldStyle(.plain).padding(MSpacing.m).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
-                TextField("Where, roughly (city or area)", text: $place).textFieldStyle(.plain).padding(MSpacing.m).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
+                Button { showPlace = true } label: {
+                    HStack { Image(systemName: "mappin.and.ellipse").foregroundStyle(MColor.textSecondary); Text(pickedVenue?.name ?? "Where? (optional — lets people nearby find you)").foregroundStyle(pickedVenue == nil ? MColor.textSecondary : MColor.textPrimary).lineLimit(1); Spacer() }
+                        .padding(MSpacing.m).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showPlace) { PlacePickerSheet(selected: $pickedVenue) }
+                .onAppear { if pickedVenue == nil { pickedVenue = venue } }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Lasts \(Int(hours)) hours").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
                     Slider(value: $hours, in: 1...12, step: 1).tint(MColor.accent)
@@ -98,7 +107,7 @@ struct AnyoneUpComposerBody: View {
             .background(MColor.background)
             .navigationTitle("I'm up for…").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Post") { Task { if await env.social.postNow(text: text, photo: nil, place: place.isBlank ? nil : place, activity: activity, hours: hours) { Haptics.completed(); dismiss() } } }.accessibilityIdentifier("postStatus") }
+                ToolbarItem(placement: .confirmationAction) { Button("Post") { Task { if await env.social.postNow(text: text, photo: nil, place: pickedVenue?.area ?? (place.isBlank ? nil : place), activity: activity, hours: hours, venue: pickedVenue) { Haptics.completed(); dismiss() } } }.accessibilityIdentifier("postStatus") }
             }
     }
 }

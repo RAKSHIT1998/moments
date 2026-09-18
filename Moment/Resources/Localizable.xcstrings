@@ -4,6 +4,9 @@
     "" : {
 
     },
+    " " : {
+
+    },
     "— %@" : {
 
     },
@@ -17,6 +20,9 @@
 
     },
     "· birthday in %lld days" : {
+
+    },
+    "· Live" : {
 
     },
     "· shared %lld×" : {
@@ -220,16 +226,6 @@
         }
       }
     },
-    "%lld %@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ · %3$@"
-          }
-        }
-      }
-    },
     "%lld %@ together · since %@" : {
       "localizations" : {
         "en" : {
@@ -268,16 +264,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld Moment%2$@ remembered for you this month."
-          }
-        }
-      }
-    },
-    "%lld Moments · %lld people · %lld places" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld Moments · %2$lld people · %3$lld places"
           }
         }
       }
@@ -392,6 +378,9 @@
 
     },
     "Add “%@” to your calendar?" : {
+
+    },
+    "Add a comment…" : {
 
     },
     "Add a few sides first." : {
@@ -871,9 +860,6 @@
     "Follows your iPhone's Light/Dark setting, including schedules. Text, cards and colours adapt automatically." : {
 
     },
-    "For you" : {
-
-    },
     "Format" : {
 
     },
@@ -1020,9 +1006,6 @@
     "Inbox" : {
 
     },
-    "Inbox%@" : {
-
-    },
     "Intelligence" : {
 
     },
@@ -1042,9 +1025,6 @@
 
     },
     "It lands in your Inbox, already understood." : {
-
-    },
-    "Join" : {
 
     },
     "JOIN" : {
@@ -1098,6 +1078,9 @@
     "Light" : {
 
     },
+    "Like" : {
+
+    },
     "Link per person" : {
 
     },
@@ -1111,6 +1094,9 @@
 
     },
     "LIVE" : {
+
+    },
+    "Live · %@" : {
 
     },
     "Load demo data" : {
@@ -1293,9 +1279,6 @@
     "More reactions" : {
 
     },
-    "More to discover →" : {
-
-    },
     "Most reacted" : {
 
     },
@@ -1347,6 +1330,9 @@
     "No collections yet." : {
 
     },
+    "No comments yet." : {
+
+    },
     "No date yet." : {
 
     },
@@ -1393,9 +1379,6 @@
 
     },
     "Nobody's out yet" : {
-
-    },
-    "Nobody's out yet." : {
 
     },
     "Nobody's out yet. Say what you're up for and see who joins." : {
@@ -1498,6 +1481,9 @@
 
     },
     "Open memory" : {
+
+    },
+    "Open Moment" : {
 
     },
     "Open plan" : {
@@ -1624,6 +1610,9 @@
 
     },
     "Post comment" : {
+
+    },
+    "Post to NOW" : {
 
     },
     "Posted" : {
@@ -1822,9 +1811,6 @@
     "Say what you're up for and see who joins." : {
 
     },
-    "Say what you're up to" : {
-
-    },
     "Scan to join" : {
 
     },
@@ -1870,9 +1856,6 @@
     "See what MOMENT understands" : {
 
     },
-    "See who's out" : {
-
-    },
     "Send" : {
 
     },
@@ -1904,6 +1887,9 @@
 
     },
     "Setup" : {
+
+    },
+    "Share" : {
 
     },
     "Share a Moment" : {
@@ -2183,6 +2169,9 @@
     "Unfollow" : {
 
     },
+    "Unlike" : {
+
+    },
     "Unlock with %@" : {
 
     },
@@ -2229,6 +2218,9 @@
 
     },
     "View" : {
+
+    },
+    "View all %lld comments" : {
 
     },
     "View gift idea" : {
@@ -2375,9 +2367,6 @@
     "with %@" : {
 
     },
-    "You" : {
-
-    },
     "You + %@" : {
 
     },
@@ -2445,6 +2434,9 @@
 
     },
     "Your name (shown as “…'s side”)" : {
+
+    },
+    "Your NOW" : {
 
     },
     "Your numbers" : {

@@ -53,6 +53,30 @@ enum MomentVisibility: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// A venue or area: a café, a beach, a club, a city. Venue coordinates are public knowledge;
+/// a person's own location never leaves the device — it is only used to ask "what's near me?".
+struct SocialPlace: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var name: String
+    /// Neighbourhood / city line shown under the name ("Bandra West, Mumbai").
+    var area: String
+    var latitude: Double
+    var longitude: Double
+    var category: String?
+
+    /// Stable id from name + rounded coordinates, so the same café from two phones is one place.
+    static func makeID(name: String, latitude: Double, longitude: Double) -> String {
+        let n = name.lowercased().filter { $0.isLetter || $0.isNumber }
+        return "\(n)_\(Int((latitude * 1000).rounded()))_\(Int((longitude * 1000).rounded()))"
+    }
+
+    func distance(fromLatitude lat: Double, longitude lon: Double) -> Double {
+        let r = 6371.0, dLat = (latitude - lat) * .pi / 180, dLon = (longitude - lon) * .pi / 180
+        let a = sin(dLat / 2) * sin(dLat / 2) + cos(lat * .pi / 180) * cos(latitude * .pi / 180) * sin(dLon / 2) * sin(dLon / 2)
+        return 2 * r * atan2(sqrt(a), sqrt(1 - a))   // km
+    }
+}
+
 struct SocialMoment: Codable, Sendable, Equatable, Identifiable, Hashable {
     var id: String
     var creatorID: String
@@ -85,6 +109,8 @@ struct SocialMoment: Codable, Sendable, Equatable, Identifiable, Hashable {
     var allowsContributions: Bool
     /// "You had to be there": shown blurred until the viewer taps Reveal. Playful, opt-in.
     var isTeaser: Bool = false
+    /// The venue this happened at, when the creator picked one.
+    var place: SocialPlace? = nil
 
     var isGroup: Bool { memberIDs.count > 1 }
     var dateLabel: String {
@@ -165,6 +191,7 @@ struct NowPost: Codable, Sendable, Equatable, Identifiable, Hashable {
     var coarsePlace: String?
     var savedToMomentID: String?
     var activity: Activity = .none
+    var place: SocialPlace? = nil
     /// People who tapped JOIN (ids) — the spontaneous-meetup mechanic.
     var joinerIDs: [String] = []
     var joinerNames: [String] = []

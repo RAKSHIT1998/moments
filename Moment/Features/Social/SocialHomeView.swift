@@ -101,6 +101,8 @@ enum SocialRoute: Hashable {
     case messages
     case discover
     case now
+    case nearby
+    case place(SocialPlace)
 }
 
 extension View {

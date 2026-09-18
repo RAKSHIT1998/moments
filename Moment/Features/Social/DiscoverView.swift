@@ -15,11 +15,21 @@ struct DiscoverView: View {
         Array(Set(results.compactMap(\.coarsePlace).filter { !$0.isEmpty })).sorted()
     }
 
+    @State private var mode = 0
+
     var body: some View {
         Group { if embedded { content } else { NavigationStack { content.socialDestinations() } } }
     }
 
     private var content: some View {
+        VStack(spacing: 0) {
+            Picker("Mode", selection: $mode) { Text("Nearby").tag(0); Text("Search").tag(1) }.pickerStyle(.segmented).padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.s)
+            if mode == 0 { NearbyView(embedded: true) } else { searchContent }
+        }
+        .accessibilityIdentifier("discoverScreen")
+    }
+
+    private var searchContent: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: MSpacing.l) {
                     if query.isBlank, !env.social.peopleSuggestions.isEmpty {

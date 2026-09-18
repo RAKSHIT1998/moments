@@ -37,6 +37,11 @@ protocol SocialBackend: AnyObject, Sendable {
     // Feed / discover
     func feed(cursor: String?) async throws -> FeedPage<SocialMoment>
     func discover(query: String?, place: String?, cursor: String?) async throws -> FeedPage<SocialMoment>
+    /// Public Moments within `radiusKm` of a point. The point is the caller's — it is never stored.
+    func nearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [SocialMoment]
+    func nowNearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [NowPost]
+    /// Everything public that happened at one venue.
+    func moments(atPlace placeID: String) async throws -> [SocialMoment]
 
     // Engagement
     func comments(momentID: String) async throws -> [MomentComment]
@@ -106,6 +111,7 @@ struct MomentDraft: Sendable, Equatable {
     var isTeaser: Bool = false
     /// Members to add at creation (a group's members, "Anyone up?" joiners).
     var initialMemberIDs: [String] = []
+    var place: SocialPlace? = nil
 }
 
 /// Relationship strength from actual shared experience — the strongest feed signal.

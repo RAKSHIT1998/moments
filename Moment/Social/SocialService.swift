@@ -42,6 +42,11 @@ final class SocialService {
     private(set) var safety = SafetySettings()
     private(set) var collections: [MomentCollection] = []
     private(set) var groups: [SocialGroup] = []
+    // Nearby (from the device's one-shot location; never uploaded)
+    private(set) var nearbyMoments: [SocialMoment] = []
+    private(set) var nearbyNow: [NowPost] = []
+    private(set) var placeMoments: [String: [SocialMoment]] = [:]
+    var nearbyRadiusKm: Double = 3
     private(set) var hasLoadedOnce = false
     private var imageCache: [String: UIImage] = [:]
     private var lastContributionCounts: [String: Int] = [:]
@@ -116,6 +121,33 @@ final class SocialService {
         async let g: () = refreshGroups()
         _ = await (f, n, i, s, c, g)
         hasLoadedOnce = true
+    }
+
+    // MARK: - Nearby & places
+
+    /// Refreshes what's happening around a coordinate. Distance is computed client-side for display.
+    func refreshNearby(latitude: Double, longitude: Double) async {
+        async let m = backend.nearby(latitude: latitude, longitude: longitude, radiusKm: nearbyRadiusKm)
+        async let n = backend.nowNearby(latitude: latitude, longitude: longitude, radiusKm: nearbyRadiusKm)
+        let moms = (try? await m) ?? [], nows = (try? await n) ?? []
+        for x in moms { moments[x.id] = x }
+        nearbyMoments = moms.filter { !blocked.contains($0.creatorID) && !muted.contains($0.creatorID) }
+        nearbyNow = nows.filter { !blocked.contains($0.authorID) && !muted.contains($0.authorID) }
+    }
+
+    /// Venues near you, built from public Moments and NOW posts — most active first.
+    func nearbyPlaces(latitude: Double, longitude: Double) -> [(place: SocialPlace, moments: Int, people: Int, live: Bool, km: Double)] {
+        var byPlace: [String: (SocialPlace, [SocialMoment], Set<String>)] = [:]
+        for m in nearbyMoments { if let p = m.place { var e = byPlace[p.id] ?? (p, [], []); e.1.append(m); e.2.formUnion(m.memberIDs); byPlace[p.id] = e } }
+        for n in nearbyNow { if let p = n.place { var e = byPlace[p.id] ?? (p, [], []); e.2.insert(n.authorID); byPlace[p.id] = e } }
+        return byPlace.values.map { (place: $0.0, moments: $0.1.count, people: $0.2.count, live: $0.1.contains(where: \.isLive), km: $0.0.distance(fromLatitude: latitude, longitude: longitude)) }
+            .sorted { ($0.live ? 0 : 1, -$0.moments, $0.km) < ($1.live ? 0 : 1, -$1.moments, $1.km) }
+    }
+
+    func loadPlace(_ id: String) async {
+        let ms = (try? await backend.moments(atPlace: id)) ?? []
+        for m in ms { moments[m.id] = m }
+        placeMoments[id] = ms.filter { !blocked.contains($0.creatorID) }
     }
 
     // MARK: - Collections
@@ -275,6 +307,7 @@ final class SocialService {
         var isLive = false
         var isTeaser = false
         var initialMemberIDs: [String] = []
+        var place: SocialPlace? = nil
         var photos: [Data] = []
         var videoURLs: [URL] = []
         var note: String = ""
@@ -286,7 +319,8 @@ final class SocialService {
         guard let me else { lastError = SocialError.notSignedIn.localizedDescription; return nil }
         let prepared = input.photos.compactMap(MediaPipeline.preparePhoto)
         let dates = prepared.compactMap(\.capturedAt).sorted()
-        let draft = MomentDraft(title: input.title.isBlank ? "Untitled Moment" : input.title.trimmed, description: input.description.trimmed, startAt: input.startAt ?? dates.first, endAt: input.endAt ?? (dates.count > 1 ? dates.last : nil), locationName: input.locationName, coarsePlace: input.locationName.map(Self.coarse), visibility: input.visibility, templateID: input.templateID, remixedFromID: input.remixedFromID, isLive: input.isLive, coverData: prepared.first.flatMap { MediaPipeline.thumbnail($0.data, side: 1080) }, isTeaser: input.isTeaser, initialMemberIDs: input.initialMemberIDs)
+        let locationName = input.locationName ?? input.place?.name
+        let draft = MomentDraft(title: input.title.isBlank ? "Untitled Moment" : input.title.trimmed, description: input.description.trimmed, startAt: input.startAt ?? dates.first, endAt: input.endAt ?? (dates.count > 1 ? dates.last : nil), locationName: locationName, coarsePlace: input.place.map { Self.coarse($0.area.isEmpty ? $0.name : $0.area) } ?? input.locationName.map(Self.coarse), visibility: input.visibility, templateID: input.templateID, remixedFromID: input.remixedFromID, isLive: input.isLive, coverData: prepared.first.flatMap { MediaPipeline.thumbnail($0.data, side: 1080) }, isTeaser: input.isTeaser, initialMemberIDs: input.initialMemberIDs, place: input.place)
         do {
             var m = try await backend.createMoment(draft)
             // CloudKit adds people through the share; the in-memory backend already did it in create.
@@ -301,9 +335,10 @@ final class SocialService {
     }
 
     /// One tap: a live, open Moment for whatever is happening right now — the QR is the invite.
-    func startActivity(title: String, kind: ActivityKind, place: String?, openToAnyone: Bool) async -> SocialMoment? {
-        var input = NewMomentInput(title: title.isBlank ? kind.defaultTitle : title.trimmed, visibility: openToAnyone ? .group : .friends, templateID: "activity.\(kind.rawValue)", isLive: true)
+    func startActivity(title: String, kind: ActivityKind, place: String?, venue: SocialPlace? = nil, openToAnyone: Bool, isPublic: Bool = false) async -> SocialMoment? {
+        var input = NewMomentInput(title: title.isBlank ? kind.defaultTitle : title.trimmed, visibility: isPublic ? .publicAll : openToAnyone ? .group : .friends, templateID: "activity.\(kind.rawValue)", isLive: true)
         input.locationName = place
+        input.place = venue
         input.startAt = .now
         guard let m = await createMoment(input) else { return nil }
         // Make the link exist immediately so the QR is scannable the second the screen appears.
@@ -597,12 +632,12 @@ final class SocialService {
         if let posts = try? await backend.nowFeed() { nowPosts = posts.filter { !muted.contains($0.authorID) && !blocked.contains($0.authorID) } }
     }
 
-    func postNow(text: String, photo: Data?, place: String?, activity: NowPost.Activity = .none, hours: Double = 24) async -> Bool {
+    func postNow(text: String, photo: Data?, place: String?, activity: NowPost.Activity = .none, hours: Double = 24, venue: SocialPlace? = nil) async -> Bool {
         guard let me else { return false }
         if case .blocked(let why) = ContentModeration.check(text) { lastError = why; return false }
         var ref: MediaRef? = nil
         if let photo, let p = MediaPipeline.preparePhoto(photo), let local = try? await media.store(p.data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: nil, width: p.width, height: p.height) }
-        let post = NowPost(id: UUID().uuidString, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, createdAt: .now, expiresAt: .now.addingTimeInterval(hours * 3600), coarsePlace: place.map(Self.coarse), savedToMomentID: nil, activity: activity)
+        let post = NowPost(id: UUID().uuidString, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, createdAt: .now, expiresAt: .now.addingTimeInterval(hours * 3600), coarsePlace: (place ?? venue?.area).map(Self.coarse), savedToMomentID: nil, activity: activity, place: venue)
         nowPosts.insert(post, at: 0)
         queue.enqueue(.now(post))
         analytics.track(.nowPosted, category: photo == nil ? "text" : "photo")

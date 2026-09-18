@@ -65,7 +65,7 @@ actor InMemoryBackend: SocialBackend {
         try gate()
         var cover: MediaRef? = nil
         if let data = draft.coverData { let id = "cover_\(UUID().uuidString)"; mediaBlobs[id] = data; cover = MediaRef(kind: .photo, localRef: nil, remoteID: id) }
-        var m = SocialMoment(id: "m_\(UUID().uuidString)", creatorID: me.id, creatorName: me.displayName, title: draft.title, description: draft.description, coverRef: cover, createdAt: .now, startAt: draft.startAt, endAt: draft.endAt, locationName: draft.locationName, coarsePlace: draft.coarsePlace, visibility: draft.visibility, memberIDs: [me.id], memberNames: [me.displayName], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: draft.isLive, templateID: draft.templateID, remixedFromID: draft.remixedFromID, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: draft.isTeaser)
+        var m = SocialMoment(id: "m_\(UUID().uuidString)", creatorID: me.id, creatorName: me.displayName, title: draft.title, description: draft.description, coverRef: cover, createdAt: .now, startAt: draft.startAt, endAt: draft.endAt, locationName: draft.locationName, coarsePlace: draft.coarsePlace, visibility: draft.visibility, memberIDs: [me.id], memberNames: [me.displayName], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: draft.isLive, templateID: draft.templateID, remixedFromID: draft.remixedFromID, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: draft.isTeaser, place: draft.place)
         for id in draft.initialMemberIDs where !m.memberIDs.contains(id) { if let u = users[id] { m.memberIDs.append(id); m.memberNames.append(u.displayName) } }
         m.shareURL = URL(string: "https://www.icloud.com/share/\(m.id)")
         moments[m.id] = m
@@ -207,6 +207,29 @@ actor InMemoryBackend: SocialBackend {
         if let q = query?.lowercased(), !q.isBlank { items = items.filter { $0.title.lowercased().contains(q) || $0.description.lowercased().contains(q) || ($0.coarsePlace?.lowercased().contains(q) ?? false) } }
         if let place, !place.isBlank { items = items.filter { $0.coarsePlace == place } }
         return FeedPage(items: items.sorted { $0.contributionCount > $1.contributionCount }, cursor: nil)
+    }
+
+    private func visibleForDiscovery(_ m: SocialMoment) -> Bool {
+        m.visibility == .publicAll && !blocked.contains(m.creatorID) && !muted.contains(m.creatorID)
+    }
+    func nearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [SocialMoment] {
+        try gate()
+        return moments.values.filter { m in
+            guard visibleForDiscovery(m), let p = m.place else { return false }
+            return p.distance(fromLatitude: latitude, longitude: longitude) <= radiusKm
+        }.sorted { ($0.place!.distance(fromLatitude: latitude, longitude: longitude), $1.createdAt) < ($1.place!.distance(fromLatitude: latitude, longitude: longitude), $0.createdAt) }
+    }
+    func nowNearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [NowPost] {
+        try gate()
+        return nows.filter { n in
+            guard !n.isExpired, !blocked.contains(n.authorID), let p = n.place else { return false }
+            return (settingsByUser[n.authorID] ?? SafetySettings()).allowDiscoverByLocation || n.authorID == me.id || follows.contains { $0.fromID == n.authorID && $0.toID == me.id }
+                && p.distance(fromLatitude: latitude, longitude: longitude) <= radiusKm
+        }
+    }
+    func moments(atPlace placeID: String) async throws -> [SocialMoment] {
+        try gate()
+        return moments.values.filter { ($0.place?.id == placeID) && (visibleForDiscovery($0) || $0.memberIDs.contains(me.id)) }.sorted { $0.createdAt > $1.createdAt }
     }
 
     // MARK: Engagement
@@ -389,10 +412,17 @@ actor InMemoryBackend: SocialBackend {
                 (label as NSString).draw(at: CGPoint(x: 60, y: 1020), withAttributes: attrs)
             }.jpegData(compressionQuality: 0.8)!
         }
+        let venues: [String: SocialPlace] = [
+            "Goa": SocialPlace(id: SocialPlace.makeID(name: "Palolem Beach", latitude: 15.010, longitude: 74.023), name: "Palolem Beach", area: "Canacona, Goa", latitude: 15.010, longitude: 74.023, category: "Beach"),
+            "Bandra": SocialPlace(id: SocialPlace.makeID(name: "Bastian", latitude: 19.062, longitude: 72.831), name: "Bastian", area: "Bandra West, Mumbai", latitude: 19.062, longitude: 72.831, category: "Restaurant"),
+            "Marine Drive": SocialPlace(id: SocialPlace.makeID(name: "Marine Drive", latitude: 18.944, longitude: 72.823), name: "Marine Drive", area: "Mumbai", latitude: 18.944, longitude: 72.823, category: "Promenade"),
+            "Versova": SocialPlace(id: SocialPlace.makeID(name: "Versova Beach", latitude: 19.131, longitude: 72.812), name: "Versova Beach", area: "Andheri West, Mumbai", latitude: 19.131, longitude: 72.812, category: "Beach"),
+            "Lower Parel": SocialPlace(id: SocialPlace.makeID(name: "Kokoro Ramen", latitude: 18.997, longitude: 72.828), name: "Kokoro Ramen", area: "Lower Parel, Mumbai", latitude: 18.997, longitude: 72.828, category: "Café")
+        ]
         func add(_ id: String, creator: String, title: String, desc: String, daysAgo: Int, members: [String], place: String?, vis: MomentVisibility, color: UIColor, isLive: Bool = false, contribs: [(String, Contribution.Kind, String, Int)]) {
             let creatorUser = users[creator]!
             mediaBlobs["cover_\(id)"] = img(color, title)
-            var m = SocialMoment(id: id, creatorID: creator, creatorName: creatorUser.displayName, title: title, description: desc, coverRef: MediaRef(kind: .photo, localRef: nil, remoteID: "cover_\(id)"), createdAt: .now.adding(days: -daysAgo), startAt: .now.adding(days: -daysAgo), endAt: nil, locationName: place, coarsePlace: place, visibility: vis, memberIDs: members, memberNames: members.map { users[$0]?.displayName ?? $0 }, contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: members.count, isLive: isLive, templateID: nil, remixedFromID: nil, shareURL: URL(string: "https://www.icloud.com/share/\(id)"), allowsReshare: true, allowsDownload: true, allowsContributions: true)
+            var m = SocialMoment(id: id, creatorID: creator, creatorName: creatorUser.displayName, title: title, description: desc, coverRef: MediaRef(kind: .photo, localRef: nil, remoteID: "cover_\(id)"), createdAt: .now.adding(days: -daysAgo), startAt: .now.adding(days: -daysAgo), endAt: nil, locationName: place, coarsePlace: place, visibility: vis, memberIDs: members, memberNames: members.map { users[$0]?.displayName ?? $0 }, contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: members.count, isLive: isLive, templateID: nil, remixedFromID: nil, shareURL: URL(string: "https://www.icloud.com/share/\(id)"), allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: false, place: place.flatMap { venues[$0] })
             var list: [Contribution] = []
             for (i, c) in contribs.enumerated() {
                 let cid = "c_\(id)_\(i)"
@@ -413,13 +443,15 @@ actor InMemoryBackend: SocialBackend {
         ])
         add("m_run", creator: "u_dev", title: "Sunday long run", desc: "21k, no walking.", daysAgo: 1, members: ["u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.2, green: 0.6, blue: 0.5, alpha: 1), contribs: [("u_dev", .photo, "Km 18", 0), ("u_dev", .photo, "Done", 70)])
         add("m_sunset", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), isLive: true, contribs: [("u_public", .photo, "6:41pm", 0), ("u_public", .photo, "6:52pm", 11), ("u_public", .photo, "7:03pm", 22)])
+        add("m_cafe", creator: "u_sarah", title: "Ramen night", desc: "The tonkotsu. That's the review.", daysAgo: 3, members: ["u_sarah", "u_dev"], place: "Lower Parel", vis: .publicAll, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), contribs: [("u_sarah", .photo, "Tonkotsu", 0), ("u_dev", .photo, "Gyoza", 15)])
+        add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), contribs: [("u_public", .photo, "Bar", 0), ("u_rahul", .photo, "Cocktails", 40)])
         add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), contribs: [(me.id, .photo, "Anjuna", 0), ("u_rahul", .photo, "Same beach", 30)])
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
         nows = [
             NowPost(id: "n1", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Chai run. Who's up", media: nil, createdAt: .now.addingTimeInterval(-1800), expiresAt: .now.addingTimeInterval(22 * 3600), coarsePlace: "Bandra", savedToMomentID: nil),
             NowPost(id: "n2", authorID: "u_sarah", authorName: "Sarah Kim", text: "Finally trying that ramen place", media: nil, createdAt: .now.addingTimeInterval(-5400), expiresAt: .now.addingTimeInterval(18 * 3600), coarsePlace: "Lower Parel", savedToMomentID: nil),
-            NowPost(id: "n3", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Anyone out?", media: nil, createdAt: .now.addingTimeInterval(-600), expiresAt: .now.addingTimeInterval(4 * 3600), coarsePlace: "Bandra", savedToMomentID: nil, activity: .drinks, joinerIDs: ["u_sarah"], joinerNames: ["Sarah Kim"])
+            NowPost(id: "n3", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Anyone out?", media: nil, createdAt: .now.addingTimeInterval(-600), expiresAt: .now.addingTimeInterval(4 * 3600), coarsePlace: "Bandra", savedToMomentID: nil, activity: .drinks, place: venues["Bandra"], joinerIDs: ["u_sarah"], joinerNames: ["Sarah Kim"])
         ]
         groupsByID["g_boys"] = SocialGroup(id: "g_boys", ownerID: me.id, name: "The Goa crew", emoji: "🏖️", memberIDs: [me.id, "u_rahul", "u_sarah"], memberNames: [me.displayName, "Rahul Mehta", "Sarah Kim"], conversationID: nil, createdAt: .now.adding(days: -100))
         activityItems = [

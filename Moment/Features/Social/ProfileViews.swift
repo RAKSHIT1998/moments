@@ -35,7 +35,8 @@ struct SocialProfileView: View {
             .padding(.bottom, 80)
         }
         .background(MColor.background)
-        .navigationTitle(user?.handle.isEmpty == false ? user!.handle : "Profile")
+        .navigationTitle(user?.displayName ?? "Profile")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -68,10 +69,12 @@ struct SocialProfileView: View {
                     if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 86, height: 86).clipShape(Circle()) }
                     else { PersonAvatar(name: user?.displayName ?? "?", size: 86) }
                 }
-                NavigationLink(value: SocialRoute.moment(moments.first?.id ?? "")) { stat("\(moments.count)", "Moments") }.buttonStyle(.plain).disabled(moments.isEmpty)
-                NavigationLink(value: SocialRoute.followers(userID, false)) { stat("\(Set(moments.flatMap(\.memberIDs)).subtracting([userID]).count)", "People") }.buttonStyle(.plain)
-                NavigationLink(value: SocialRoute.map) { stat("\(Set(moments.compactMap(\.coarsePlace)).count)", "Places") }.buttonStyle(.plain)
-                Spacer(minLength: 0)
+                // Stats share the remaining width evenly, centred under each number.
+                HStack(spacing: 0) {
+                    stat("\(moments.count)", "Moments").frame(maxWidth: .infinity)
+                    NavigationLink(value: SocialRoute.followers(userID, false)) { stat("\(Set(moments.flatMap(\.memberIDs)).subtracting([userID]).count)", "People").frame(maxWidth: .infinity) }.buttonStyle(.plain)
+                    NavigationLink(value: SocialRoute.map) { stat("\(Set(moments.compactMap(\.coarsePlace)).count)", "Places").frame(maxWidth: .infinity) }.buttonStyle(.plain)
+                }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(user?.displayName ?? "…").font(.subheadline.weight(.semibold))
@@ -146,10 +149,10 @@ struct SocialProfileView: View {
 
     private var collectionsRow: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Text("Collections").sectionLabel()
                 Spacer()
-                NavigationLink(value: SocialRoute.collections) { Text(env.social.collections.isEmpty ? "Create" : "See all").font(MFont.caption.weight(.semibold)) }.accessibilityIdentifier("collectionsLink")
+                NavigationLink(value: SocialRoute.collections) { Text(env.social.collections.isEmpty ? "Create" : "See all").font(MFont.caption.weight(.semibold)).foregroundStyle(MColor.accent) }.accessibilityIdentifier("collectionsLink")
             }
             if env.social.collections.isEmpty {
                 Text("Group Moments into albums — a trip, a year, a person.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
@@ -182,19 +185,15 @@ struct SocialProfileView: View {
     private var suggestionsRow: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
             Text("People you were there with").sectionLabel()
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: MSpacing.s) {
-                    ForEach(env.social.peopleSuggestions.prefix(8), id: \.id) { p in
-                        VStack(spacing: 6) {
-                            NavigationLink(value: SocialRoute.profile(p.id)) { AvatarView(userID: p.id, name: p.name, size: 56) }.buttonStyle(.plain)
-                            Text(p.name.split(separator: " ").first.map(String.init) ?? p.name).font(MFont.caption).lineLimit(1)
-                            Text("\(p.shared) together").font(.caption2).foregroundStyle(MColor.textTertiary)
-                            Button("Follow") { Task { await env.social.follow(p.id); Haptics.selection() } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("suggestFollow-\(p.id)")
-                        }
-                        .frame(width: 110)
-                        .padding(.vertical, MSpacing.m)
-                        .background(MColor.surface, in: RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
+            ForEach(env.social.peopleSuggestions.prefix(5), id: \.id) { p in
+                HStack(spacing: MSpacing.m) {
+                    NavigationLink(value: SocialRoute.profile(p.id)) { AvatarView(userID: p.id, name: p.name, size: 44) }.buttonStyle(.plain)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(p.name).font(.subheadline.weight(.semibold))
+                        Text("\(p.shared) \(p.shared == 1 ? "Moment" : "Moments") together").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                     }
+                    Spacer()
+                    Button("Follow") { Task { await env.social.follow(p.id); Haptics.selection() } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("suggestFollow-\(p.id)")
                 }
             }
         }
@@ -370,8 +369,8 @@ struct SafetySettingsView: View {
                 Picker("Mention me", selection: $s.whoCanMention) { ForEach(SafetySettings.Audience.allCases, id: \.self) { Text($0.label).tag($0) } }
             }
             Section("Discover") {
-                Toggle("Show my public Moments by place", isOn: $s.allowDiscoverByLocation)
-                Text("Places are city-level. MOMENT never stores or shares exact coordinates.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                Toggle("Show my NOW to people nearby", isOn: $s.allowDiscoverByLocation)
+                Text("Only NOW posts where you picked a venue. Your phone's location is never stored or shared — the venue is.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             Section {
                 NavigationLink(value: SocialRoute.blockedUsers) { Label("Blocked people (\(env.social.blocked.count))", systemImage: "hand.raised") }
@@ -442,7 +441,8 @@ struct ProfileButtonStyle: ButtonStyle {
             .foregroundStyle(MColor.textPrimary)
             .padding(.vertical, 8)
             .frame(minHeight: 34)
-            .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .background(MColor.fill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))   // visible grey in light mode too
             .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

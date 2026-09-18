@@ -1,5 +1,6 @@
 import Foundation
 import CloudKit
+import CoreLocation
 import UIKit
 
 /// Production backend on CloudKit — Apple's hosted database, asset CDN and sharing system.
@@ -135,6 +136,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["allowsDownload"] = 1
         record["allowsContributions"] = 1
         record["isTeaser"] = draft.isTeaser ? 1 : 0
+        Self.write(place: draft.place, to: record)
         if let cover = draft.coverData, let url = try? Self.tempFile(cover, ext: "jpg") { record["cover"] = CKAsset(fileURL: url) }
         let saved = try await save(record, in: privateDB)
         let moment = try await moment(from: saved)
@@ -392,10 +394,49 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         return FeedPage(items: out, cursor: next)
     }
 
+    /// Public Moments carry the venue as a CLLocation so CloudKit can answer "within 2 km of here".
+    func nearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [SocialMoment] {
+        let here = CLLocation(latitude: latitude, longitude: longitude)
+        let q = CKQuery(recordType: "PublicMoment", predicate: NSPredicate(format: "distanceToLocation:fromLocation:(location, %@) < %f", here, radiusKm * 1000))
+        q.sortDescriptors = [CKLocationSortDescriptor(key: "location", relativeLocation: here)]
+        var out: [SocialMoment] = []
+        for r in try await query(q, in: publicDB, limit: 60) { if let m = try? await moment(from: r) { out.append(m) } }
+        return out
+    }
+
+    func nowNearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [NowPost] {
+        let here = CLLocation(latitude: latitude, longitude: longitude)
+        let q = CKQuery(recordType: "Now", predicate: NSPredicate(format: "distanceToLocation:fromLocation:(location, %@) < %f AND expiresAt > %@ AND discoverable == 1", here, radiusKm * 1000, Date.now as NSDate))
+        q.sortDescriptors = [CKLocationSortDescriptor(key: "location", relativeLocation: here)]
+        return try await query(q, in: publicDB, limit: 60).map { Self.now(from: $0) }
+    }
+
+    func moments(atPlace placeID: String) async throws -> [SocialMoment] {
+        let q = CKQuery(recordType: "PublicMoment", predicate: NSPredicate(format: "placeID == %@", placeID))
+        q.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        var out: [SocialMoment] = []
+        for r in try await query(q, in: publicDB, limit: 100) { if let m = try? await moment(from: r) { out.append(m) } }
+        return out
+    }
+
+    static func write(place: SocialPlace?, to r: CKRecord) {
+        r["placeID"] = place?.id; r["placeName"] = place?.name; r["placeArea"] = place?.area; r["placeCategory"] = place?.category
+        r["location"] = place.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
+    }
+
+    static func place(from r: CKRecord) -> SocialPlace? {
+        guard let id = r["placeID"] as? String, let name = r["placeName"] as? String, let loc = r["location"] as? CLLocation else { return nil }
+        return SocialPlace(id: id, name: name, area: r["placeArea"] as? String ?? "", latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude, category: r["placeCategory"] as? String)
+    }
+
+    static func now(from r: CKRecord) -> NowPost {
+        NowPost(id: r.recordID.recordName, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: nil, createdAt: r.creationDate ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, coarsePlace: r["coarsePlace"] as? String, savedToMomentID: nil, activity: NowPost.Activity(rawValue: r["activity"] as? String ?? "") ?? .none, place: place(from: r), joinerIDs: r["joinerIDs"] as? [String] ?? [], joinerNames: r["joinerNames"] as? [String] ?? [])
+    }
+
     private func mirrorPublic(_ moment: SocialMoment, record: CKRecord) async throws {
         let id = CKRecord.ID(recordName: "public_\(moment.id)")
         let pub = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "PublicMoment", recordID: id)
-        for key in ["creatorID", "creatorName", "title", "description", "startAt", "endAt", "locationName", "coarsePlace", "memberIDs", "memberNames", "contributionCount", "mediaCount", "commentCount", "shareCount", "isLive", "templateID", "remixedFromID"] { pub[key] = record[key] }
+        for key in ["creatorID", "creatorName", "title", "description", "startAt", "endAt", "locationName", "coarsePlace", "memberIDs", "memberNames", "contributionCount", "mediaCount", "commentCount", "shareCount", "isLive", "templateID", "remixedFromID", "placeID", "placeName", "placeArea", "placeCategory", "location"] { pub[key] = record[key] }
         pub["visibility"] = MomentVisibility.publicAll.rawValue
         pub["sourceID"] = moment.id
         if let cover = record["cover"] as? CKAsset, let url = cover.fileURL { pub["cover"] = CKAsset(fileURL: url) }
@@ -490,6 +531,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["coarsePlace"] = post.coarsePlace
         record["activity"] = post.activity.rawValue
         record["joinerIDs"] = post.joinerIDs; record["joinerNames"] = post.joinerNames
+        Self.write(place: post.place, to: record)
+        record["discoverable"] = ((try? await safetySettings())?.allowDiscoverByLocation ?? false) ? 1 : 0
         if let mediaData, let url = try? Self.tempFile(mediaData, ext: "jpg") { record["media"] = CKAsset(fileURL: url) }
         let saved = try await save(record, in: publicDB)
         var out = post; out.id = saved.recordID.recordName
@@ -852,7 +895,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
             else if let share = try? await (r.recordID.zoneID.ownerName == CKCurrentUserDefaultName ? privateDB : sharedDB).record(for: shareRef.recordID) as? CKShare { shareURL = share.url; shareURLCache[shareRef.recordID.recordName] = share.url }
         }
         let id = (r["sourceID"] as? String) ?? r.recordID.recordName
-        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1)
+        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1, place: Self.place(from: r))
     }
 
     static func contribution(from r: CKRecord, media: MediaStore) async throws -> Contribution {
