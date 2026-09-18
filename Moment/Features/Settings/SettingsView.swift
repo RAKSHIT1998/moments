@@ -46,7 +46,8 @@ struct SettingsView: View {
                 Text("MOMENT never imports your address book. Link a person from their profile.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             Section("Appearance") {
-                Picker("Appearance", selection: $appearance) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }.pickerStyle(.segmented)
+                Picker("Appearance", selection: $appearance) { Text("Automatic").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }.pickerStyle(.segmented)
+                Text(appearance == "system" ? "Follows your iPhone's Light/Dark setting, including schedules. Text, cards and colours adapt automatically." : "Fixed. Choose Automatic to follow your iPhone again.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             Section("About") {
                 NavigationLink(value: Route.about) { Label("About MOMENT", systemImage: "info.circle") }

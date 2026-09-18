@@ -167,7 +167,7 @@ struct ShareConfirmationView: View {
             .padding()
             Spacer()
         }
-        .background(MColor.overlayDark.opacity(0.25).ignoresSafeArea())
+        .background(Color.black.opacity(0.25).ignoresSafeArea())   // dimming scrim over the host app; same in both modes
         .task {
             // Auto-dismiss on success so sharing feels instant.
             try? await Task.sleep(for: .seconds(1.4))

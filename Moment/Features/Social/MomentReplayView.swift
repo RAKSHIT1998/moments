@@ -42,7 +42,7 @@ struct MomentReplayView: View {
                             .overlay(LinearGradient(colors: [MColor.overlayDark.opacity(0.5), .clear, .clear, MColor.overlayDark.opacity(0.7)], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
                     case .note(let c):
                         AmbientBackdrop(intensity: 1.5).ignoresSafeArea()
-                        Text(""\(c.caption)"").font(.system(size: 30, weight: .semibold, design: .serif)).foregroundStyle(MColor.overlayLight).multilineTextAlignment(.center).padding(MSpacing.xxl)
+                        Text("“\(c.caption)”").font(.system(size: 30, weight: .semibold, design: .serif)).foregroundStyle(MColor.overlayLight).multilineTextAlignment(.center).padding(MSpacing.xxl)
                     case .joined(let name):
                         MColor.overlayDark
                         VStack(spacing: MSpacing.m) { PersonAvatar(name: name, size: 88); Text("\(name) joined").font(MFont.heroSmall).foregroundStyle(MColor.overlayLight) }
