@@ -64,6 +64,7 @@ extension View {
             case .passport: PassportView()
             case .scan: QRScannerView()
             case .inbox: InboxView(embedded: true)
+            case .messages: InboxView(embedded: true, segment: 2)
             case .discover: DiscoverView(embedded: true)
             case .now: NowView(embedded: true)
             }

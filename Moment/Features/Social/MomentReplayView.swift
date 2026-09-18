@@ -97,7 +97,7 @@ struct MomentReplayView: View {
             }
             step(1, count: beats.count)
         }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)   // local to this view; preferredColorScheme would flip the whole window
         .accessibilityIdentifier("replayView")
     }
 

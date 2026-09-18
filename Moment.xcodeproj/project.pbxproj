@@ -35,6 +35,7 @@
 		29F529A4CC7AFF0DB0AE6495 /* MemoryEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F7FB4AB4D27843673924B /* MemoryEditView.swift */; };
 		2A466CE19814BA5FAEA8BE1A /* MemoryActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4371AEE165C28E6AFF62C43F /* MemoryActions.swift */; };
 		2C02D06529CDFF9AE49E313B /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5C4E1628757B967D4EFA41 /* SearchEngine.swift */; };
+		2C913467DD2688980689051F /* PostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51760AF8F6A0625260BDBE8 /* PostCard.swift */; };
 		2EA5A1B8247A952EF34E3E0A /* Memory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362A6EE38786ECC0B45B06E0 /* Memory.swift */; };
 		2F8CD7E4C6531252971282F2 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464154532F0FB495D0569F60 /* AppIntents.framework */; };
 		2FCA17F74EDF90CD63046310 /* IntentClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AF5F99C875785ED4DEF9B7 /* IntentClassifier.swift */; };
@@ -353,6 +354,7 @@
 		A30A2DD7ACE9C387984B8F46 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
 		A32CD298346F88F5EBA6AB25 /* Place.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Place.swift; sourceTree = "<group>"; };
 		A39684E5785BF6263297F29A /* PlansViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansViews.swift; sourceTree = "<group>"; };
+		A51760AF8F6A0625260BDBE8 /* PostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostCard.swift; sourceTree = "<group>"; };
 		A556007B88DC6B38789AADAC /* ImportanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportanceEngine.swift; sourceTree = "<group>"; };
 		A5FF9AC8204B47BB0C54BFD5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A8017C1806616B4138412E1E /* GiftIdea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiftIdea.swift; sourceTree = "<group>"; };
@@ -770,6 +772,7 @@
 				C968E2C58941908662506CAB /* NowView.swift */,
 				5C3152B7F4E2A271743F15FE /* NowViews.swift */,
 				A30A2DD7ACE9C387984B8F46 /* PassportView.swift */,
+				A51760AF8F6A0625260BDBE8 /* PostCard.swift */,
 				35DF02CBAACFC80DBA64B3DE /* ProfileViews.swift */,
 				0F67315BFEA8FA785861388C /* SetupView.swift */,
 				C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */,
@@ -1246,6 +1249,7 @@
 				42C1836976AD5676DF746A7E /* Plan.swift in Sources */,
 				ECBE15603743D23D5742EA86 /* PlanIntelligence.swift in Sources */,
 				1468ACBD4169CFCAB8E81F56 /* PlansViews.swift in Sources */,
+				2C913467DD2688980689051F /* PostCard.swift in Sources */,
 				30EBC49C2B586D2CD71372E2 /* ProfileViews.swift in Sources */,
 				E9A3239131C8633C4323E52B /* Promise.swift in Sources */,
 				A7FD88291D531D168FD85D2E /* RemoteIntelligenceProvider.swift in Sources */,

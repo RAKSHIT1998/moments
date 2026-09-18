@@ -35,8 +35,7 @@ struct SocialProfileView: View {
             .padding(.bottom, 80)
         }
         .background(MColor.background)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .navigationTitle("")
+        .navigationTitle(user?.handle.isEmpty == false ? user!.handle : "Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -63,41 +62,41 @@ struct SocialProfileView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: MSpacing.l) {
-            ZStack {
-                if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 96, height: 96).clipShape(Circle()) }
-                else { PersonAvatar(name: user?.displayName ?? "?", size: 96) }
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(user?.displayName ?? "…").displayStyle()
-                HStack(spacing: 6) {
-                    Text("@\(user?.handle ?? "")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                    if user?.isPrivateAccount == true { Image(systemName: "lock").font(.caption).foregroundStyle(MColor.textTertiary) }
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            HStack(spacing: MSpacing.xl) {
+                ZStack {
+                    if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 86, height: 86).clipShape(Circle()) }
+                    else { PersonAvatar(name: user?.displayName ?? "?", size: 86) }
                 }
-                if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.body).foregroundStyle(MColor.textPrimary).padding(.top, 4) }
+                NavigationLink(value: SocialRoute.moment(moments.first?.id ?? "")) { stat("\(moments.count)", "Moments") }.buttonStyle(.plain).disabled(moments.isEmpty)
+                NavigationLink(value: SocialRoute.followers(userID, false)) { stat("\(Set(moments.flatMap(\.memberIDs)).subtracting([userID]).count)", "People") }.buttonStyle(.plain)
+                NavigationLink(value: SocialRoute.map) { stat("\(Set(moments.compactMap(\.coarsePlace)).count)", "Places") }.buttonStyle(.plain)
+                Spacer(minLength: 0)
             }
-            Text("\(moments.count) Moments · \(Set(moments.flatMap(\.memberIDs)).subtracting([userID]).count) people · \(Set(moments.compactMap(\.coarsePlace)).count) places")
-                .font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(user?.displayName ?? "…").font(.subheadline.weight(.semibold))
+                if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.subheadline) }
+            }
             if isMe {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: MSpacing.l) {
-                        NavigationLink(value: SocialRoute.passport) { Text("Passport") }.accessibilityIdentifier("passportLink")
-                        NavigationLink(value: SocialRoute.map) { Text("Map") }.accessibilityIdentifier("mapLink")
-                        NavigationLink(value: SocialRoute.groups) { Text("Groups") }.accessibilityIdentifier("groupsLink")
-                        NavigationLink(value: SocialRoute.followers(userID, false)) { Text("People") }
-                        NavigationLink(value: SocialRoute.timeMachine) { Text("Time Machine") }
-                        NavigationLink(value: SocialRoute.editProfile) { Text("Edit") }.accessibilityIdentifier("editProfile")
-                        NavigationLink(value: SocialRoute.safety) { Text("Privacy") }.accessibilityIdentifier("safetyLink")
-                    }
-                    .font(.subheadline.weight(.medium)).foregroundStyle(MColor.textPrimary)
+                HStack(spacing: MSpacing.s) {
+                    NavigationLink(value: SocialRoute.editProfile) { Text("Edit profile").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("editProfile")
+                    NavigationLink(value: SocialRoute.passport) { Text("Passport").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("passportLink")
+                    NavigationLink(value: SocialRoute.groups) { Image(systemName: "person.3").frame(width: 44) }.buttonStyle(ProfileButtonStyle()).accessibilityLabel("Groups").accessibilityIdentifier("groupsLink")
                 }
+                HStack(spacing: MSpacing.l) {
+                    NavigationLink(value: SocialRoute.map) { Text("Map") }.accessibilityIdentifier("mapLink")
+                    NavigationLink(value: SocialRoute.timeMachine) { Text("Time Machine") }
+                    NavigationLink(value: SocialRoute.collections) { Text("Collections") }.accessibilityIdentifier("collectionsLink")
+                    NavigationLink(value: SocialRoute.safety) { Text("Privacy") }.accessibilityIdentifier("safetyLink")
+                }
+                .font(MFont.caption.weight(.medium)).foregroundStyle(MColor.textSecondary)
             }
         }
         .accessibilityIdentifier("profileHeader")
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
-        VStack(spacing: 2) { Text(value).font(.title3.weight(.bold)).monospacedDigit(); Text(label).font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+        VStack(spacing: 0) { Text(value).font(.headline.weight(.semibold)).monospacedDigit(); Text(label).font(MFont.caption).foregroundStyle(MColor.textPrimary) }
     }
 
     private var relationshipCard: some View {
@@ -235,9 +234,13 @@ struct SocialProfileView: View {
                 Text(isMe ? "Make your first Moment from the + tab." : (user?.isPrivateAccount == true ? "This account is private. Follow to see shared Moments." : "No Moments you can see yet.")).font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             if isMe, !query.isBlank, shown.isEmpty { Text("Nothing matches \"\(query)\".").font(MFont.footnote).foregroundStyle(MColor.textSecondary) }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: MSpacing.s), GridItem(.flexible(), spacing: MSpacing.s)], spacing: MSpacing.s) {
-                ForEach(shown) { m in NavigationLink(value: SocialRoute.moment(m.id)) { MomentTile(moment: m) }.buttonStyle(PressScaleStyle()) }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 3), spacing: 2) {
+                ForEach(shown) { m in
+                    NavigationLink(value: SocialRoute.moment(m.id)) { SocialImage(ref: m.coverRef).aspectRatio(1, contentMode: .fill).clipped() }
+                        .buttonStyle(.plain).accessibilityLabel(m.title).accessibilityIdentifier("tile-\(m.id)")
+                }
             }
+            .padding(.horizontal, -MSpacing.page)
         }
     }
 }
@@ -427,5 +430,19 @@ struct PrivateMemoryHubView: View {
             .padding(.horizontal, MSpacing.l).padding(.vertical, 6)
             .background(.bar)
         }
+    }
+}
+
+
+/// The grey "Edit profile" button everyone recognises.
+struct ProfileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(MColor.textPrimary)
+            .padding(.vertical, 8)
+            .frame(minHeight: 34)
+            .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

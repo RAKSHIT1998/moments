@@ -5,18 +5,19 @@ import SwiftUI
 /// Quiet luxury: ivory / charcoal grounds, soft-ink text, one muted accent. Every value is an
 /// adaptive colour set, so Light, Dark, Increase Contrast and Reduce Transparency all work.
 enum MColor {
-    static let background = Color("Canvas")
-    static let surface = Color("Surface")
-    static let surfaceSecondary = Color("SurfaceSecondary")
-    static let textPrimary = Color("Ink")
+    // Pure system colours: white/black grounds that flip with the device, like every app people already know.
+    static let background = Color(uiColor: .systemBackground)
+    static let surface = Color(uiColor: .secondarySystemBackground)
+    static let surfaceSecondary = Color(uiColor: .tertiarySystemBackground)
+    static let textPrimary = Color(uiColor: .label)
     static let textSecondary = Color(uiColor: .secondaryLabel)
     static let textTertiary = Color(uiColor: .tertiaryLabel)
-    static let separator = Color("Hairline")
+    static let separator = Color(uiColor: .separator)
     static let accent = Color.accentColor
     static let accentSoft = Color.accentColor.opacity(0.10)
-    /// Solid ink for the one primary action on a screen; inverts with the theme.
-    static let ink = Color("Ink")
-    static let onInk = Color("Canvas")
+    /// Solid ink for filled buttons; inverts with the theme.
+    static let ink = Color(uiColor: .label)
+    static let onInk = Color(uiColor: .systemBackground)
     static let success = Color(uiColor: .systemGreen)
     static let warning = Color(uiColor: .systemOrange)
     static let danger = Color(uiColor: .systemRed)

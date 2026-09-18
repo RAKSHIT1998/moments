@@ -5,7 +5,8 @@ import PhotosUI
 struct InboxView: View {
     @Environment(AppEnvironment.self) private var env
     var embedded = false
-    @State private var segment = 0
+    var segment: Int = 0
+    @State private var selectedSegment = 0
 
     var body: some View {
         Group { if embedded { content } else { NavigationStack { content.socialDestinations() } } }
@@ -13,11 +14,11 @@ struct InboxView: View {
 
     private var content: some View {
             VStack(spacing: 0) {
-                Picker("Inbox", selection: $segment) { Text("Activity").tag(0); Text("Invites").tag(1); Text("Messages").tag(2) }
+                Picker("Inbox", selection: $selectedSegment) { Text("Activity").tag(0); Text("Invites").tag(1); Text("Messages").tag(2) }
                     .pickerStyle(.segmented).padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.s)
                     .accessibilityIdentifier("inboxSegments")
                 List {
-                    switch segment {
+                    switch selectedSegment {
                     case 0: activity
                     case 1: invites
                     default: messages
@@ -26,9 +27,9 @@ struct InboxView: View {
                 .listStyle(.plain)
             }
             .background(MColor.background)
-            .navigationTitle("Inbox")
+            .navigationTitle(segment == 2 ? "Messages" : "Activity")
             .refreshable { await env.social.refreshInbox() }
-            .task { await env.social.refreshInbox(); await env.social.markActivityRead() }
+            .task { selectedSegment = segment; await env.social.refreshInbox(); await env.social.markActivityRead() }
     }
 
     @ViewBuilder private var activity: some View {

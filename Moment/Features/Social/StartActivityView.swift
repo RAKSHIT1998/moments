@@ -150,7 +150,7 @@ struct HostQRView: View {
         .confirmationDialog("End this activity?", isPresented: $confirmEnd, titleVisibility: .visible) {
             Button("End — keep the Moment") { Task { if var m = moment { m.isLive = false; _ = await env.social.update(m) }; dismiss() } }
         } message: { Text("The QR stops admitting people. Everything added stays in the Moment.") }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)   // local to this view; preferredColorScheme would flip the whole window
         .accessibilityIdentifier("hostQR")
     }
 }

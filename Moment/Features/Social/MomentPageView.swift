@@ -160,7 +160,7 @@ struct MomentPageView: View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
             Text("Your side").sectionLabel()
             Text("Got photos from this?").font(MFont.title)
-            NavigationLink(value: SocialRoute.addSide(m.id)) { Text("Add Your Side").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("addYourSide")
+            NavigationLink(value: SocialRoute.addSide(m.id)) { Label("Add your side", systemImage: "plus.square.on.square").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("addYourSide")
         }
     }
 
@@ -619,7 +619,7 @@ struct MediaPagerView: View {
         }
         .reactionBurst($burst)
         .onAppear { current = startAt.id }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)   // local to this view; preferredColorScheme would flip the whole window
     }
 }
 

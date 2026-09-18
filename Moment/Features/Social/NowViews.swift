@@ -102,7 +102,7 @@ struct NowViewerView: View {
             }
             go(1)
         }
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)   // local to this view; preferredColorScheme would flip the whole window
     }
 
     private func go(_ delta: Int) {

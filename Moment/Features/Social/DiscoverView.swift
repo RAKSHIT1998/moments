@@ -62,17 +62,23 @@ struct DiscoverView: View {
                     if shown.isEmpty && !loading {
                         EmptyStateView(symbol: "safari", title: query.isEmpty ? "Nothing public nearby yet" : "No Moments for \"\(query)\"", message: "Public Moments from people and places show up here. Make one public to be found.")
                     }
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: MSpacing.s), GridItem(.flexible(), spacing: MSpacing.s)], spacing: MSpacing.s) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 3), spacing: 2) {
                         ForEach(shown) { m in
-                            NavigationLink(value: SocialRoute.moment(m.id)) { MomentTile(moment: m) }.buttonStyle(PressScaleStyle())
+                            NavigationLink(value: SocialRoute.moment(m.id)) {
+                                SocialImage(ref: m.coverRef).aspectRatio(1, contentMode: .fill).clipped()
+                                    .overlay(alignment: .topTrailing) { if m.memberIDs.count > 1 { Image(systemName: "person.2.fill").font(.caption2).foregroundStyle(.white).shadow(radius: 2).padding(6) } }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(m.title).accessibilityIdentifier("tile-\(m.id)")
                         }
                     }
+                    .padding(.horizontal, -MSpacing.l)
                 }
                 .padding(MSpacing.l)
                 .padding(.bottom, 80)
             }
             .background(MColor.background)
-            .navigationTitle("Discover")
+            .navigationTitle("Search")
             .searchable(text: $query, prompt: "Places, Moments, @people")
             .task(id: query) { await search() }
             .refreshable { await search() }

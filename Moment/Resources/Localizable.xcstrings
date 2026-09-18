@@ -19,9 +19,6 @@
     "· birthday in %lld days" : {
 
     },
-    "· gone in 24h" : {
-
-    },
     "· shared %lld×" : {
 
     },
@@ -85,6 +82,9 @@
         }
       }
     },
+    "%@ in Moments" : {
+
+    },
     "%@ is coming together." : {
 
     },
@@ -103,16 +103,6 @@
     },
     "%@ says you were there" : {
 
-    },
-    "%@ started it · %lld in · %lld added" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ started it · %2$lld in · %3$lld added"
-          }
-        }
-      }
     },
     "%@ wants %@" : {
       "localizations" : {
@@ -177,6 +167,16 @@
         }
       }
     },
+    "%@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
+          }
+        }
+      }
+    },
     "%@'s %@ · %lld reactions" : {
       "localizations" : {
         "en" : {
@@ -210,22 +210,22 @@
         }
       }
     },
+    "%lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
     "%lld %@ · %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@ · %3$@"
-          }
-        }
-      }
-    },
-    "%lld %@ · %lld photos · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ · %3$lld photos · %4$@"
           }
         }
       }
@@ -272,6 +272,16 @@
         }
       }
     },
+    "%lld Moments · %lld people · %lld places" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld Moments · %2$lld people · %3$lld places"
+          }
+        }
+      }
+    },
     "%lld Moments · %lld places · since %@" : {
       "localizations" : {
         "en" : {
@@ -310,9 +320,6 @@
           }
         }
       }
-    },
-    "%lld photos" : {
-
     },
     "%lld selected" : {
 
@@ -384,9 +391,6 @@
     "Add" : {
 
     },
-    "ADD" : {
-
-    },
     "Add “%@” to your calendar?" : {
 
     },
@@ -436,6 +440,9 @@
 
     },
     "Add your side" : {
+
+    },
+    "Add Your Side" : {
 
     },
     "ADD YOUR SIDE" : {
@@ -612,9 +619,6 @@
     "Collections" : {
 
     },
-    "COLLECTIONS" : {
-
-    },
     "Collections are private. Only you see how you group your Moments." : {
 
     },
@@ -729,6 +733,9 @@
     "Description" : {
 
     },
+    "Details" : {
+
+    },
     "Details (optional)" : {
 
     },
@@ -772,6 +779,9 @@
 
     },
     "End this activity?" : {
+
+    },
+    "Event" : {
 
     },
     "Every Moment lands here with its source, in the order it happened." : {
@@ -861,6 +871,9 @@
     "Follows your iPhone's Light/Dark setting, including schedules. Text, cards and colours adapt automatically." : {
 
     },
+    "For you" : {
+
+    },
     "Format" : {
 
     },
@@ -899,9 +912,6 @@
         }
       }
     },
-    "Get a QR. People scan, they're in." : {
-
-    },
     "Gift actions" : {
 
     },
@@ -929,6 +939,9 @@
     "Got it." : {
 
     },
+    "Got photos from this?" : {
+
+    },
     "Group Moments into albums — a trip, a year, a person." : {
 
     },
@@ -951,9 +964,6 @@
 
     },
     "Happening now (LIVE)" : {
-
-    },
-    "Happening right now?" : {
 
     },
     "here" : {
@@ -989,7 +999,7 @@
     "I only answer from what you've given me. Try a person's name, a place, or a topic — or tell me something to remember." : {
 
     },
-    "I WAS THERE" : {
+    "I was there" : {
 
     },
     "I'm up for…" : {
@@ -1008,6 +1018,9 @@
 
     },
     "Inbox" : {
+
+    },
+    "Inbox%@" : {
 
     },
     "Intelligence" : {
@@ -1031,13 +1044,13 @@
     "It lands in your Inbox, already understood." : {
 
     },
+    "Join" : {
+
+    },
     "JOIN" : {
 
     },
     "Join %@" : {
-
-    },
-    "Join to add your side. Your photos stay yours." : {
 
     },
     "Keep" : {
@@ -1094,6 +1107,9 @@
     "Listening" : {
 
     },
+    "Live" : {
+
+    },
     "LIVE" : {
 
     },
@@ -1119,9 +1135,6 @@
 
     },
     "Made with MOMENT" : {
-
-    },
-    "Make a Moment from something that happened and invite the people who were there. Their side shows up next to yours." : {
 
     },
     "Make it a Moment" : {
@@ -1170,6 +1183,9 @@
 
     },
     "Media" : {
+
+    },
+    "Memories" : {
 
     },
     "Memories from the past" : {
@@ -1256,9 +1272,6 @@
     "Moments" : {
 
     },
-    "MOMENTS" : {
-
-    },
     "Moments and chats stay with the people in them." : {
 
     },
@@ -1278,6 +1291,9 @@
 
     },
     "More reactions" : {
+
+    },
+    "More to discover →" : {
 
     },
     "Most reacted" : {
@@ -1343,6 +1359,9 @@
     "No Moments with everyone yet. Start one — the group is invited automatically." : {
 
     },
+    "No Moments yet" : {
+
+    },
     "No Moments you can see yet." : {
 
     },
@@ -1364,13 +1383,19 @@
     "No saved memories yet." : {
 
     },
-    "No sides yet." : {
+    "No sides yet" : {
 
     },
     "No stamps yet." : {
 
     },
     "Nobody — remove person" : {
+
+    },
+    "Nobody's out yet" : {
+
+    },
+    "Nobody's out yet." : {
 
     },
     "Nobody's out yet. Say what you're up for and see who joins." : {
@@ -1433,6 +1458,9 @@
     "Notify me" : {
 
     },
+    "Now" : {
+
+    },
     "NOW" : {
 
     },
@@ -1452,9 +1480,6 @@
 
     },
     "One alert per Moment that grew — who and how many, never the photos." : {
-
-    },
-    "ONE YEAR AGO" : {
 
     },
     "Only friends you follow back can join, even with the QR." : {
@@ -1532,6 +1557,9 @@
     "People you know" : {
 
     },
+    "People you were there with" : {
+
+    },
     "PEOPLE YOU WERE THERE WITH" : {
 
     },
@@ -1565,7 +1593,7 @@
     "Pin to profile" : {
 
     },
-    "PINNED" : {
+    "Pinned" : {
 
     },
     "Place" : {
@@ -1592,10 +1620,13 @@
     "Post" : {
 
     },
+    "Post a photo to NOW" : {
+
+    },
     "Post comment" : {
 
     },
-    "Post to NOW" : {
+    "Posted" : {
 
     },
     "Privacy" : {
@@ -1788,7 +1819,10 @@
     "Say something" : {
 
     },
-    "Scan a Moment QR" : {
+    "Say what you're up for and see who joins." : {
+
+    },
+    "Say what you're up to" : {
 
     },
     "Scan to join" : {
@@ -1830,7 +1864,13 @@
     "See it" : {
 
     },
+    "See Moment →" : {
+
+    },
     "See what MOMENT understands" : {
+
+    },
+    "See who's out" : {
 
     },
     "Send" : {
@@ -1987,15 +2027,6 @@
     "Start a new Moment" : {
 
     },
-    "Start an activity" : {
-
-    },
-    "START AN ACTIVITY" : {
-
-    },
-    "Start an activity and show a QR instead" : {
-
-    },
     "Start with photos" : {
 
     },
@@ -2029,7 +2060,7 @@
     "The boys, Family, Travel crew…" : {
 
     },
-    "THE MOMENT" : {
+    "The Moment" : {
 
     },
     "The Moment is live until you end it. Everyone keeps their own photos; you can remove anything from your activity." : {
@@ -2162,6 +2193,9 @@
 
     },
     "Unpin from profile" : {
+
+    },
+    "Up for" : {
 
     },
     "Up to %lld a day" : {
@@ -2320,6 +2354,9 @@
     "Who was there?" : {
 
     },
+    "Who's out, right now. Gone in a few hours." : {
+
+    },
     "Why am I seeing this?" : {
 
     },
@@ -2359,16 +2396,10 @@
     "You own your data. %lld memories." : {
 
     },
-    "You reacted %@" : {
-
-    },
     "You were there too." : {
 
     },
     "You're on MOMENT Pro." : {
-
-    },
-    "YOUR %@ IN MOMENTS" : {
 
     },
     "Your API key" : {
@@ -2380,7 +2411,7 @@
     "Your data" : {
 
     },
-    "YOUR LIFE IN MOMENTS" : {
+    "Your first one starts here." : {
 
     },
     "Your life, remembered." : {

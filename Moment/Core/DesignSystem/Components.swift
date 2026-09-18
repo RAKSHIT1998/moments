@@ -8,10 +8,10 @@ struct PrimaryButtonStyle: ButtonStyle {
             .font(MFont.headline)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .foregroundStyle(tint == nil ? MColor.onInk : Color.white)
+            .foregroundStyle(.white)
             .background {
-                // The one primary action: solid ink. No gradient, no glow.
-                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(tint ?? MColor.ink)
+                // Solid action blue, 8pt corners: the button people already know how to press.
+                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(tint ?? MColor.accent)
             }
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.985 : 1)
@@ -27,7 +27,7 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .foregroundStyle(MColor.textPrimary)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MColor.separator, lineWidth: 1))
+            .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Rectangle())
     }
@@ -44,13 +44,13 @@ struct ChipButtonStyle: ButtonStyle {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .frame(minHeight: MTouch.minimum - 8)
-            .foregroundStyle(light ? (prominent ? Color.black : Color.white) : (prominent ? MColor.onInk : MColor.textPrimary))
+            .foregroundStyle(light ? (prominent ? Color.black : Color.white) : (prominent ? Color.white : MColor.textPrimary))
             .background {
                 if light { Capsule().fill(prominent ? Color.white : Color.white.opacity(0.18)) }
-                else if prominent { Capsule().fill(MColor.ink) } else { Capsule().strokeBorder(MColor.separator, lineWidth: 1) }
+                else if prominent { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(MColor.accent) } else { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(MColor.surfaceSecondary) }
             }
             .opacity(configuration.isPressed ? 0.7 : 1)
-            .contentShape(Capsule())
+            .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
