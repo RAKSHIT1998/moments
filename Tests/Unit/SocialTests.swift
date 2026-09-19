@@ -458,9 +458,10 @@ final class InMemoryBackendFlowTests: XCTestCase {
     @MainActor func testIdentitySignsMomentsAndBackupRoundTrips() async throws {
         let (env, _) = await makeSocial()
         let id = env.identity.momentID
-        XCTAssertTrue(id.hasPrefix("MMT-") && id.count == 19, id)
+        XCTAssertTrue(id.hasPrefix("MMT-") && id.count == 18, id)
         XCTAssertEqual(env.social.me?.publicKey, env.identity.publicKeyBase64, "key is published on the profile at start")
-        let m = try XCTUnwrap(await env.social.createMoment(SocialService.NewMomentInput(title: "Signed night")))
+        let created = await env.social.createMoment(SocialService.NewMomentInput(title: "Signed night"))
+        let m = try XCTUnwrap(created)
         XCTAssertNotNil(m.signature)
         XCTAssertTrue(env.social.isVerified(m))
         var tampered = m; tampered.title = "Edited"

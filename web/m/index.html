@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Open in MOMENT</title>
+<style>body{margin:0;background:#0e0e11;color:#f1efeb;font:16px/1.5 -apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center;padding:20px}img{width:96px;height:96px;border-radius:24px}h1{letter-spacing:-.02em;margin:18px 0 6px}p{color:#a09c96;max-width:420px}.btn{display:inline-block;margin-top:18px;background:#f1efeb;color:#0e0e11;padding:14px 22px;border-radius:12px;text-decoration:none;font-weight:600}</style></head>
+<body><div><img src="../logo.png" alt=""><h1>You were there.</h1><p>Someone shared a Moment with you. Open it in MOMENT to add your side.</p>
+<a class="btn" id="open" href="#">Open in MOMENT</a><p style="margin-top:22px;font-size:14px">Don't have it? <a href="https://apps.apple.com/app/id0000000000" style="color:inherit">Get MOMENT for iPhone</a></p></div>
+<script>
+// /m/<id> → moment://moment/<id>. Universal Links (AASA) take over once the domain is set up.
+const id=location.pathname.split('/').filter(Boolean).pop();
+const a=document.getElementById('open'); a.href='moment://moment/'+encodeURIComponent(id||'');
+setTimeout(()=>{ location.href=a.href; },400);
+</script></body></html>

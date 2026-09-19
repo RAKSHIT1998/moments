@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOMENT — Venue dashboard</title>
+<link rel="icon" href="../logo.png">
+<style>
+  :root{--bg:#fbf9f6;--ink:#161514;--muted:#6b6763;--line:#e6e2dc;--card:#fff;--amber:#ff9e3d}
+  @media (prefers-color-scheme:dark){:root{--bg:#0e0e11;--ink:#f1efeb;--muted:#a09c96;--line:#26262b;--card:#15151a}}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,Inter,system-ui,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 20px 60px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:28px}
+  .mark{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.14em;text-decoration:none;color:var(--ink)}.mark img{width:28px;height:28px}
+  h1{font-size:28px;letter-spacing:-.02em;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 22px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:18px 0 26px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}.tile b{display:block;font-size:26px;letter-spacing:-.02em}.tile span{color:var(--muted);font-size:13px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--muted);font-weight:600}tr:last-child td{border-bottom:0}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.pill.live{border-color:#e5484d;color:#e5484d}.pill.ok{border-color:#2f9e44;color:#2f9e44}
+  .btn{background:var(--ink);color:var(--bg);border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .muted{color:var(--muted)}.notice{border:1px solid var(--line);border-radius:14px;padding:16px;margin:16px 0;color:var(--muted)}
+  #apple-sign-in-button,#apple-sign-out-button{display:inline-block}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .qr{width:180px;height:180px;background:#fff;border-radius:12px;padding:10px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="mark" href="../"><img src="../logo.png" alt="">MOMENT</a>
+    <div class="row"><div id="apple-sign-in-button"></div><div id="apple-sign-out-button"></div></div>
+  </header>
+
+  <h1>Venue dashboard</h1>
+  <p class="sub">The pages you've claimed, what people added there, and the QR for your counter. Reads the public database only — nothing here can see private Moments.</p>
+
+  <div id="setup" class="notice">Not configured yet: paste a CloudKit API token into <code>dashboard/config.js</code>. Until then this page shows the layout with no data.</div>
+  <div id="signin" class="notice" hidden>Sign in with the Apple ID you used in the MOMENT app to see your claimed places.</div>
+
+  <section id="places" hidden>
+    <div class="tiles">
+      <div class="tile"><b id="t-places">0</b><span>places claimed</span></div>
+      <div class="tile"><b id="t-moments">0</b><span>Moments at your places</span></div>
+      <div class="tile"><b id="t-people">0</b><span>people who added</span></div>
+      <div class="tile"><b id="t-live">0</b><span>live right now</span></div>
+    </div>
+    <table>
+      <thead><tr><th>Place</th><th>Status</th><th>Moments</th><th>People</th><th>Last activity</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+
+  <section id="detail" hidden style="margin-top:26px">
+    <div class="grid2">
+      <div class="card">
+        <h3 id="d-name" style="margin:0 0 4px"></h3>
+        <p class="muted" id="d-meta" style="margin:0 0 14px"></p>
+        <div class="row"><img class="qr" id="d-qr" alt="QR to this place"><div><p class="muted" style="margin:0 0 8px">Print this for the counter. Scans open the place page in MOMENT; people add their photos there.</p><a class="btn ghost" id="d-qr-dl" download="moment-qr.png">Download QR</a></div></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 10px">Recent Moments here</h3>
+        <table><thead><tr><th>Title</th><th>By</th><th>People</th><th>When</th></tr></thead><tbody id="d-rows"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <p class="muted" style="margin-top:36px;font-size:13px">Verification badges are granted by review in the CloudKit Dashboard (PlaceClaim.verified). This page cannot change them.</p>
+</div>
+
+<script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js"></script>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(async function () {
+  const cfg = window.MOMENT_CK || {};
+  const configured = cfg.apiToken && !cfg.apiToken.startsWith('REPLACE');
+  if (!configured) return; // layout only
+  document.getElementById('setup').hidden = true;
+
+  CloudKit.configure({ containers: [{ containerIdentifier: cfg.containerIdentifier, apiTokenAuth: { apiToken: cfg.apiToken, persist: true, signInButton: { id: 'apple-sign-in-button', theme: 'black' }, signOutButton: { id: 'apple-sign-out-button', theme: 'black' } }, environment: cfg.environment }] });
+  const container = CloudKit.getDefaultContainer();
+  const db = container.publicCloudDatabase;
+
+  container.setUpAuth().then(userIdentity => { if (userIdentity) load(userIdentity); else document.getElementById('signin').hidden = false; });
+  container.whenUserSignsIn().then(load);
+  container.whenUserSignsOut().then(() => { document.getElementById('places').hidden = true; document.getElementById('signin').hidden = false; });
+
+  async function query(recordType, filterBy, sortBy, limit = 200) {
+    const res = await db.performQuery({ recordType, filterBy, sortBy }, { resultsLimit: limit });
+    if (res.hasErrors) throw res.errors[0];
+    return res.records;
+  }
+  const f = (r, k) => r.fields[k] ? r.fields[k].value : undefined;
+
+  async function load(user) {
+    document.getElementById('signin').hidden = true;
+    const uid = user.userRecordName;
+    const claims = await query('PlaceClaim', [{ fieldName: 'ownerID', comparator: 'EQUALS', fieldValue: { value: uid } }]);
+    const rows = [], tbody = document.getElementById('rows'); tbody.innerHTML = '';
+    let tm = 0, tl = 0; const people = new Set();
+    for (const c of claims) {
+      const placeID = f(c, 'placeID');
+      const moments = await query('PublicMoment', [{ fieldName: 'placeID', comparator: 'EQUALS', fieldValue: { value: placeID } }], [{ fieldName: '___createTime', ascending: false }], 100);
+      const live = moments.filter(m => f(m, 'isLive') === 1).length; tm += moments.length; tl += live;
+      moments.forEach(m => (f(m, 'memberIDs') || []).forEach(p => people.add(p)));
+      const last = moments[0] ? new Date(moments[0].created.timestamp).toLocaleDateString() : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><b>${esc(f(c,'businessName')||placeID)}</b><div class="muted">${esc(f(moments[0]||{fields:{}},'placeArea')||'')}</div></td>
+        <td>${f(c,'verified')===1?'<span class="pill ok">Verified</span>':'<span class="pill">Pending review</span>'}</td>
+        <td>${moments.length}</td><td>${new Set(moments.flatMap(m=>f(m,'memberIDs')||[])).size}</td><td>${last} ${live?'<span class="pill live">Live</span>':''}</td>
+        <td><button class="btn ghost">Open</button></td>`;
+      tr.querySelector('button').onclick = () => showDetail(c, moments);
+      tbody.appendChild(tr);
+    }
+    document.getElementById('t-places').textContent = claims.length;
+    document.getElementById('t-moments').textContent = tm;
+    document.getElementById('t-people').textContent = people.size;
+    document.getElementById('t-live').textContent = tl;
+    document.getElementById('places').hidden = false;
+    if (claims.length === 0) tbody.innerHTML = '<tr><td colspan="6" class="muted">No claimed places yet. In the app: open a place → Claim.</td></tr>';
+  }
+
+  function showDetail(claim, moments) {
+    const placeID = f(claim, 'placeID');
+    document.getElementById('d-name').textContent = f(claim, 'businessName') || placeID;
+    document.getElementById('d-meta').textContent = (f(claim, 'note') || '') + (f(claim, 'verified') === 1 ? ' · Verified' : ' · Pending verification');
+    const url = location.origin + '/p/' + encodeURIComponent(placeID);
+    const holder = document.createElement('div'); new QRCode(holder, { text: url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+    setTimeout(() => { const img = holder.querySelector('img') || holder.querySelector('canvas'); const src = img.tagName === 'IMG' ? img.src : img.toDataURL(); document.getElementById('d-qr').src = src; document.getElementById('d-qr-dl').href = src; }, 60);
+    const rows = document.getElementById('d-rows'); rows.innerHTML = '';
+    for (const m of moments.slice(0, 20)) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${esc(f(m,'title'))}</td><td>${esc(f(m,'creatorName'))}</td><td>${(f(m,'memberIDs')||[]).length}</td><td>${new Date(m.created.timestamp).toLocaleString()}</td>`;
+      rows.appendChild(tr);
+    }
+    document.getElementById('detail').hidden = false; document.getElementById('detail').scrollIntoView({ behavior: 'smooth' });
+  }
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+})();
+</script>
+</body>
+</html>

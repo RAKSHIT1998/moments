@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOMENT — One Moment. Everyone's story.</title>
+<meta name="description" content="A Moment is an experience that belongs to everyone who was there. No servers, no sign-up, no data collection.">
+<link rel="icon" href="logo.png">
+<style>
+  :root{--bg:#fbf9f6;--ink:#161514;--muted:#6b6763;--line:#e6e2dc;--amber:#ff9e3d}
+  @media (prefers-color-scheme:dark){:root{--bg:#0e0e11;--ink:#f1efeb;--muted:#a09c96;--line:#26262b}}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 20px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .mark{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.14em}
+  .mark img{width:32px;height:32px}
+  nav a{color:var(--muted);text-decoration:none;margin-left:18px;font-size:14px}
+  .hero{padding:96px 0 48px}
+  h1{font-size:clamp(40px,7vw,72px);line-height:1.02;letter-spacing:-.03em;margin:0 0 20px;font-weight:700}
+  .lead{font-size:20px;color:var(--muted);max-width:620px;margin:0 0 32px}
+  .btn{display:inline-block;background:var(--ink);color:var(--bg);padding:14px 22px;border-radius:12px;text-decoration:none;font-weight:600}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);margin-left:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:64px}
+  .card{border:1px solid var(--line);border-radius:18px;padding:22px}
+  .card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--muted);font-size:15px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--amber);display:inline-block;margin-right:8px}
+  .privacy{margin-top:72px;border-top:1px solid var(--line);padding-top:36px}
+  .privacy h2{font-size:26px;letter-spacing:-.02em;margin:0 0 12px}
+  .privacy li{color:var(--muted);margin:6px 0}
+  footer{margin-top:64px;color:var(--muted);font-size:13px;display:flex;gap:18px;flex-wrap:wrap}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark"><img src="logo.png" alt=""> MOMENT</div>
+    <nav><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="dashboard/">For venues</a></nav>
+  </header>
+
+  <section class="hero">
+    <h1>One Moment.<br>Everyone's story.</h1>
+    <p class="lead">Instagram shows what one person posted. MOMENT is the night itself — made by everyone who was there. Start one, put the QR on the table, and their photos land next to yours.</p>
+    <a class="btn" href="https://apps.apple.com/app/id0000000000" id="download">Get MOMENT for iPhone</a>
+    <a class="btn ghost" href="#how">See how</a>
+  </section>
+
+  <section id="how" class="grid">
+    <div class="card"><h3><span class="dot"></span>Start a Moment</h3><p>Pick what's happening — party, trip, dinner, wedding. You get a QR and a link in one tap.</p></div>
+    <div class="card"><h3><span class="dot"></span>Everyone scans in</h3><p>People who were there join and add their side. Their photos stay theirs; the Moment belongs to all of you.</p></div>
+    <div class="card"><h3><span class="dot"></span>Places come alive</h3><p>Cafés, beaches and venues get a page of what happened there. Owners can claim it and put the QR on the counter.</p></div>
+    <div class="card"><h3><span class="dot"></span>NOW, for right now</h3><p>"Anyone up for drinks?" — say what you're up for, see who joins, make it a Moment. Gone in a few hours.</p></div>
+  </section>
+
+  <section id="privacy" class="privacy">
+    <h2>No servers. No sign-up. Nothing collected.</h2>
+    <ul>
+      <li>There is no MOMENT backend. Your identity is a key that lives on your iPhone; its fingerprint is your MOMENT ID.</li>
+      <li>Your Moments live in your own iCloud and are shared peer-to-peer with the people you invite. We can't read them.</li>
+      <li>Public Moments carry only a venue — never a person's location. Photos are stripped of GPS and device data before they leave the phone.</li>
+      <li>No analytics or crash SDKs. No email, no phone number, no password to leak.</li>
+    </ul>
+  </section>
+
+  <footer><span>© MOMENT</span><a href="privacy.html">Privacy policy</a><a href="support.html">Support</a><a href="dashboard/">Venue dashboard</a></footer>
+</div>
+</body>
+</html>
