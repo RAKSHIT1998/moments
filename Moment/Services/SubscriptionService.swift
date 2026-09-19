@@ -18,6 +18,8 @@ final class SubscriptionService {
     /// this is the one place the number lives.
     static let freeEventAttendees = 100
     static let freeOpenEventsPerMonth = 10
+    /// A venue can claim its page for free; running several venues is the paid tier later.
+    static let freePlaceClaims = 1
 
     private(set) var products: [Product] = []
     private(set) var tier: Tier = .free
@@ -93,6 +95,8 @@ final class SubscriptionService {
     /// Free tier: 100 memories. The check is only for *creating new* memories; viewing/exporting/deleting is never gated.
     /// Can this host admit one more person? Pro: always. Free: up to `freeEventAttendees`.
     func canAdmit(attendees: Int) -> Bool { isPro || attendees < Self.freeEventAttendees }
+
+    func canClaimPlace(existingClaims: Int) -> Bool { isPro || existingClaims < Self.freePlaceClaims }
 
     func canCreateMemory(currentCount: Int) -> Bool {
         isPro || currentCount < Self.freeMemoryLimit

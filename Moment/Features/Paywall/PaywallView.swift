@@ -34,6 +34,7 @@ struct PaywallView: View {
                     feature("Contextual people, plans and promises")
                     feature("Home and Lock Screen widgets")
                     feature("Host bigger activities: more than \(SubscriptionService.freeEventAttendees) people per QR")
+                    feature("Run several venues: claim more than \(SubscriptionService.freePlaceClaims) place page")
                 }.momentCard()
 
                 if !env.subscriptions.isPro {

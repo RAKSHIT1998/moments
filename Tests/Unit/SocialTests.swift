@@ -429,6 +429,32 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertEqual(far.map(\.id), [], "Goa Moment is group-visibility, not public")
     }
 
+    func testRegularsAndPlaceClaims() async throws {
+        let (env, backend) = await makeSocial()
+        await env.social.refreshNearby(latitude: 19.06, longitude: 72.83)
+        let venue = env.social.nearbyPlaces(latitude: 19.06, longitude: 72.83).first!.place   // Bastian
+        // Two public Moments at the venue with Rahul in both → Rahul is a regular.
+        for t in ["Round one", "Round two"] {
+            var i = SocialService.NewMomentInput(title: t, visibility: .publicAll, initialMemberIDs: ["u_rahul"]); i.place = venue
+            _ = await env.social.createMoment(i)
+        }
+        await env.social.loadPlace(venue.id)
+        XCTAssertTrue(env.social.regulars(at: venue.id).contains { $0.id == "u_rahul" && $0.visits >= 2 })
+        XCTAssertEqual(env.social.myVisits(at: venue.id), 3, "two new + Sarah's 30th, which was at the same venue")
+        XCTAssertEqual(env.social.myPlaces.first?.place.id, venue.id)
+        // Claim: pending until reviewed; a second person can't take it; free plan allows one.
+        let claimed = await env.social.claimPlace(venue, businessName: "Bastian", role: "Manager", note: "Window table.")
+        XCTAssertTrue(claimed)
+        XCTAssertEqual(env.social.claims[venue.id]?.verified, false)
+        do {
+            try await backend.acting(as: "u_dev") { b in _ = try await b.saveClaim(PlaceClaim(id: venue.id, placeID: venue.id, ownerID: "u_dev", ownerName: "Dev", businessName: "Not mine", role: "Owner", note: "", verified: false, createdAt: .now)) }
+            XCTFail("second claimant must be refused")
+        } catch { if case SocialError.notAllowed = error {} else { XCTFail("\(error)") } }
+        let other = SocialPlace(id: "x", name: "Other", area: "", latitude: 0, longitude: 0, category: nil)
+        let second = await env.social.claimPlace(other, businessName: "Two", role: "Owner", note: "")
+        XCTAssertFalse(second, "free tier: one place")
+    }
+
     func testMediaPipelineStripsMetadataAndBounds() throws {
         let big = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000)).image { ctx in UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000)) }.jpegData(compressionQuality: 1)!
         let p = try XCTUnwrap(MediaPipeline.preparePhoto(big))

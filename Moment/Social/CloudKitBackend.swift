@@ -419,6 +419,29 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         return out
     }
 
+    // Claims live in the public DB, one record per place; `verified` is only ever set from the Dashboard.
+    func claim(for placeID: String) async throws -> PlaceClaim? {
+        guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "claim_\(placeID)")) else { return nil }
+        return Self.claim(from: r)
+    }
+    func saveClaim(_ c: PlaceClaim) async throws -> PlaceClaim {
+        let me = try await currentUser()
+        let id = CKRecord.ID(recordName: "claim_\(c.placeID)")
+        let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "PlaceClaim", recordID: id)
+        if let owner = r["ownerID"] as? String, owner != me.id { throw SocialError.notAllowed }
+        r["placeID"] = c.placeID; r["ownerID"] = me.id; r["ownerName"] = me.displayName
+        r["businessName"] = c.businessName; r["role"] = c.role; r["note"] = c.note
+        if r["verified"] == nil { r["verified"] = 0 }
+        return Self.claim(from: try await save(r, in: publicDB))
+    }
+    func myClaims() async throws -> [PlaceClaim] {
+        let me = try await currentUser()
+        return try await query(CKQuery(recordType: "PlaceClaim", predicate: NSPredicate(format: "ownerID == %@", me.id)), in: publicDB, limit: 50).map(Self.claim(from:))
+    }
+    static func claim(from r: CKRecord) -> PlaceClaim {
+        PlaceClaim(id: r["placeID"] as? String ?? "", placeID: r["placeID"] as? String ?? "", ownerID: r["ownerID"] as? String ?? "", ownerName: r["ownerName"] as? String ?? "", businessName: r["businessName"] as? String ?? "", role: r["role"] as? String ?? "", note: r["note"] as? String ?? "", verified: (r["verified"] as? Int ?? 0) == 1, createdAt: r.creationDate ?? .now)
+    }
+
     static func write(place: SocialPlace?, to r: CKRecord) {
         r["placeID"] = place?.id; r["placeName"] = place?.name; r["placeArea"] = place?.area; r["placeCategory"] = place?.category
         r["location"] = place.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }

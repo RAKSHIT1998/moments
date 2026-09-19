@@ -42,6 +42,9 @@ protocol SocialBackend: AnyObject, Sendable {
     func nowNearby(latitude: Double, longitude: Double, radiusKm: Double) async throws -> [NowPost]
     /// Everything public that happened at one venue.
     func moments(atPlace placeID: String) async throws -> [SocialMoment]
+    func claim(for placeID: String) async throws -> PlaceClaim?
+    func saveClaim(_ c: PlaceClaim) async throws -> PlaceClaim
+    func myClaims() async throws -> [PlaceClaim]
 
     // Engagement
     func comments(momentID: String) async throws -> [MomentComment]

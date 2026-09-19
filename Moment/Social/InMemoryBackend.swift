@@ -30,6 +30,7 @@ actor InMemoryBackend: SocialBackend {
     var mediaBlobs: [String: Data] = [:]
     var collectionsByID: [String: MomentCollection] = [:]
     var groupsByID: [String: SocialGroup] = [:]
+    var claims: [String: PlaceClaim] = [:]
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
     var offline = false
@@ -231,6 +232,15 @@ actor InMemoryBackend: SocialBackend {
         try gate()
         return moments.values.filter { ($0.place?.id == placeID) && (visibleForDiscovery($0) || $0.memberIDs.contains(me.id)) }.sorted { $0.createdAt > $1.createdAt }
     }
+
+    func claim(for placeID: String) async throws -> PlaceClaim? { try gate(); return claims[placeID] }
+    func saveClaim(_ c: PlaceClaim) async throws -> PlaceClaim {
+        try gate()
+        if let existing = claims[c.placeID], existing.ownerID != me.id { throw SocialError.notAllowed }
+        var out = c; out.ownerID = me.id; out.ownerName = me.displayName; out.verified = claims[c.placeID]?.verified ?? false
+        claims[c.placeID] = out; return out
+    }
+    func myClaims() async throws -> [PlaceClaim] { try gate(); return claims.values.filter { $0.ownerID == me.id }.sorted { $0.createdAt < $1.createdAt } }
 
     // MARK: Engagement
     func comments(momentID: String) async throws -> [MomentComment] { try gate(); return (comments[momentID] ?? []).filter { !blocked.contains($0.authorID) } }

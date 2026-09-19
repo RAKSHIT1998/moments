@@ -136,8 +136,10 @@ struct PlaceView: View {
     @State private var showNew = false
     @State private var showStart = false
     @State private var showNow = false
+    @State private var showClaim = false
 
     private var moments: [SocialMoment] { env.social.placeMoments[place.id] ?? [] }
+    private var claim: PlaceClaim? { env.social.claims[place.id] }
     private var live: [SocialMoment] { moments.filter(\.isLive) }
     private var hereNow: [NowPost] { env.social.nearbyNow.filter { $0.place?.id == place.id } }
     private var photos: [SocialMoment] { moments.filter { $0.coverRef != nil } }
@@ -148,7 +150,19 @@ struct PlaceView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(place.name).displayStyle()
                     Text([place.category, place.area.isEmpty ? nil : place.area].compactMap { $0 }.joined(separator: " · ")).font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                    Text("\(moments.count) \(moments.count == 1 ? "Moment" : "Moments") · \(Set(moments.flatMap(\.memberIDs)).count) people").font(MFont.caption).foregroundStyle(MColor.textTertiary)
+                    Text("\(moments.count) \(moments.count == 1 ? "Moment" : "Moments") · \(Set(moments.flatMap(\.memberIDs)).count) people\(env.social.myVisits(at: place.id) > 0 ? " · you've been here \(env.social.myVisits(at: place.id))×" : "")").font(MFont.caption).foregroundStyle(MColor.textTertiary)
+                }
+                if let claim {
+                    HStack(alignment: .top, spacing: MSpacing.s) {
+                        Image(systemName: claim.verified ? "checkmark.seal.fill" : "storefront").foregroundStyle(claim.verified ? MColor.accent : MColor.textSecondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(claim.businessName) · \(claim.verified ? "Verified" : "Claimed, pending verification")").font(.subheadline.weight(.semibold))
+                            if !claim.note.isEmpty { Text(claim.note).font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
+                        }
+                        Spacer()
+                        if claim.ownerID == env.social.myID { Button("Edit") { showClaim = true }.font(.subheadline.weight(.medium)) }
+                    }
+                    .padding(MSpacing.m).background(MColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 HStack(spacing: MSpacing.s) {
                     Button { showNew = true } label: { Label("Add photos here", systemImage: "plus.square.on.square").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("placeAddPhotos")
@@ -175,6 +189,25 @@ struct PlaceView: View {
                         ForEach(hereNow) { NowStatusRow(post: $0) }
                     }
                 }
+                let regulars = env.social.regulars(at: place.id)
+                if !regulars.isEmpty {
+                    VStack(alignment: .leading, spacing: MSpacing.s) {
+                        Text("Regulars").sectionLabel()
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: MSpacing.l) {
+                                ForEach(regulars, id: \.id) { r in
+                                    NavigationLink(value: SocialRoute.profile(r.id)) {
+                                        VStack(spacing: 4) {
+                                            AvatarView(userID: r.id, name: r.name, size: 52)
+                                            Text(r.id == env.social.myID ? "You" : r.name.split(separator: " ").first.map(String.init) ?? r.name).font(MFont.caption).foregroundStyle(MColor.textPrimary)
+                                            Text("\(r.visits)× here").font(.caption2).foregroundStyle(MColor.textTertiary)
+                                        }.frame(width: 72)
+                                    }.buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
                 VStack(alignment: .leading, spacing: MSpacing.s) {
                     Text("Photos").sectionLabel()
                     if photos.isEmpty { Text("No photos here yet. Yours would be the first.").font(MFont.footnote).foregroundStyle(MColor.textSecondary) }
@@ -196,6 +229,12 @@ struct PlaceView: View {
         }
         .background(MColor.background)
         .navigationTitle(place.name).navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if claim == nil {
+                ToolbarItem(placement: .topBarTrailing) { Button("Claim") { showClaim = true }.font(.subheadline.weight(.medium)).accessibilityIdentifier("claimPlace") }
+            }
+        }
+        .sheet(isPresented: $showClaim) { ClaimPlaceSheet(place: place, existing: claim?.ownerID == env.social.myID ? claim : nil) }
         .task { await env.social.loadPlace(place.id) }
         .refreshable { await env.social.loadPlace(place.id) }
         .sheet(isPresented: $showNew) { NavigationStack { NewMomentView(initial: prefilled) { m in showNew = false; env.social.pendingMomentID = m.id }.socialDestinations() } }
@@ -245,5 +284,45 @@ struct PlacePickerSheet: View {
             .navigationTitle("Where?").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
+    }
+}
+
+
+/// "This is my café." Claiming pins your name and a welcome line on the page; verification is
+/// a manual review, and the page says so until it happens.
+struct ClaimPlaceSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let place: SocialPlace
+    var existing: PlaceClaim? = nil
+    @State private var business = ""
+    @State private var role = "Owner"
+    @State private var note = ""
+    @State private var saving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section { Text(place.name).font(MFont.headline); if !place.area.isEmpty { Text(place.area).font(MFont.footnote).foregroundStyle(MColor.textSecondary) } }
+                Section("Business") {
+                    TextField("Business name", text: $business).accessibilityIdentifier("claimBusiness")
+                    Picker("Your role", selection: $role) { ForEach(["Owner", "Manager", "Staff"], id: \.self) { Text($0) } }
+                }
+                Section("Welcome line (shown on the page)") { TextField("Happy hour 5–7. Ask for the window table.", text: $note, axis: .vertical).lineLimit(1...3) }
+                Section {
+                    Text("Claims are reviewed manually before showing a verified badge. Until then the page says \"claimed, pending verification\". Free plan: \(SubscriptionService.freePlaceClaims) place.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                }
+            }
+            .navigationTitle(existing == nil ? "Claim this place" : "Your place").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "Saving…" : "Save") { Task { saving = true; if await env.social.claimPlace(place, businessName: business, role: role, note: note) { Haptics.completed(); dismiss() }; saving = false } }
+                        .disabled(business.isBlank || saving).accessibilityIdentifier("saveClaim")
+                }
+            }
+            .onAppear { if let existing { business = existing.businessName; role = existing.role; note = existing.note } }
+        }
+        .modifier(SocialErrorAlert())
     }
 }

@@ -52,6 +52,16 @@
     "%@" : {
 
     },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -133,6 +143,16 @@
         }
       }
     },
+    "%@, %lld Moments" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld Moments"
+          }
+        }
+      }
+    },
     "%@, %lld open" : {
       "localizations" : {
         "en" : {
@@ -203,6 +223,16 @@
         }
       }
     },
+    "%@%lld %@ · %lld people" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$lld %3$@ · %4$lld people"
+          }
+        }
+      }
+    },
     "%lld" : {
 
     },
@@ -222,6 +252,26 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
+    "%lld %@ · %lld people%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$lld people%4$@"
+          }
+        }
+      }
+    },
+    "%lld %@ together" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ together"
           }
         }
       }
@@ -254,6 +304,16 @@
     },
     "%lld in" : {
 
+    },
+    "%lld in · by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld in · by %2$@"
+          }
+        }
+      }
     },
     "%lld items" : {
 
@@ -323,10 +383,20 @@
         }
       }
     },
-    "%lld together" : {
+    "%lld uploads need a retry" : {
 
     },
-    "%lld uploads need a retry" : {
+    "%lld× · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld× · %2$@"
+          }
+        }
+      }
+    },
+    "%lld× here" : {
 
     },
     "+%lld" : {
@@ -392,6 +462,9 @@
     "Add a photo now" : {
 
     },
+    "Add a place — café, beach, venue" : {
+
+    },
     "Add a place to a Moment and it shows up here." : {
 
     },
@@ -414,6 +487,9 @@
 
     },
     "Add photo" : {
+
+    },
+    "Add photos here" : {
 
     },
     "Add photos, a video or a note. Everyone who was there sees it here." : {
@@ -497,6 +573,9 @@
     "Archive" : {
 
     },
+    "Around you" : {
+
+    },
     "Ask MOMENT a question about what you've saved." : {
 
     },
@@ -545,6 +624,18 @@
     "Blocked people (%lld)" : {
 
     },
+    "Business" : {
+
+    },
+    "Business name" : {
+
+    },
+    "Cafés, bars, beaches, venues near you." : {
+
+    },
+    "Cafés, beaches, venues — and the Moments people made there. Your location stays on your phone; only \"within %lld km\" is asked." : {
+
+    },
     "Calendar" : {
 
     },
@@ -573,6 +664,15 @@
 
     },
     "Choose photos" : {
+
+    },
+    "Claim" : {
+
+    },
+    "Claim this place" : {
+
+    },
+    "Claims are reviewed manually before showing a verified badge. Until then the page says \"claimed, pending verification\". Free plan: %lld place." : {
 
     },
     "Clear" : {
@@ -842,6 +942,9 @@
     "Find your people." : {
 
     },
+    "Finding you…" : {
+
+    },
     "First came up %@." : {
 
     },
@@ -943,6 +1046,9 @@
     "Handle" : {
 
     },
+    "Happening here" : {
+
+    },
     "Happening now" : {
 
     },
@@ -952,7 +1058,13 @@
     "Happening now (LIVE)" : {
 
     },
+    "Happy hour 5–7. Ask for the window table." : {
+
+    },
     "here" : {
+
+    },
+    "Here now" : {
 
     },
     "Here's exactly where they live and what leaves this iPhone." : {
@@ -986,6 +1098,9 @@
 
     },
     "I was there" : {
+
+    },
+    "I'm here now" : {
 
     },
     "I'm up for…" : {
@@ -1025,6 +1140,9 @@
 
     },
     "It lands in your Inbox, already understood." : {
+
+    },
+    "Join" : {
 
     },
     "JOIN" : {
@@ -1112,6 +1230,9 @@
 
     },
     "Loading…" : {
+
+    },
+    "Location is off" : {
 
     },
     "Lock MOMENT with %@" : {
@@ -1213,6 +1334,9 @@
     "Minimise" : {
 
     },
+    "Mode" : {
+
+    },
     "Model: %@. Stored only in this device's Keychain." : {
 
     },
@@ -1261,6 +1385,9 @@
     "Moments and chats stay with the people in them." : {
 
     },
+    "Moments here" : {
+
+    },
     "Moments MOMENT brought back this month that you acted on." : {
 
     },
@@ -1301,6 +1428,12 @@
 
     },
     "Name or @handle" : {
+
+    },
+    "Nearby" : {
+
+    },
+    "Nearby map" : {
 
     },
     "Needs review" : {
@@ -1360,10 +1493,16 @@
     "No pending promises." : {
 
     },
+    "No photos here yet. Yours would be the first." : {
+
+    },
     "No plans yet." : {
 
     },
     "No plans yet. Say “let's go to Goa in December” and MOMENT will keep it as an intention." : {
+
+    },
+    "No public Moments within %lld km yet. Be the first — add the place to your next one." : {
 
     },
     "No saved memories yet." : {
@@ -1403,6 +1542,9 @@
 
     },
     "Notes" : {
+
+    },
+    "Nothing found. Try the street or area." : {
 
     },
     "Nothing from this day yet." : {
@@ -1471,6 +1613,9 @@
     "Only genuinely useful ones — a birthday coming up with a gift idea saved, a promise going stale, a plan whose time is near. Never “come back to MOMENT”." : {
 
     },
+    "Only NOW posts where you picked a venue. Your phone's location is never stored or shared — the venue is." : {
+
+    },
     "Only the people you invite can see a Moment set to \"People in it\". You can change this any time." : {
 
     },
@@ -1487,6 +1632,9 @@
 
     },
     "Open plan" : {
+
+    },
+    "Open Settings" : {
 
     },
     "Open the map" : {
@@ -1534,6 +1682,9 @@
     "PEOPLE" : {
 
     },
+    "People around %@ see it and can join. Great for cafés, venues, public events." : {
+
+    },
     "People in it can add" : {
 
     },
@@ -1564,6 +1715,9 @@
     "Photo added" : {
 
     },
+    "Photos" : {
+
+    },
     "PHOTOS & VIDEO" : {
 
     },
@@ -1585,10 +1739,7 @@
     "Place" : {
 
     },
-    "Place (city-level, e.g. Goa)" : {
-
-    },
-    "Places are city-level. MOMENT never stores or shares exact coordinates." : {
+    "Places near you" : {
 
     },
     "Places, Moments, @people" : {
@@ -1648,6 +1799,9 @@
     "Question" : {
 
     },
+    "Quiet around here" : {
+
+    },
     "Re-link contact" : {
 
     },
@@ -1665,6 +1819,9 @@
       }
     },
     "Reason" : {
+
+    },
+    "Regulars" : {
 
     },
     "Relationship (optional, e.g. brother)" : {
@@ -1713,6 +1870,9 @@
 
     },
     "Remove photo" : {
+
+    },
+    "Remove place" : {
 
     },
     "Removes stored screenshots, audio and files. Text memories stay." : {
@@ -1841,6 +2001,9 @@
     "Search My Memories" : {
 
     },
+    "Search places" : {
+
+    },
     "Search titles, places, people" : {
 
     },
@@ -1854,6 +2017,9 @@
 
     },
     "See what MOMENT understands" : {
+
+    },
+    "See what's happening around you" : {
 
     },
     "Send" : {
@@ -1949,10 +2115,16 @@
     "Show Gift Ideas" : {
 
     },
-    "Show my public Moments by place" : {
+    "Show my NOW to people nearby" : {
+
+    },
+    "Show nearby" : {
 
     },
     "Show on Home" : {
+
+    },
+    "Show on Nearby" : {
 
     },
     "Show Pending Promises" : {
@@ -2011,6 +2183,9 @@
 
     },
     "Start a new Moment" : {
+
+    },
+    "Start an event here" : {
 
     },
     "Start with photos" : {
@@ -2142,6 +2317,9 @@
     "Turn into a plan" : {
 
     },
+    "Turn on location for MOMENT in Settings to see nearby places and Moments. Your location is only used on your phone to ask what's close." : {
+
+    },
     "Type" : {
 
     },
@@ -2199,6 +2377,9 @@
     "Uploading %lld…" : {
 
     },
+    "Use \"%@\"" : {
+
+    },
     "Use “%@”" : {
 
     },
@@ -2245,6 +2426,9 @@
 
     },
     "wants" : {
+
+    },
+    "Welcome line (shown on the page)" : {
 
     },
     "Were you there?" : {
@@ -2319,10 +2503,7 @@
     "Where (city, optional)" : {
 
     },
-    "Where, roughly (city or area)" : {
-
-    },
-    "Where, roughly (optional)" : {
+    "Where?" : {
 
     },
     "Who can see it" : {
@@ -2445,7 +2626,16 @@
     "Your photos are compressed and stripped of location data before upload. You can remove them any time." : {
 
     },
+    "Your place" : {
+
+    },
+    "Your places" : {
+
+    },
     "Your profile is stored in your iCloud. Only people you share with see your Moments." : {
+
+    },
+    "Your role" : {
 
     },
     "Your side" : {

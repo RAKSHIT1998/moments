@@ -41,6 +41,7 @@ final class AnalyticsService {
         case reportSent = "report_sent"
         case activityStarted = "activity_started"
         case qrScanned = "qr_scanned"
+        case placeClaimed = "place_claimed"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).
@@ -69,7 +70,7 @@ final class AnalyticsService {
     func count(_ event: Event) -> Int { defaults.integer(forKey: "analytics.\(event.rawValue)") }
 
     func reset() {
-        for e in [Event.captureStarted, .captureCompleted, .memoryCreated, .memoryEdited, .memoryDeleted, .searchUsed, .insightOpened, .notificationOpened, .subscriptionStarted, .subscriptionCancelled, .usefulMemoryResurfaced, .firstMomentCreated, .momentCreated, .momentShared, .momentExportedVideo, .sharedMomentOpened, .sideAdded, .reactionAdded, .momentRemixed, .recapViewed, .memoryDropCreated, .contextualInviteShown, .contextualInviteAccepted, .sharedMomentCreated, .inviteSent, .momentJoined, .nowPosted, .nowSaved, .commentAdded, .messageSent, .userBlocked, .reportSent, .activityStarted, .qrScanned] {
+        for e in [Event.captureStarted, .captureCompleted, .memoryCreated, .memoryEdited, .memoryDeleted, .searchUsed, .insightOpened, .notificationOpened, .subscriptionStarted, .subscriptionCancelled, .usefulMemoryResurfaced, .firstMomentCreated, .momentCreated, .momentShared, .momentExportedVideo, .sharedMomentOpened, .sideAdded, .reactionAdded, .momentRemixed, .recapViewed, .memoryDropCreated, .contextualInviteShown, .contextualInviteAccepted, .sharedMomentCreated, .inviteSent, .momentJoined, .nowPosted, .nowSaved, .commentAdded, .messageSent, .userBlocked, .reportSent, .activityStarted, .qrScanned, .placeClaimed] {
             defaults.removeObject(forKey: "analytics.\(e.rawValue)")
         }
     }

@@ -77,6 +77,20 @@ struct SocialPlace: Codable, Sendable, Equatable, Hashable, Identifiable {
     }
 }
 
+/// A venue owner's claim on a place page. Claims are honest about their state: `verified` is only
+/// set by review, never by the app. One claim per place.
+struct PlaceClaim: Codable, Sendable, Equatable, Identifiable, Hashable {
+    var id: String            // == placeID
+    var placeID: String
+    var ownerID: String
+    var ownerName: String
+    var businessName: String
+    var role: String          // owner / manager / staff
+    var note: String          // pinned welcome line on the place page
+    var verified: Bool
+    var createdAt: Date
+}
+
 struct SocialMoment: Codable, Sendable, Equatable, Identifiable, Hashable {
     var id: String
     var creatorID: String

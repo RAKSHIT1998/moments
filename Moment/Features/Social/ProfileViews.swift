@@ -27,6 +27,7 @@ struct SocialProfileView: View {
                 if isMe, !env.social.featured.isEmpty { featuredRow }
                 if isMe, let y = env.social.yearSummary() { YearCard(summary: y) }
                 if isMe { collectionsRow }
+                if isMe, !env.social.myPlaces.isEmpty { placesRow }
                 if isMe, !env.social.peopleSuggestions.isEmpty { suggestionsRow }
                 if isMe { myMemoriesCard }
                 momentsGrid
@@ -54,7 +55,7 @@ struct SocialProfileView: View {
                 }
             }
         }
-        .task { user = isMe ? env.social.me : await env.social.user(userID) }
+        .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims() } }
         .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
         .fullScreenCover(isPresented: $showMemories) { PrivateMemoryHubView() }
         .sheet(isPresented: $showSettings) { NavigationStack { SettingsView().socialDestinations() } }
@@ -178,6 +179,26 @@ struct SocialProfileView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private var placesRow: some View {
+        VStack(alignment: .leading, spacing: MSpacing.s) {
+            Text("Your places").sectionLabel()
+            ForEach(env.social.myPlaces.prefix(5), id: \.place.id) { p in
+                NavigationLink(value: SocialRoute.place(p.place)) {
+                    HStack(spacing: MSpacing.m) {
+                        Image(systemName: "mappin.and.ellipse").frame(width: 40, height: 40).background(MColor.fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(p.place.name).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                            Text("\(p.visits)× · \(p.place.area)").font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1)
+                        }
+                        Spacer()
+                        if env.social.claims[p.place.id]?.ownerID == env.social.myID { Image(systemName: "storefront").foregroundStyle(MColor.textTertiary) }
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
     }

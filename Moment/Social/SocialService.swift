@@ -46,6 +46,8 @@ final class SocialService {
     private(set) var nearbyMoments: [SocialMoment] = []
     private(set) var nearbyNow: [NowPost] = []
     private(set) var placeMoments: [String: [SocialMoment]] = [:]
+    private(set) var claims: [String: PlaceClaim] = [:]
+    private(set) var myClaims: [PlaceClaim] = []
     var nearbyRadiusKm: Double = 3
     private(set) var hasLoadedOnce = false
     private var imageCache: [String: UIImage] = [:]
@@ -163,6 +165,37 @@ final class SocialService {
         let ms = (try? await backend.moments(atPlace: id)) ?? []
         for m in ms { moments[m.id] = m }
         placeMoments[id] = ms.filter { !blocked.contains($0.creatorID) }
+        claims[id] = try? await backend.claim(for: id)
+    }
+
+    /// Regulars: people who keep turning up here (2+ Moments at this venue). Computed, never inferred.
+    func regulars(at placeID: String) -> [(id: String, name: String, visits: Int)] {
+        var counts: [String: (String, Int)] = [:]
+        for m in placeMoments[placeID] ?? [] {
+            for (id, n) in zip(m.memberIDs, m.memberNames) { counts[id] = (n, (counts[id]?.1 ?? 0) + 1) }
+        }
+        return counts.filter { $0.value.1 >= 2 }.map { (id: $0.key, name: $0.value.0, visits: $0.value.1) }.sorted { $0.visits > $1.visits }
+    }
+
+    /// How many times I've been part of a Moment at this venue.
+    func myVisits(at placeID: String) -> Int { moments.values.filter { $0.place?.id == placeID && $0.memberIDs.contains(myID) }.count }
+
+    /// Your places: venues you've been to most, from your own Moments.
+    var myPlaces: [(place: SocialPlace, visits: Int)] {
+        var counts: [String: (SocialPlace, Int)] = [:]
+        for m in momentsImIn { if let p = m.place { counts[p.id] = (p, (counts[p.id]?.1 ?? 0) + 1) } }
+        return counts.values.map { (place: $0.0, visits: $0.1) }.sorted { $0.visits > $1.visits }
+    }
+
+    func refreshClaims() async { myClaims = (try? await backend.myClaims()) ?? []; for c in myClaims { claims[c.placeID] = c } }
+
+    func claimPlace(_ place: SocialPlace, businessName: String, role: String, note: String) async -> Bool {
+        guard subscriptions.canClaimPlace(existingClaims: myClaims.count) else {
+            lastError = "The free plan includes one claimed place. MOMENT Pro lifts the limit."; return false
+        }
+        let c = PlaceClaim(id: place.id, placeID: place.id, ownerID: myID, ownerName: displayName, businessName: businessName.trimmed, role: role, note: note.trimmed, verified: false, createdAt: .now)
+        do { let saved = try await backend.saveClaim(c); claims[place.id] = saved; if !myClaims.contains(where: { $0.id == saved.id }) { myClaims.append(saved) }; analytics.track(.placeClaimed); return true }
+        catch { lastError = error.localizedDescription; return false }
     }
 
     // MARK: - Collections
