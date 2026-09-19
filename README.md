@@ -32,6 +32,8 @@ What's built on top of that contract (all real data, nothing generated):
 - **Groups** (own Moments, NOW, chat), **Collections**, **Time Machine** (1/2/3… years ago today), **Moment Map** (city-level pins, geocoded on device), **Passport**, **Year in Moments**, **You + X / Our story** chains.
 - **Moment QR** (scan to join with the system scanner), **Moment Card** image share, **Mystery Moments** (blurred until Reveal), **Merge** suggestions for same-day overlapping Moments, pinned Moments, @mentions.
 
+**Location layer.** Venues (`SocialPlace`: name, area, coordinates from Apple Maps POI search) attach to Moments, events and NOW posts. *Nearby* asks the device for one when-in-use fix and queries "within 3 km" (CloudKit `distanceToLocation` on a `CLLocation` field; haversine in-memory) — the user's coordinate is never stored or uploaded. Place pages aggregate everything at a venue (photos, live events, who's here now, regulars), let anyone add photos / start an event / say they're here, and can be **claimed** by the business (pending manual verification; owner gets a pinned note and plain-count insights). Friends' NOW posts with a venue near you raise a local notification.
+
 Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the app uses `CloudKitBackend` with container `iCloud.com.rakshitbargotra.moment`. Nothing social is faked with local-only data in Release: if iCloud is unavailable the UI says so and keeps private Moments working.
 
 ## Requirements

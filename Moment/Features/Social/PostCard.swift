@@ -58,22 +58,22 @@ struct MomentPostCard: View {
         .padding(.vertical, 8)
     }
 
+    /// The photo is the link. (Double-tap-to-heart is on the heart itself: gestures on a
+    /// NavigationLink label swallow the single tap, and navigationDestination(item:) can't live in a lazy list.)
     private var media: some View {
         NavigationLink(value: SocialRoute.moment(moment.id)) {
             ZStack(alignment: .topTrailing) {
                 SocialImage(ref: moment.coverRef).aspectRatio(4/5, contentMode: .fill).frame(maxWidth: .infinity)
                     .blur(radius: moment.isTeaser && !isMember ? 24 : 0)
                 if moment.mediaCount > 1 {
-                    Image(systemName: "square.on.square.fill").foregroundStyle(.white).shadow(radius: 3).padding(MSpacing.m)
+                    Image(systemName: "square.on.square.fill").foregroundStyle(.white).shadow(radius: 3).padding(MSpacing.m).accessibilityHidden(true)
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
-        .simultaneousGesture(TapGesture(count: 2).onEnded {
-            Haptics.saved(); burst = ReactionKind.core.emoji
-            Task { await env.social.react(momentID: moment.id, kind: .core) }
-        })
+        .accessibilityLabel("Open \(moment.title)")
+        .accessibilityIdentifier("open-\(moment.id)")
     }
 
     private var actions: some View {
@@ -144,6 +144,7 @@ struct CommentsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let momentID: String
     @State private var text = ""
+    @State private var error: String?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -175,7 +176,10 @@ struct CommentsSheet: View {
                     TextField("Add a comment…", text: $text, axis: .vertical).lineLimit(1...4).focused($focused).textFieldStyle(.plain).accessibilityIdentifier("commentField")
                     Button("Post") {
                         let t = text; text = ""
-                        Task { if await env.social.comment(momentID: momentID, text: t) { Haptics.saved() } else { text = t } }
+                        Task {
+                            if await env.social.comment(momentID: momentID, text: t) { Haptics.saved() }
+                            else { text = t; error = env.social.lastError ?? "Couldn't post that."; env.social.clearError() }
+                        }
                     }
                     .font(.subheadline.weight(.semibold)).disabled(text.isBlank).accessibilityIdentifier("postComment")
                 }
@@ -188,7 +192,7 @@ struct CommentsSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .modifier(SocialErrorAlert())
+        .alert("Something went wrong", isPresented: Binding(get: { error != nil }, set: { _ in error = nil })) { Button("OK") {} } message: { Text(error ?? "") }
     }
 }
 

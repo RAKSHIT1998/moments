@@ -29,6 +29,9 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
     /// Asks once if needed, then returns a coordinate (or nil if refused / unavailable).
     func locate() async -> CLLocationCoordinate2D? {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-uitest"), let current { return current }
+        #endif
         if status == .notDetermined { manager.requestWhenInUseAuthorization(); return await withCheckedContinuation { continuation = $0 } }
         guard isAuthorized else { return current }
         manager.requestLocation()

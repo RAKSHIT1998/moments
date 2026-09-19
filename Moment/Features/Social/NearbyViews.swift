@@ -189,6 +189,7 @@ struct PlaceView: View {
                         ForEach(hereNow) { NowStatusRow(post: $0) }
                     }
                 }
+                if let claim, claim.ownerID == env.social.myID { ownerInsights }
                 let regulars = env.social.regulars(at: place.id)
                 if !regulars.isEmpty {
                     VStack(alignment: .leading, spacing: MSpacing.s) {
@@ -241,6 +242,26 @@ struct PlaceView: View {
         .sheet(isPresented: $showStart) { NavigationStack { StartActivityBody(venue: place) } }
         .sheet(isPresented: $showNow) { NavigationStack { AnyoneUpComposerBody(venue: place) } }
         .accessibilityIdentifier("placeView")
+    }
+
+    /// For the owner: what actually happened on their page. Plain counts, no invented "reach".
+    private var ownerInsights: some View {
+        let week = moments.filter { $0.createdAt > Date.now.adding(days: -7) }
+        let month = moments.filter { $0.createdAt > Date.now.adding(days: -30) }
+        let visitors = Set(month.flatMap(\.memberIDs)).count
+        let events = moments.filter { ($0.templateID ?? "").hasPrefix("activity.") }.count
+        return VStack(alignment: .leading, spacing: MSpacing.s) {
+            HStack { Text("Your page, last 30 days").sectionLabel(); Spacer(); Text("Owner").font(MFont.caption).foregroundStyle(MColor.textTertiary) }
+            HStack(spacing: MSpacing.s) {
+                StatTile(value: "\(visitors)", label: "people", symbol: "person.2")
+                StatTile(value: "\(month.count)", label: "Moments", symbol: "rectangle.stack")
+                StatTile(value: "\(week.count)", label: "this week", symbol: "calendar")
+                StatTile(value: "\(events)", label: "events", symbol: "qrcode")
+            }
+            Text("Print your QR for the counter: every scan lands people on this page.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+        }
+        .padding(MSpacing.m).background(MColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityIdentifier("ownerInsights")
     }
 
     private var prefilled: SocialService.NewMomentInput {

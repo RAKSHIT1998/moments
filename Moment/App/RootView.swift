@@ -92,7 +92,7 @@ struct CreateSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(next == nil ? [.medium] : [.large], selection: .constant(next == nil ? .medium : .large))
         .presentationDragIndicator(.visible)
     }
 

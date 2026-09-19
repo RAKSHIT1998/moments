@@ -14,7 +14,9 @@ struct SocialProfileView: View {
     @State private var openConversation: String?
     @State private var query = ""
 
-    private var isMe: Bool { userID == env.social.myID }
+    /// The Profile tab is built before the session resolves, so an empty id means "me".
+    private var isMe: Bool { userID.isEmpty || userID == env.social.myID }
+    private var resolvedID: String { userID.isEmpty ? env.social.myID : userID }
     private var moments: [SocialMoment] { isMe ? env.social.momentsImIn : env.social.moments(with: userID) + publicOnes }
     private var publicOnes: [SocialMoment] { env.social.moments.values.filter { $0.creatorID == userID && $0.visibility == .publicAll && !$0.memberIDs.contains(env.social.myID) } }
 
@@ -441,6 +443,11 @@ struct PrivateMemoryHubView: View {
             Tab(PrivateTab.vault.label, systemImage: PrivateTab.vault.symbol, value: .vault) { VaultView() }.badge(env.surface.inboxCount)
         }
         .tint(MColor.accent)
+        .task {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-uitest") { await DemoData.seedAsync(into: env) }
+            #endif
+        }
         .overlay(alignment: .top) {
             HStack {
                 Label("Private · on-device", systemImage: "lock.fill").font(MFont.caption).foregroundStyle(MColor.textSecondary)

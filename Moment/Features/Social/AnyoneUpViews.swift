@@ -33,7 +33,8 @@ struct NowStatusRow: View {
             }
         }
         .momentCard(padding: MSpacing.m)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("status-\(post.id)")
     }
 }
 

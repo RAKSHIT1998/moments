@@ -159,14 +159,16 @@ extension AppEnvironment {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-reset-onboarding") { settings.onboardingCompleted = false }
         if ProcessInfo.processInfo.arguments.contains("-uitest") { settings.onboardingCompleted = true; settings.setupCompleted = true; settings.requireBiometrics = false }
-        if ProcessInfo.processInfo.arguments.contains("-reset") { try? await lifecycle.deleteEverything(); settings.onboardingCompleted = true }
+        if ProcessInfo.processInfo.arguments.contains("-reset") { try? await lifecycle.deleteEverything(); settings.onboardingCompleted = true; settings.setupCompleted = true }
         #endif
         // Social first: the feed is the first screen, and this is cheap (cached session + one fetch).
         await social.start()
         UIApplication.shared.registerForRemoteNotifications()
         #if DEBUG
         // Private-memory demo data runs the full understanding pipeline; keep it after the feed is up.
-        if ProcessInfo.processInfo.arguments.contains("-demo") || settings.demoMode { await DemoData.seedAsync(into: self) }
+        // Under -uitest the private-memory seed runs when that layer is opened (see PrivateMemoryHubView),
+        // so the social UI isn't starved by the understanding pipeline during tests.
+        if (ProcessInfo.processInfo.arguments.contains("-demo") || settings.demoMode) && !ProcessInfo.processInfo.arguments.contains("-uitest") { await DemoData.seedAsync(into: self) }
         #endif
         LocalIntelligenceProvider.warmUp()
         await shareInbox.drain()

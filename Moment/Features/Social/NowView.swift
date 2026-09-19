@@ -21,6 +21,10 @@ struct NowView: View {
                     Text("Who's out, right now. Gone in a few hours.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                 }
                 .padding(.top, MSpacing.s)
+                HStack(spacing: MSpacing.s) {
+                    Button { showAnyoneUp = true } label: { Text("I'm up for…").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("imUpFor")
+                    Button { showComposer = true } label: { Image(systemName: "camera").font(.title3.weight(.regular)).frame(width: 54, height: 50) }.buttonStyle(SecondaryButtonStyle()).accessibilityLabel("Post a photo to NOW").accessibilityIdentifier("nowCompose")
+                }
                 let statuses = env.social.nowPosts.filter(\.isStatus)
                 let posts = env.social.nowPosts.filter { !$0.isStatus }
                 if statuses.isEmpty && posts.isEmpty {
@@ -60,14 +64,6 @@ struct NowView: View {
         }
         .background(MColor.background)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .bottom) {
-            HStack(spacing: MSpacing.s) {
-                Button { showAnyoneUp = true } label: { Text("I'm up for…").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("imUpFor")
-                Button { showComposer = true } label: { Image(systemName: "camera").font(.title3.weight(.light)).frame(width: 54, height: 54) }.buttonStyle(SecondaryButtonStyle()).accessibilityLabel("Post a photo to NOW").accessibilityIdentifier("nowCompose")
-            }
-            .padding(.horizontal, MSpacing.page).padding(.vertical, MSpacing.m)
-            .background(.bar)
-        }
         .refreshable { await env.social.refreshNow() }
         .sheet(isPresented: $showAnyoneUp) { AnyoneUpComposer() }
         .sheet(isPresented: $showComposer) { NowComposerView() }
