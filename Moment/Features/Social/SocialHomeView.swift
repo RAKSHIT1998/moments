@@ -36,15 +36,15 @@ struct SocialHomeView: View {
             }
             .background(MColor.background)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Text("MOMENT").font(.system(size: 22, weight: .heavy)).tracking(2).accessibilityAddTraits(.isHeader) }
+                ToolbarItem(placement: .topBarLeading) { Wordmark(size: 20) }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: MSpacing.l) {
-                        Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder") }.accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
+                        Button { showScanner = true } label: { Glyph(.scan) }.accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
                         NavigationLink(value: SocialRoute.inbox) {
-                            Image(systemName: "heart").overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 2, y: -2) } }
+                            Glyph(.activity).overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 2, y: -2) } }
                         }
                         .accessibilityLabel("Activity").accessibilityIdentifier("inboxButton")
-                        NavigationLink(value: SocialRoute.messages) { Image(systemName: "paperplane") }.accessibilityLabel("Messages")
+                        NavigationLink(value: SocialRoute.messages) { Glyph(.reply) }.accessibilityLabel("Messages")
                     }
                     .font(.title3.weight(.regular)).foregroundStyle(MColor.textPrimary)
                 }

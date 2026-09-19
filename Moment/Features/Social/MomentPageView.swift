@@ -160,7 +160,7 @@ struct MomentPageView: View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
             Text("Your side").sectionLabel()
             Text("Got photos from this?").font(MFont.title)
-            NavigationLink(value: SocialRoute.addSide(m.id)) { Label("Add your side", systemImage: "plus.square.on.square").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("addYourSide")
+            NavigationLink(value: SocialRoute.addSide(m.id)) { HStack(spacing: 8) { Glyph(.addSide, size: 20).foregroundStyle(.white); Text("Add your side") }.frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("addYourSide")
         }
     }
 

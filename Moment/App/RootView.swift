@@ -48,13 +48,11 @@ struct RootView: View {
 
     private var mainTabs: some View {
         TabView(selection: $tab) {
-            Tab(RootTab.home.label, systemImage: RootTab.home.symbol, value: .home) { SocialHomeView() }
-            Tab(RootTab.discover.label, systemImage: RootTab.discover.symbol, value: .discover) { DiscoverView() }
-            Tab(RootTab.create.label, systemImage: RootTab.create.symbol, value: .create) { Color.clear }
-            Tab(RootTab.now.label, systemImage: RootTab.now.symbol, value: .now) { NowView() }
-            Tab(RootTab.profile.label, systemImage: RootTab.profile.symbol, value: .profile) {
-                NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() }
-            }
+            Tab(value: .home) { SocialHomeView() } label: { Label { Text(RootTab.home.label) } icon: { Image(uiImage: MomentGlyph.home.image()) } }
+            Tab(value: .discover) { DiscoverView() } label: { Label { Text(RootTab.discover.label) } icon: { Image(uiImage: MomentGlyph.nearby.image()) } }
+            Tab(value: .create) { Color.clear } label: { Label { Text(RootTab.create.label) } icon: { Image(uiImage: MomentGlyph.create.image()) } }
+            Tab(value: .now) { NowView() } label: { Label { Text(RootTab.now.label) } icon: { Image(uiImage: MomentGlyph.now.image()) } }
+            Tab(value: .profile) { NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() } } label: { Label { Text(RootTab.profile.label) } icon: { Image(uiImage: MomentGlyph.profile.image()) } }
         }
         .tint(MColor.textPrimary)
         .onChange(of: tab) { old, new in
@@ -76,9 +74,9 @@ struct CreateSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: MSpacing.l) {
                 Text("Create").displayStyle().padding(.top, MSpacing.s)
-                row(.moment, "Moment", "From photos. Invite the people who were there.", "rectangle.stack")
-                row(.now, "NOW", "What you're up to, right now. Gone in hours.", "sparkle")
-                row(.event, "Event", "A QR on the table. People scan, they're in.", "qrcode")
+                row(.moment, "Moment", "From photos. Invite the people who were there.", .home)
+                row(.now, "NOW", "What you're up to, right now. Gone in hours.", .now)
+                row(.event, "Event", "A QR on the table. People scan, they're in.", .scan)
                 Spacer()
             }
             .padding(.horizontal, MSpacing.page)
@@ -96,10 +94,10 @@ struct CreateSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    private func row(_ kind: Kind, _ title: String, _ detail: String, _ symbol: String) -> some View {
+    private func row(_ kind: Kind, _ title: String, _ detail: String, _ glyph: MomentGlyph) -> some View {
         Button { next = kind } label: {
             HStack(spacing: MSpacing.l) {
-                Image(systemName: symbol).font(.title3.weight(.light)).frame(width: 28)
+                Glyph(glyph, size: 26).frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(MFont.headline).foregroundStyle(MColor.textPrimary)
                     Text(detail).font(MFont.footnote).foregroundStyle(MColor.textSecondary)

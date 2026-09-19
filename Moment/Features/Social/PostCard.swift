@@ -81,14 +81,14 @@ struct MomentPostCard: View {
             Button {
                 if mine == nil { Haptics.saved(); burst = ReactionKind.core.emoji }
                 Task { await env.social.react(momentID: moment.id, kind: .core) }
-            } label: { Image(systemName: mine == .core ? "heart.fill" : "heart").foregroundStyle(mine == .core ? MColor.danger : MColor.textPrimary) }
+            } label: { Glyph(.spark, size: 24, filled: mine == .core).foregroundStyle(mine == .core ? Color(red: 1.0, green: 0.62, blue: 0.24) : MColor.textPrimary) }
                 .accessibilityLabel(mine == .core ? "Unlike" : "Like").accessibilityIdentifier("react-core")
-            Button { showComments = true } label: { Image(systemName: "bubble.right") }.accessibilityLabel("Comments").accessibilityIdentifier("comments-\(moment.id)")
-            Button { Task { await share() } } label: { Image(systemName: "paperplane") }.accessibilityLabel("Share")
+            Button { showComments = true } label: { Glyph(.reply, size: 24) }.accessibilityLabel("Comments").accessibilityIdentifier("comments-\(moment.id)")
+            Button { Task { await share() } } label: { Glyph(.send, size: 24) }.accessibilityLabel("Share")
             Spacer()
             if isMember {
                 NavigationLink(value: SocialRoute.addSide(moment.id)) {
-                    Label("Add your side", systemImage: "plus.square.on.square").font(.subheadline.weight(.semibold))
+                    HStack(spacing: 6) { Glyph(.addSide, size: 20); Text("Add your side") }.font(.subheadline.weight(.semibold))
                 }
                 .accessibilityIdentifier("addYourSide")
             } else {
@@ -209,7 +209,7 @@ struct StoriesRow: View {
                     VStack(spacing: 6) {
                         ZStack(alignment: .bottomTrailing) {
                             AvatarView(userID: env.social.myID, name: env.social.displayName, size: 64)
-                            Image(systemName: "plus.circle.fill").font(.title3).foregroundStyle(MColor.accent).background(MColor.background, in: Circle())
+                            Glyph(.create, size: 20, weight: 2.2).foregroundStyle(MColor.background).padding(2).background(MColor.accent, in: Circle())
                         }
                         Text("Your NOW").font(MFont.caption).foregroundStyle(MColor.textPrimary)
                     }

@@ -234,8 +234,8 @@ struct AboutView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text("MOMENT").font(MFont.display).tracking(2)
-                    Text("Never forget what matters.").font(MFont.body).foregroundStyle(MColor.textSecondary)
+                    Wordmark(size: 26)
+                    Text("Be there. Remember it.").font(MFont.body).foregroundStyle(MColor.textSecondary)
                     Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")").font(MFont.caption).foregroundStyle(MColor.textTertiary)
                 }.padding(.vertical, 8)
             }

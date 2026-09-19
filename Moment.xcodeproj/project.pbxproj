@@ -176,6 +176,7 @@
 		E7690F29F0CAAB7D4012C38C /* Insight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63BB3768BF1EAF095F2F07FF /* Insight.swift */; };
 		E9A3239131C8633C4323E52B /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96EFAFB5DDCC9D250837961F /* Promise.swift */; };
 		EA28ED523FA9E9B966A46B4E /* SurfaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C904EF724ABB35A2CA1E777 /* SurfaceService.swift */; };
+		EA95E7B025D724397F6974F6 /* Glyphs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E509AA7790AB7184A8D1767 /* Glyphs.swift */; };
 		EBDA10E92379A9A4FF63B8A0 /* AppLockController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2665995C5B2789C4B8BDAC58 /* AppLockController.swift */; };
 		EBDFDACD5A9F1E667FB98961 /* SearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF92AA04CF95FABED2D53E41 /* SearchService.swift */; };
 		ECBE15603743D23D5742EA86 /* PlanIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFC21D1E077E0C4D8E0D5C6 /* PlanIntelligence.swift */; };
@@ -295,6 +296,7 @@
 		37CCE6604C8AA23BE9032247 /* Person.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Person.swift; sourceTree = "<group>"; };
 		39297A7D87A51444667E9B87 /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
 		3AFFF965467D61700ADAB3A4 /* MediaPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeline.swift; sourceTree = "<group>"; };
+		3E509AA7790AB7184A8D1767 /* Glyphs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glyphs.swift; sourceTree = "<group>"; };
 		3ED94EB2AA475555D74EFFA5 /* Moment.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Moment.entitlements; sourceTree = "<group>"; };
 		3FE481E631860A89665ACB23 /* CaptureInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureInput.swift; sourceTree = "<group>"; };
 		4371AEE165C28E6AFF62C43F /* MemoryActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryActions.swift; sourceTree = "<group>"; };
@@ -585,6 +587,7 @@
 			children = (
 				668FCB0BEBD20F6BED6AC0EF /* Cards.swift */,
 				D67E5A60008179094BB66554 /* Components.swift */,
+				3E509AA7790AB7184A8D1767 /* Glyphs.swift */,
 				839FD5950DFAF95EF50BAA35 /* Theme.swift */,
 				0D5E7FF001AE74D299FFE511 /* Tokens.swift */,
 			);
@@ -1206,6 +1209,7 @@
 				317548CE115F3F4912ED2AC2 /* FeatureFlags.swift in Sources */,
 				354D344A35AB2A30ACF617AD /* FileCrypto.swift in Sources */,
 				5736D62CCE23E9A8DAAE7409 /* GiftIdea.swift in Sources */,
+				EA95E7B025D724397F6974F6 /* Glyphs.swift in Sources */,
 				08ADB64DD5A6A0E0F539CEE4 /* GroupsViews.swift in Sources */,
 				2733058E3DDD07CC1C2CD571 /* Haptics.swift in Sources */,
 				253B610AC9C3E34C8CCF3A25 /* HomeView.swift in Sources */,
