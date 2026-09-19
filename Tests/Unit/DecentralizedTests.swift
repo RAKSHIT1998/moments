@@ -61,7 +61,7 @@ final class DecentralizedTests: XCTestCase {
 
     func testPrivateMomentUnreadableWithoutKey() async throws {
         let dir = tempDir()
-        let alice = DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m")), store: EventStore(directory: dir.appending(path: "a")))
+        let alice = DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m")), store: EventStore(directory: dir.appending(path: "a")), keys: MomentKeys(namespace: "test.a.\(UUID().uuidString)"))
         _ = try await alice.updateProfile(displayName: "Alice", handle: "alice", bio: "", avatar: nil)
         let m = try await alice.createMoment(MomentDraft(title: "Secret dinner", description: "", visibility: .group))
         let root = await alice.store.get([m.id]).first!
@@ -69,16 +69,18 @@ final class DecentralizedTests: XCTestCase {
         XCTAssertFalse(root.content.contains("Secret"), "relays and strangers see ciphertext only")
         // Bob receives the raw event but has no key.
         let bobStore = EventStore(directory: dir.appending(path: "b"))
-        let bob = DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m2")), store: bobStore)
+        let bob = DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m2")), store: bobStore, keys: MomentKeys(namespace: "test.b.\(UUID().uuidString)"))
         await bobStore.ingest(root)
         do { _ = try await bob.moment(id: m.id); XCTFail("must not be readable") } catch {}
         // With the invite link (carrying the key) he can join and read it.
         let url = m.shareURL!
         XCTAssertNotNil(url.fragment, "invite carries the Moment key in the fragment")
-        XCTAssertTrue(SocialService.isInviteURL(url))
+        let isInvite = await SocialService.isInviteURL(url)
+        XCTAssertTrue(isInvite)
         let joined = try await bob.acceptInvite(url: url)
         XCTAssertEqual(joined.title, "Secret dinner")
-        XCTAssertTrue(joined.memberIDs.contains(await bob.myID))
+        let bobID = await bob.myID
+        XCTAssertTrue(joined.memberIDs.contains(bobID))
     }
 
     func testTwoPhonesConvergeOnPublicMoment() async throws {
@@ -105,7 +107,8 @@ final class DecentralizedTests: XCTestCase {
         XCTAssertEqual(sides.map(\.caption), ["was there"])
         let updated = try await alice.moment(id: m.id)
         XCTAssertEqual(updated.memberIDs.count, 2)
-        let bobUser = try await alice.user(id: await bob.myID)
+        let bobID = await bob.myID
+        let bobUser = try await alice.user(id: bobID)
         XCTAssertEqual(bobUser.handle, "bob")
     }
 

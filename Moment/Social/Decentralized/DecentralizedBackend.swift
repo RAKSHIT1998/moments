@@ -12,6 +12,7 @@ actor DecentralizedBackend: SocialBackend {
     let store: EventStore
     private let key: Curve25519.Signing.PrivateKey
     private let media: MediaStore
+    let keys: MomentKeys
     private var transports: [EventTransport] = []
     private var profileCache: [String: SocialUser] = [:]
     private var localBlocked: Set<String> = []
@@ -33,8 +34,8 @@ actor DecentralizedBackend: SocialBackend {
         struct Report: Codable { var targetUserID: String?; var targetMomentID: String?; var reason: String; var details: String }
     }
 
-    init(key: Curve25519.Signing.PrivateKey, media: MediaStore, store: EventStore? = nil) {
-        self.key = key; self.media = media
+    init(key: Curve25519.Signing.PrivateKey, media: MediaStore, store: EventStore? = nil, keys: MomentKeys = MomentKeys()) {
+        self.key = key; self.media = media; self.keys = keys
         self.store = store ?? EventStore()
         if let raw = Keychain.get("mesh.safety"), let s = try? JSONDecoder().decode(SafetySettings.self, from: raw) { safety = s }
         localBlocked = Set(UserDefaults.standard.stringArray(forKey: "mesh.blocked") ?? [])
@@ -128,7 +129,7 @@ actor DecentralizedBackend: SocialBackend {
 
     private func momentKey(_ id: String, event: SignedEvent?) -> SymmetricKey? {
         if event?.tags["enc"] != "1" { return nil }
-        return MomentKeys.load(id)
+        return keys.load(id)
     }
 
     func moment(id: String) async throws -> SocialMoment {
@@ -141,7 +142,7 @@ actor DecentralizedBackend: SocialBackend {
         if localBlocked.contains(m.creatorID) { return false }
         if m.memberIDs.contains(myID) || m.visibility == .publicAll { return true }
         // Anything else is encrypted; we can only build it if we hold the key.
-        return MomentKeys.load(m.id) != nil
+        return keys.load(m.id) != nil
     }
 
     /// Folds moment + update + join + leave + contribution + comment + reaction events into one value.
@@ -194,7 +195,7 @@ actor DecentralizedBackend: SocialBackend {
 
     private func inviteURL(for id: String) -> URL? {
         var c = URLComponents(); c.scheme = "moment"; c.host = "join"; c.path = "/\(id)"
-        if let k = MomentKeys.load(id) { c.fragment = MomentKeys.string(k) }
+        if let k = keys.load(id) { c.fragment = MomentKeys.string(k) }
         return c.url
     }
 
@@ -213,7 +214,7 @@ actor DecentralizedBackend: SocialBackend {
         if let pl = draft.place { tags["place"] = pl.id; tags["geo"] = GeoCell.cell(lat: pl.latitude, lon: pl.longitude) }
         let e = try emit(.moment, tags: tags, payload: p, momentKey: key)
         // The Moment's own id is the event id; index it under itself so children can be folded.
-        if let key { MomentKeys.save(key, for: e.id) }
+        if let key { keys.save(key, for: e.id) }
         await store.ingest(e)
         for id in draft.initialMemberIDs { _ = try? await inviteMember(id, momentID: e.id) }
         guard let m = await build(e.id) else { throw SocialError.backend("Couldn't build the Moment.") }
@@ -225,13 +226,13 @@ actor DecentralizedBackend: SocialBackend {
         // creator's UI shows "invited" until they join. We record it as a creator-authored join on their behalf
         // with their name, which the fold treats as membership (they can leave at any time).
         let name = (try? await user(id: userID))?.displayName ?? "Invited"
-        let k = MomentKeys.load(momentID)
+        let k = keys.load(momentID)
         try emit(.join, tags: ["moment": momentID, "for": userID], payload: Payloads.Join(name: name), momentKey: k)
     }
 
     func updateMoment(_ moment: SocialMoment) async throws -> SocialMoment {
         guard moment.creatorID == myID else { throw SocialError.notAllowed }
-        let k = MomentKeys.load(moment.id)
+        let k = keys.load(moment.id)
         try emit(.momentUpdate, tags: ["moment": moment.id], payload: Payloads.Update(title: moment.title, description: moment.description, visibility: moment.visibility.rawValue, isLive: moment.isLive, allowsContributions: moment.allowsContributions, isTeaser: moment.isTeaser, cover: nil), momentKey: k)
         try? await Task.sleep(for: .milliseconds(20))
         return try await self.moment(id: moment.id)
@@ -247,7 +248,7 @@ actor DecentralizedBackend: SocialBackend {
 
     func contributions(momentID: String) async throws -> [Contribution] {
         guard let m = await build(momentID), canSee(m) else { throw SocialError.notFound }
-        let k = MomentKeys.load(momentID)
+        let k = keys.load(momentID)
         var out: [Contribution] = []
         for e in await store.forMoment(momentID) where e.kind == .contribution && !localBlocked.contains(e.author) {
             guard let s = e.payload(Payloads.Side.self, momentKey: k) else { continue }
@@ -269,7 +270,7 @@ actor DecentralizedBackend: SocialBackend {
     func addContribution(_ c: Contribution, mediaData: Data?) async throws -> Contribution {
         guard let m = await build(c.momentID) else { throw SocialError.notFound }
         guard m.allowsContributions, m.memberIDs.contains(myID) || m.visibility == .publicAll else { throw SocialError.notAllowed }
-        let k = MomentKeys.load(c.momentID)
+        let k = keys.load(c.momentID)
         var b64: String? = nil
         if let mediaData { b64 = (c.kind == .video ? mediaData : (MediaPipeline.thumbnail(mediaData, side: 1280) ?? mediaData)).base64EncodedString() }
         let s = Payloads.Side(kind: c.kind.rawValue, caption: c.caption, media: b64, mediaKind: c.kind == .video ? "video" : "photo", originalTimestamp: c.originalTimestamp, authorName: c.authorName, w: c.media?.width, h: c.media?.height)
@@ -296,7 +297,7 @@ actor DecentralizedBackend: SocialBackend {
     func acceptInvite(url: URL) async throws -> SocialMoment {
         guard url.scheme == "moment", url.host() == "join" else { throw SocialError.notFound }
         let id = url.lastPathComponent
-        if let frag = url.fragment, let k = MomentKeys.key(frag) { MomentKeys.save(k, for: id) }
+        if let frag = url.fragment, let k = MomentKeys.key(frag) { keys.save(k, for: id) }
         // We may not have the events yet (arriving via mesh/relay); ask transports and wait briefly.
         for t in transports { (t as? RelayTransport)?.subscribe(id: "m." + id.prefix(8), .init(moments: [id])) }
         for _ in 0..<40 { if await build(id) != nil { break }; try? await Task.sleep(for: .milliseconds(250)) }
@@ -306,17 +307,17 @@ actor DecentralizedBackend: SocialBackend {
     func join(momentID: String) async throws -> SocialMoment {
         guard let m = await build(momentID), canSee(m) else { throw SocialError.notFound }
         let me = try await currentUser()
-        if !m.memberIDs.contains(myID) { try emit(.join, tags: ["moment": momentID], payload: Payloads.Join(name: me.displayName), momentKey: MomentKeys.load(momentID)); try? await Task.sleep(for: .milliseconds(20)) }
+        if !m.memberIDs.contains(myID) { try emit(.join, tags: ["moment": momentID], payload: Payloads.Join(name: me.displayName), momentKey: keys.load(momentID)); try? await Task.sleep(for: .milliseconds(20)) }
         return try await moment(id: momentID)
     }
 
     func leaveMoment(id: String) async throws {
-        try emit(.leave, tags: ["moment": id], payload: ["left": "1"], momentKey: MomentKeys.load(id))
+        try emit(.leave, tags: ["moment": id], payload: ["left": "1"], momentKey: keys.load(id))
     }
 
     func merge(sourceID: String, into targetID: String) async throws -> SocialMoment {
         guard let src = await build(sourceID), let dst = await build(targetID), src.creatorID == myID, dst.creatorID == myID else { throw SocialError.notAllowed }
-        let sk = MomentKeys.load(sourceID), dk = MomentKeys.load(targetID)
+        let sk = keys.load(sourceID), dk = keys.load(targetID)
         for e in await store.forMoment(sourceID) where e.kind == .contribution { if let s = e.payload(Payloads.Side.self, momentKey: sk) { try emit(.contribution, tags: ["moment": targetID, "movedFrom": e.id], payload: s, momentKey: dk) } }
         for (id, name) in zip(src.memberIDs, src.memberNames) where !dst.memberIDs.contains(id) { try emit(.join, tags: ["moment": targetID, "for": id], payload: Payloads.Join(name: name), momentKey: dk) }
         try emit(.delete, tags: ["target": sourceID, "moment": sourceID], payload: ["reason": "merged"])
@@ -326,7 +327,7 @@ actor DecentralizedBackend: SocialBackend {
 
     func setCover(momentID: String, data: Data) async throws -> SocialMoment {
         guard let m = await build(momentID), m.creatorID == myID else { throw SocialError.notAllowed }
-        try emit(.momentUpdate, tags: ["moment": momentID], payload: Payloads.Update(cover: MediaPipeline.thumbnail(data, side: 720)?.base64EncodedString()), momentKey: MomentKeys.load(momentID))
+        try emit(.momentUpdate, tags: ["moment": momentID], payload: Payloads.Update(cover: MediaPipeline.thumbnail(data, side: 720)?.base64EncodedString()), momentKey: keys.load(momentID))
         coverCache[momentID] = nil
         try? await Task.sleep(for: .milliseconds(20))
         return try await moment(id: momentID)
@@ -397,20 +398,20 @@ actor DecentralizedBackend: SocialBackend {
     // MARK: - Engagement
 
     func comments(momentID: String) async throws -> [MomentComment] {
-        let k = MomentKeys.load(momentID)
+        let k = keys.load(momentID)
         return await store.forMoment(momentID).filter { $0.kind == .comment && !localBlocked.contains($0.author) }.compactMap { e in e.payload(Payloads.Comment.self, momentKey: k).map { MomentComment(id: e.id, momentID: momentID, contributionID: $0.contributionID, authorID: e.author, authorName: $0.authorName, text: $0.text, createdAt: e.createdAt) } }
     }
     func addComment(_ c: MomentComment) async throws -> MomentComment {
         guard ContentModeration.check(c.text) == .ok, let m = await build(c.momentID), canSee(m) else { throw SocialError.notAllowed }
-        let e = try emit(.comment, tags: ["moment": c.momentID], payload: Payloads.Comment(text: c.text, contributionID: c.contributionID, authorName: c.authorName), momentKey: MomentKeys.load(c.momentID))
+        let e = try emit(.comment, tags: ["moment": c.momentID], payload: Payloads.Comment(text: c.text, contributionID: c.contributionID, authorName: c.authorName), momentKey: keys.load(c.momentID))
         var out = c; out.id = e.id; out.authorID = myID; return out
     }
     func deleteComment(id: String, momentID: String) async throws { try emit(.delete, tags: ["target": id, "moment": momentID], payload: ["reason": "removed"]) }
     func react(momentID: String, contributionID: String?, kind: ReactionKind?) async throws {
-        try emit(.reaction, tags: ["moment": momentID], payload: Payloads.Reaction(kind: kind?.rawValue, contributionID: contributionID), momentKey: MomentKeys.load(momentID))
+        try emit(.reaction, tags: ["moment": momentID], payload: Payloads.Reaction(kind: kind?.rawValue, contributionID: contributionID), momentKey: keys.load(momentID))
     }
     func myReactions(momentID: String) async throws -> [MomentReaction] {
-        let k = MomentKeys.load(momentID)
+        let k = keys.load(momentID)
         var latest: [String: (SignedEvent, Payloads.Reaction)] = [:]
         for e in await store.forMoment(momentID) where e.kind == .reaction && e.author == myID { if let p = e.payload(Payloads.Reaction.self, momentKey: k) { latest[p.contributionID ?? ""] = (e, p) } }
         return latest.values.compactMap { (e, p) in p.kind.flatMap(ReactionKind.init(rawValue:)).map { MomentReaction(id: e.id, momentID: momentID, contributionID: p.contributionID, authorID: myID, kind: $0, createdAt: e.createdAt) } }

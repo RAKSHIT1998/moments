@@ -62,12 +62,14 @@ extension JSONEncoder { static let event: JSONEncoder = { let e = JSONEncoder();
 extension JSONDecoder { static let event: JSONDecoder = { let d = JSONDecoder(); d.dateDecodingStrategy = .secondsSince1970; return d }() }
 
 /// Per-Moment secret. Held by everyone who was invited; travels inside the invite link/QR, never through relays.
-enum MomentKeys {
+struct MomentKeys: Sendable {
+    /// Keychain namespace. Production uses one keyring per phone; tests give each simulated phone its own.
+    var namespace: String = "momentkey"
     static func new() -> SymmetricKey { SymmetricKey(size: .bits256) }
     static func string(_ k: SymmetricKey) -> String { k.withUnsafeBytes { Data($0).base64EncodedString() } }
     static func key(_ s: String) -> SymmetricKey? { Data(base64Encoded: s).map { SymmetricKey(data: $0) } }
-    static func save(_ k: SymmetricKey, for momentID: String) { try? Keychain.set(k.withUnsafeBytes { Data($0) }, for: "momentkey.\(momentID)") }
-    static func load(_ momentID: String) -> SymmetricKey? { Keychain.get("momentkey.\(momentID)").map { SymmetricKey(data: $0) } }
+    func save(_ k: SymmetricKey, for momentID: String) { try? Keychain.set(k.withUnsafeBytes { Data($0) }, for: "\(namespace).\(momentID)") }
+    func load(_ momentID: String) -> SymmetricKey? { Keychain.get("\(namespace).\(momentID)").map { SymmetricKey(data: $0) } }
 }
 
 /// Coarse geo cell for routing public/NOW events through relays without exact coordinates: 0.1° ≈ 11 km.
