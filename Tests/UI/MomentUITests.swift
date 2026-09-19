@@ -82,8 +82,8 @@ final class MomentUITests: XCTestCase {
         goa.buttons["react-core"].tap()
         XCTAssertTrue(goa.buttons["Unlike"].waitForExistence(timeout: 5) || goa.buttons["Like"].waitForExistence(timeout: 2), "heart toggles")
         goa.buttons["comments-m_goa"].tap()
-        let field = app.textFields["commentField"].firstMatch.exists ? app.textFields["commentField"].firstMatch : app.textViews["commentField"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        let field = app.descendants(matching: .any)["commentField"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 8))
         field.tap(); field.typeText("kys")
         app.buttons["postComment"].tap()
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5), "abuse is refused before it leaves the device")

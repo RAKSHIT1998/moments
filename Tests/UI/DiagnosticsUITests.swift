@@ -12,8 +12,10 @@ final class DiagnosticsUITests: XCTestCase {
         card.buttons["open-m_goa"].firstMatch.tap()
         sleep(3)
         print("DIAG-AFTER-OPEN-START\n\(app.debugDescription.prefix(6000))\nDIAG-AFTER-OPEN-END")
-        app.tabBars.buttons["Now"].tap()
-        sleep(2)
-        print("DIAG-NOW-START\n\(app.debugDescription.prefix(6000))\nDIAG-NOW-END")
+        app.tabBars.buttons["Profile"].tap()
+        sleep(3)
+        let tree = app.debugDescription
+        let lines = tree.split(separator: "\n").filter { $0.contains("Privacy") || $0.contains("safetyLink") || $0.contains("Edit profile") || $0.contains("NavigationBar") }
+        print("DIAG-PROFILE-START\n\(lines.joined(separator: "\n"))\nDIAG-PROFILE-END")
     }
 }
