@@ -106,7 +106,7 @@ struct Glyph: View {
             .stroke(style: StrokeStyle(lineWidth: weight * size / 24, lineCap: .round, lineJoin: .round))
             .background { if filled { GlyphShape(kind: kind).fill() } }
             .frame(width: size, height: size)
-            .accessibilityHidden(true)
+            .accessibilityElement()   // a real element so the enclosing Button/Link is exposed; parents set the label
     }
 }
 

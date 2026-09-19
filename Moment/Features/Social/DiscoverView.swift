@@ -22,11 +22,12 @@ struct DiscoverView: View {
     }
 
     private var content: some View {
-        VStack(spacing: 0) {
-            Picker("Mode", selection: $mode) { Text("Nearby").tag(0); Text("Search").tag(1) }.pickerStyle(.segmented).padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.s)
-            if mode == 0 { NearbyView(embedded: true) } else { searchContent }
-        }
-        .accessibilityIdentifier("discoverScreen")
+        ExploreMapView()
+            .navigationTitle("Explore")
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
+            .accessibilityIdentifier("discoverScreen")
     }
 
     private var searchContent: some View {

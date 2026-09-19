@@ -47,6 +47,9 @@ final class SocialService {
     private(set) var nearbyNow: [NowPost] = []
     private(set) var placeMoments: [String: [SocialMoment]] = [:]
     private(set) var claims: [String: PlaceClaim] = [:]
+    /// Everything public on the globe that the last camera position asked for (merged, de-duplicated).
+    private(set) var exploreMoments: [String: SocialMoment] = [:]
+    private(set) var exploreNow: [String: NowPost] = [:]
     private(set) var myClaims: [PlaceClaim] = []
     var nearbyRadiusKm: Double = 3
     private(set) var hasLoadedOnce = false
@@ -150,6 +153,16 @@ final class SocialService {
             content.userInfo = ["nowID": n.id]
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "nearby.\(n.id)", content: content, trigger: nil))
         }
+    }
+
+    /// The globe: public Moments within the visible region. Same radius query as Nearby, so the
+    /// camera is the only "location" involved — never the device's own fix unless the user asked.
+    func refreshExplore(latitude: Double, longitude: Double, radiusKm: Double) async {
+        let r = max(1, min(radiusKm, 20_000))
+        async let m = backend.nearby(latitude: latitude, longitude: longitude, radiusKm: r)
+        async let n = backend.nowNearby(latitude: latitude, longitude: longitude, radiusKm: r)
+        for x in (try? await m) ?? [] where !blocked.contains(x.creatorID) && !muted.contains(x.creatorID) { exploreMoments[x.id] = x; moments[x.id] = x }
+        for x in (try? await n) ?? [] where !blocked.contains(x.authorID) && !muted.contains(x.authorID) && !x.isExpired { exploreNow[x.id] = x }
     }
 
     /// Venues near you, built from public Moments and NOW posts — most active first.

@@ -75,7 +75,9 @@ struct PrivacyCenterView: View {
             }
             Section {
                 row("Private memory: stored on this iPhone", "Memories, people, plans and media. Encrypted with iOS Data Protection; media is additionally AES-GCM encrypted. Never synced.", "iphone", ok: true)
-                row("Shared Moments: your iCloud", "Moments you make live in your own iCloud (CloudKit). Inviting someone shares that one Moment with them, nothing else. Photos are compressed and stripped of location and device metadata before upload.", "icloud", ok: true)
+                row("No MOMENT servers. No account with us.", "There is no MOMENT backend and no sign-up: you are your iCloud identity. Moments you make live in your own iCloud; inviting someone shares that one Moment with them, nothing else. We never see, store or sell any of it.", "server.rack", ok: true)
+                row("What's public is only what you chose", "Public Moments and \"show me on Nearby\" posts are visible to everyone by your choice — and only the venue, never your phone's location. Everything else is private or invite-only.", "globe", ok: true)
+                row("Photos are stripped before they leave", "Compressed and cleared of GPS, device and lens metadata. Only the capture time is kept, for the timeline.", "photo", ok: true)
                 row("Processed on this iPhone", "Text recognition, speech, understanding and search run locally.", "cpu", ok: true)
                 row(env.settings.useCloudAI ? "Sent to cloud AI: only what you capture, when you capture it" : "Sent to cloud AI: nothing", env.settings.useCloudAI ? "Cloud AI is ON. Each capture is sent to the AI provider using your own key. Your memory database is never uploaded." : "Cloud AI is off. Nothing you capture leaves this device.", "cloud", ok: !env.settings.useCloudAI)
                 row("Shared with apps: nothing", "The widget reads a short snapshot inside MOMENT's own app group. No third-party SDKs. No ad networks.", "square.grid.2x2", ok: true)

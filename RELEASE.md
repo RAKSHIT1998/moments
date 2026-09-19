@@ -192,6 +192,7 @@ What has **not** been done, because it needs your App Store Connect credentials:
 ## Location layer (added)
 
 - `NSLocationWhenInUseUsageDescription` is asked only when the user opens *Nearby* or picks a venue. The fix is used once per screen load to run a radius query; it is never persisted, never attached to content, never shown to others. What is public is the **venue** a user deliberately picks (a café, a beach) — user-generated content, city-level `coarsePlace` derived from its area.
+- Privacy stance: no MOMENT servers, no sign-up, no analytics/crash SDKs; identity = iCloud. Because public Moments live in the CloudKit *public* database (which the developer account can technically read), the honest App Privacy answer remains **Data Linked to You — user content, name, coarse location — used only for app functionality**; private/shared Moments are in users' own iCloud and are not accessible to us. Do not claim "Data Not Collected" while the public database exists.
 - Privacy label unchanged (Coarse Location, linked, app functionality). No precise-location collection: the app never sends the device coordinate to CloudKit; queries carry it only as a predicate parameter, which CloudKit does not store.
 - CloudKit Dashboard: `PublicMoment.location` and `Now.location` must be indexed as *queryable* (Location type) for `distanceToLocation` queries; `PlaceClaim` needs Authenticated create/read and creator-only write. `verified` is set only from the Dashboard by a reviewer.
 

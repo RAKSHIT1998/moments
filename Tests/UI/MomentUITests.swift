@@ -128,12 +128,19 @@ final class MomentUITests: XCTestCase {
     func testSearchNearbyInboxAndMessages() {
         waitForFeed()
         app.tabBars.buttons["Search"].tap()
-        XCTAssertTrue(app.buttons["enableNearby"].waitForExistence(timeout: 5) || app.descendants(matching: .any)["place-bastian_19062_72831"].firstMatch.waitForExistence(timeout: 10))
-        if app.buttons["enableNearby"].exists { app.buttons["enableNearby"].tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["exploreControls"].firstMatch.waitForExistence(timeout: 10), "Search is the globe")
+        app.buttons["enableNearby"].tap()   // fly to the simulated location
+        XCTAssertTrue(app.buttons["exploreListToggle"].waitForExistence(timeout: 5))
+        app.buttons["exploreListToggle"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["place-bastian_19062_72831"].firstMatch.waitForExistence(timeout: 15), "Bastian is within 3 km of the simulated location")
-        app.segmentedControls.buttons["Search"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["tile-m_sunset"].firstMatch.waitForExistence(timeout: 15), "public Moments are searchable")
+        app.swipeDown(); app.swipeDown()
+        let search = app.textFields["exploreSearch"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap(); search.typeText("Versova")
+        XCTAssertTrue(app.staticTexts["Last light, Versova"].firstMatch.waitForExistence(timeout: 10), "public Moments are searchable on the globe")
+        if app.keyboards.count > 0 { app.typeText("\n") }   // keyboard would cover the tab bar
         app.tabBars.buttons["Home"].tap()
+        XCTAssertTrue(app.buttons["inboxButton"].waitForExistence(timeout: 10))
         app.buttons["inboxButton"].tap()
         XCTAssertTrue(app.buttons["Invites"].waitForExistence(timeout: 5))
         app.buttons["Invites"].tap()
@@ -221,8 +228,8 @@ final class MomentUITests: XCTestCase {
         snap("01-home"); app.swipeUp(); snap("02-home-scrolled")
         openMoment("m_goa"); sleep(1); snap("03-moment"); app.swipeUp(); sleep(1); snap("04-moment-timeline")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["Search"].tap(); sleep(1); if app.buttons["enableNearby"].exists { app.buttons["enableNearby"].tap() }; sleep(2); snap("05-nearby")
-        app.segmentedControls.buttons["Search"].firstMatch.tap(); sleep(1); snap("06-search")
+        app.tabBars.buttons["Search"].tap(); sleep(3); snap("05-globe")
+        app.buttons["enableNearby"].tap(); sleep(3); snap("06-explore-near-me")
         app.tabBars.buttons["Create"].tap(); sleep(1); snap("07-create"); app.buttons["Cancel"].firstMatch.tap()
         app.tabBars.buttons["Now"].tap(); sleep(1); snap("08-now")
         app.tabBars.buttons["Profile"].tap(); sleep(1); snap("09-profile")

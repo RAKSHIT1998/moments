@@ -13,6 +13,7 @@
 		08ADB64DD5A6A0E0F539CEE4 /* GroupsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */; };
 		0C5C103168D6547093BC820E /* Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95B9C3A259A9C120E652B2C /* Navigation.swift */; };
 		0DB6F3F3DB3C2FC3188E35A0 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14A6BB131383E5B68E8C3ECC /* SwiftUI.framework */; };
+		0DE6DE2EBE8AF1807C229574 /* ExploreMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966FE654C032FA2AA510099B /* ExploreMapView.swift */; };
 		10CFB8E5E33C71A72229D297 /* MockIntelligenceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF7B6494F5CAD44C17FD5CE /* MockIntelligenceProvider.swift */; };
 		11499A659031F3AD0D3768DA /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A8D429606026115D94F7E9 /* Keychain.swift */; };
 		121DCA3C08D7CE26A95AC262 /* MomentUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F230AB0A7E5939A3EABC8237 /* MomentUITests.swift */; };
@@ -349,6 +350,7 @@
 		8FF7B6494F5CAD44C17FD5CE /* MockIntelligenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockIntelligenceProvider.swift; sourceTree = "<group>"; };
 		92A6B537367DE45D354ECB22 /* DataLifecycleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLifecycleService.swift; sourceTree = "<group>"; };
 		944D1321F8D9D86DF3ADEAD7 /* StoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryTests.swift; sourceTree = "<group>"; };
+		966FE654C032FA2AA510099B /* ExploreMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreMapView.swift; sourceTree = "<group>"; };
 		96EFAFB5DDCC9D250837961F /* Promise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
 		97439ADAD2FF323BF1FB95CB /* MomentPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentPackage.swift; sourceTree = "<group>"; };
 		97670D7D495DC8C9D24B011F /* MemoryExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryExtractor.swift; sourceTree = "<group>"; };
@@ -772,6 +774,7 @@
 				2262C63D4642A003CB7BBC35 /* AnyoneUpViews.swift */,
 				117AB0C48540E075181FF08E /* CollectionsView.swift */,
 				2758C294DACD68F438B13F88 /* DiscoverView.swift */,
+				966FE654C032FA2AA510099B /* ExploreMapView.swift */,
 				CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */,
 				D38D487C54357A09FE87A6AB /* InboxView.swift */,
 				28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */,
@@ -1205,6 +1208,7 @@
 				50112EBF3C2661C52BC32FB2 /* EntityRecognizer.swift in Sources */,
 				BC38D34D1E5F5DA73489CE2B /* Enums.swift in Sources */,
 				656157372B4EB588ED38F7DE /* Event.swift in Sources */,
+				0DE6DE2EBE8AF1807C229574 /* ExploreMapView.swift in Sources */,
 				B60C644053C7B837665F2E07 /* ExportService.swift in Sources */,
 				317548CE115F3F4912ED2AC2 /* FeatureFlags.swift in Sources */,
 				354D344A35AB2A30ACF617AD /* FileCrypto.swift in Sources */,
