@@ -72,6 +72,7 @@ extension View {
             case .nearbyMap: NearbyMapView()
             case .identity: IdentityView()
             case .invite: InviteFriendsView()
+            case .network: NetworkSettingsView()
             }
         }
     }

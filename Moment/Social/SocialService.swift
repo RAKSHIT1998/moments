@@ -641,8 +641,11 @@ final class SocialService {
         } catch { lastError = error.localizedDescription; return nil }
     }
 
+    /// iCloud share links, or decentralised invites: `moment://join/<eventID>#<momentKey>` — the key in the
+    /// fragment is what makes a private Moment readable, and it never touches a server.
     static func isInviteURL(_ url: URL) -> Bool {
-        (url.host()?.hasSuffix("icloud.com") ?? false) && url.path().contains("/share/")
+        if url.scheme == "moment", url.host() == "join", !url.lastPathComponent.isEmpty { return true }
+        return (url.host()?.hasSuffix("icloud.com") ?? false) && url.path().contains("/share/")
     }
 
     /// Opened from Messages/AirDrop/Safari. Joins and navigates.

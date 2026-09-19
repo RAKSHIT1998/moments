@@ -106,6 +106,7 @@ enum SocialRoute: Hashable {
     case place(SocialPlace)
     case identity
     case invite
+    case network
 }
 
 extension View {

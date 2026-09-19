@@ -216,6 +216,8 @@ struct NowPost: Codable, Sendable, Equatable, Identifiable, Hashable {
     /// People who tapped JOIN (ids) — the spontaneous-meetup mechanic.
     var joinerIDs: [String] = []
     var joinerNames: [String] = []
+    /// Author opted in to being found by people nearby (mesh/relay routing hint).
+    var discoverable: Bool = false
     var isExpired: Bool { expiresAt < .now }
     var isStatus: Bool { activity != .none }
 }

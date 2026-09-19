@@ -37,6 +37,13 @@
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MOMENT syncs Moments directly with nearby phones over Wi‑Fi and Bluetooth, so friends in the same room get them instantly — no server involved.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_mmt-mesh._tcp</string>
+		<string>_mmt-mesh._udp</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

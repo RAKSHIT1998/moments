@@ -68,9 +68,10 @@ final class AppEnvironment {
         self.speech = SpeechService()
         self.stories = StoryService(storage: storage, media: media, importer: importer, settings: settings, analytics: analytics, subscriptions: subscriptions)
         self.flags = FeatureFlags()
-        self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media, settings: settings), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
+        let identity = IdentityService()
+        self.identity = identity
+        self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media, settings: settings, identity: identity), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
         self.location = LocationService()
-        self.identity = IdentityService()
         social.subscriptions = subscriptions
         social.identity = identity
         actions.onChange = { [weak self] in self?.surface.noteDataChanged() }
@@ -82,9 +83,9 @@ final class AppEnvironment {
         }
     }
 
-    /// CloudKit in production. In DEBUG, `-uitest`/`-demo` runs use the in-process backend so the
-    /// simulator (no iCloud) exercises every social flow against fictional people.
-    static func defaultBackend(media: MediaStore, settings: SettingsStore) -> any SocialBackend {
+    /// Decentralised (mesh + relays) by default; iCloud is an opt-in alternative. In DEBUG, `-uitest`/`-demo`
+    /// runs use the in-process backend so the simulator (no iCloud, no peers) exercises every flow against fictional people.
+    static func defaultBackend(media: MediaStore, settings: SettingsStore, identity: IdentityService) -> any SocialBackend {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if args.contains("-uitest") || args.contains("-demo") || settings.demoMode || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
@@ -93,7 +94,10 @@ final class AppEnvironment {
             return b
         }
         #endif
-        return CloudKitBackend(media: media)
+        switch settings.networkMode {
+        case .icloud: return CloudKitBackend(media: media)
+        case .mesh: return DecentralizedBackend.live(identity: identity, media: media, settings: settings)
+        }
     }
 
     static func live() -> AppEnvironment {
@@ -138,11 +142,30 @@ final class AppEnvironment {
         settings.demoMode = false
         settings.demoLoaded = false
         try? await lifecycle.deleteEverything()
-        social.replaceBackend(CloudKitBackend(media: media))
+        social.replaceBackend(AppEnvironment.defaultBackend(media: media, settings: settings, identity: identity))
         await social.start()
         toast("Sample data removed.")
     }
     #endif
+
+    /// Switch between the decentralised network and iCloud. Data stays where it was; the app just talks to a different place.
+    func setNetworkMode(_ mode: NetworkMode) async {
+        guard settings.networkMode != mode else { return }
+        settings.networkMode = mode
+        #if DEBUG
+        if settings.demoMode { return }
+        #endif
+        social.replaceBackend(AppEnvironment.defaultBackend(media: media, settings: settings, identity: identity))
+        await social.start()
+        toast(mode == .mesh ? "Decentralised." : "Using iCloud.")
+    }
+
+    /// Relay list changed: rebuild the transports on the running decentralised backend.
+    func reloadRelays() async {
+        guard settings.networkMode == .mesh, !settings.demoMode else { return }
+        social.replaceBackend(AppEnvironment.defaultBackend(media: media, settings: settings, identity: identity))
+        await social.start()
+    }
 }
 
 enum RootTab: String, CaseIterable, Identifiable {

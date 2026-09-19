@@ -328,6 +328,16 @@
         }
       }
     },
+    "%lld Moments · %lld people · %lld places%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld Moments · %2$lld people · %3$lld places%4$@"
+          }
+        }
+      }
+    },
     "%lld Moments · %lld places · since %@" : {
       "localizations" : {
         "en" : {
@@ -363,6 +373,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld people · %2$lld Moments"
+          }
+        }
+      }
+    },
+    "%lld places, %lld Moments" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld places, %2$lld Moments"
           }
         }
       }
@@ -411,7 +431,13 @@
     "1 new Moment to review" : {
 
     },
+    "12 words, separated by spaces" : {
+
+    },
     "A card for the people who weren't there — and the ones who were. The invite link goes with it." : {
+
+    },
+    "A fingerprint of a key that lives only in this iPhone's Keychain. Everything you create is signed with it, so people can tell it's really yours — without any server." : {
 
     },
     "A group is a private space for the people you keep making Moments with." : {
@@ -456,6 +482,9 @@
     "Add a few sides first." : {
 
     },
+    "Add a line about you" : {
+
+    },
     "Add a photo" : {
 
     },
@@ -466,6 +495,9 @@
 
     },
     "Add a place to a Moment and it shows up here." : {
+
+    },
+    "Add a venue to a Moment and it shows up here, on the map and on your passport." : {
 
     },
     "Add another memory" : {
@@ -744,6 +776,12 @@
     "Controls" : {
 
     },
+    "Copy" : {
+
+    },
+    "Copy message" : {
+
+    },
     "Couldn't export" : {
 
     },
@@ -753,6 +791,9 @@
     "Couldn't open that Moment" : {
 
     },
+    "Counted on this phone only. Nothing about your friends is uploaded." : {
+
+    },
     "Counts events like “capture completed” locally so you can see them here. Nothing is sent anywhere, and never your content." : {
 
     },
@@ -760,6 +801,9 @@
 
     },
     "Create a group" : {
+
+    },
+    "Create encrypted backup" : {
 
     },
     "Create Moment" : {
@@ -903,6 +947,9 @@
     "Example" : {
 
     },
+    "Explore" : {
+
+    },
     "Explore with sample data" : {
 
     },
@@ -942,6 +989,9 @@
     "Fictional people and Moments on an in-process backend. Turning it off deletes them and returns to iCloud." : {
 
     },
+    "Find your people" : {
+
+    },
     "Find your people." : {
 
     },
@@ -955,6 +1005,9 @@
 
     },
     "Follow" : {
+
+    },
+    "Follow to see the Moments you're not in." : {
 
     },
     "Followers" : {
@@ -1004,6 +1057,15 @@
         }
       }
     },
+    "Generate a 12-word phrase, write it down, and you can bring this identity to a new phone. We never see it." : {
+
+    },
+    "Generate a different phrase" : {
+
+    },
+    "Generate recovery phrase" : {
+
+    },
     "Gift actions" : {
 
     },
@@ -1034,9 +1096,6 @@
     "Got photos from this?" : {
 
     },
-    "Group Moments into albums — a trip, a year, a person." : {
-
-    },
     "Group Moments into albums — a trip, a year, a person. Only you see them." : {
 
     },
@@ -1062,6 +1121,9 @@
 
     },
     "Happy hour 5–7. Ask for the window table." : {
+
+    },
+    "Have a backup from another phone? Import it with its phrase. This replaces the identity on this device." : {
 
     },
     "here" : {
@@ -1109,10 +1171,28 @@
     "I'm up for…" : {
 
     },
+    "I've saved it" : {
+
+    },
+    "I've written these 12 words down" : {
+
+    },
+    "Identity" : {
+
+    },
+    "Identity & recovery" : {
+
+    },
+    "Identity & recovery phrase" : {
+
+    },
     "Ignore" : {
 
     },
     "Imagine Sarah texts you:" : {
+
+    },
+    "Import backup…" : {
 
     },
     "Important" : {
@@ -1130,10 +1210,19 @@
     "Invitations to other people's Moments land here. Links opened from Messages open the Moment directly." : {
 
     },
+    "Invite" : {
+
+    },
     "Invite %lld" : {
 
     },
+    "Invite friends" : {
+
+    },
     "Invite people" : {
+
+    },
+    "Invite your people" : {
 
     },
     "Invites" : {
@@ -1208,6 +1297,9 @@
     "Link to a contact" : {
 
     },
+    "List" : {
+
+    },
     "Listening" : {
 
     },
@@ -1247,6 +1339,9 @@
     "Made with MOMENT" : {
 
     },
+    "Make a Moment with someone and they show up here." : {
+
+    },
     "Make it a Moment" : {
 
     },
@@ -1266,9 +1361,6 @@
 
     },
     "Make your first Moment" : {
-
-    },
-    "Make your first Moment from the + tab." : {
 
     },
     "Make your own" : {
@@ -1337,9 +1429,6 @@
     "Minimise" : {
 
     },
-    "Mode" : {
-
-    },
     "Model: %@. Stored only in this device's Keychain." : {
 
     },
@@ -1355,7 +1444,13 @@
     "Moment Card" : {
 
     },
+    "MOMENT identity backup" : {
+
+    },
     "MOMENT is locked" : {
+
+    },
+    "MOMENT is only good with the people you actually see. Every Moment you share is an invite; this is the direct one." : {
 
     },
     "MOMENT is running without saving. Restart the app; if this keeps happening, please contact support." : {
@@ -1397,6 +1492,9 @@
     "MOMENTS TOGETHER" : {
 
     },
+    "Moments you share with %@ will show here." : {
+
+    },
     "More" : {
 
     },
@@ -1433,6 +1531,9 @@
     "Name or @handle" : {
 
     },
+    "Near me" : {
+
+    },
     "Nearby" : {
 
     },
@@ -1440,6 +1541,9 @@
 
     },
     "Needs review" : {
+
+    },
+    "New" : {
 
     },
     "New collection" : {
@@ -1475,13 +1579,13 @@
     "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
 
     },
+    "No matches in view. Zoom out or try another word." : {
+
+    },
     "No Moments with everyone yet. Start one — the group is invited automatically." : {
 
     },
     "No Moments yet" : {
-
-    },
-    "No Moments you can see yet." : {
 
     },
     "No one blocked." : {
@@ -1490,10 +1594,16 @@
     "No one found." : {
 
     },
+    "No password, no email. A key on this iPhone signs everything you make. This is its ID:" : {
+
+    },
     "No pending promises." : {
 
     },
     "No photos here yet. Yours would be the first." : {
+
+    },
+    "No places yet" : {
 
     },
     "No plans yet." : {
@@ -1562,9 +1672,6 @@
     "Nothing made yet." : {
 
     },
-    "Nothing matches \"%@\"." : {
-
-    },
     "Nothing needs you yet." : {
 
     },
@@ -1572,6 +1679,9 @@
 
     },
     "Nothing to replay yet" : {
+
+    },
+    "Nothing to see yet" : {
 
     },
     "Nothing to tidy up." : {
@@ -1700,9 +1810,6 @@
     "People you know" : {
 
     },
-    "People you were there with" : {
-
-    },
     "PEOPLE YOU WERE THERE WITH" : {
 
     },
@@ -1743,6 +1850,9 @@
 
     },
     "Place" : {
+
+    },
+    "Places" : {
 
     },
     "Places near you" : {
@@ -1830,6 +1940,9 @@
     "Reason" : {
 
     },
+    "Recovery phrase" : {
+
+    },
     "Regulars" : {
 
     },
@@ -1911,6 +2024,12 @@
     "Reset what MOMENT learned from your feedback" : {
 
     },
+    "Restore" : {
+
+    },
+    "Restore on this phone" : {
+
+    },
     "Restore purchases" : {
 
     },
@@ -1956,6 +2075,9 @@
     "Save as a Moment" : {
 
     },
+    "Save backup file" : {
+
+    },
     "Save key" : {
 
     },
@@ -1995,7 +2117,7 @@
     "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
 
     },
-    "Screenshots, promises, plans, gift ideas — on-device only. %lld memories." : {
+    "Screenshots, promises, plans — on this iPhone only. %lld memories." : {
 
     },
     "Search" : {
@@ -2013,10 +2135,10 @@
     "Search places" : {
 
     },
-    "Search titles, places, people" : {
+    "Search your Moments" : {
 
     },
-    "See all" : {
+    "Section" : {
 
     },
     "See it" : {
@@ -2083,6 +2205,9 @@
 
     },
     "Share card" : {
+
+    },
+    "Share invite link" : {
 
     },
     "Share link" : {
@@ -2157,6 +2282,15 @@
     "Sign in to iCloud on this iPhone to share Moments with people. You can still make private ones." : {
 
     },
+    "Signed" : {
+
+    },
+    "Signed by %@'s key" : {
+
+    },
+    "Signed identity" : {
+
+    },
     "Since %@" : {
 
     },
@@ -2164,6 +2298,9 @@
 
     },
     "Skip for now" : {
+
+    },
+    "Skip for now — I'll do it in Settings" : {
 
     },
     "Something went wrong" : {
@@ -2230,6 +2367,9 @@
     "The boys, Family, Travel crew…" : {
 
     },
+    "The file is useless without the phrase. Keep them apart." : {
+
+    },
     "The Moment" : {
 
     },
@@ -2260,7 +2400,7 @@
     "Things people owe me" : {
 
     },
-    "This account is private. Follow to see shared Moments." : {
+    "This account is private" : {
 
     },
     "This cannot be undone. Export first if you want a copy." : {
@@ -2330,6 +2470,9 @@
 
     },
     "Type" : {
+
+    },
+    "Type the 12 words that go with this backup." : {
 
     },
     "Type: %@. Double-tap to change." : {
@@ -2476,6 +2619,9 @@
     "What should people call you?" : {
 
     },
+    "What spreads MOMENT" : {
+
+    },
     "What to remember" : {
 
     },
@@ -2557,6 +2703,9 @@
     "with %@" : {
 
     },
+    "Write it down. It's the only way to move your identity to a new phone — we can't recover it for you." : {
+
+    },
     "You + %@" : {
 
     },
@@ -2593,7 +2742,13 @@
     "Your first one starts here." : {
 
     },
+    "Your key is ready." : {
+
+    },
     "Your life, remembered." : {
+
+    },
+    "Your loop" : {
 
     },
     "Your memories are always yours: viewing, exporting and deleting never require a subscription." : {
@@ -2612,6 +2767,9 @@
 
     },
     "Your Moment" : {
+
+    },
+    "Your MOMENT ID" : {
 
     },
     "Your Moments" : {
@@ -2639,9 +2797,6 @@
 
     },
     "Your place" : {
-
-    },
-    "Your places" : {
 
     },
     "Your profile is stored in your iCloud. Only people you share with see your Moments." : {

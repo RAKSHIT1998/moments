@@ -17,6 +17,9 @@ final class SettingsStore {
         featuredMomentIDs = defaults.stringArray(forKey: "featuredMomentIDs") ?? []
         setupCompleted = defaults.bool(forKey: "setupCompleted")
         demoMode = defaults.bool(forKey: "demoMode")
+        networkMode = NetworkMode(rawValue: defaults.string(forKey: "networkMode") ?? "") ?? .mesh
+        relayURLs = defaults.stringArray(forKey: "relayURLs") ?? NetworkMode.defaultRelays
+        meshEnabled = defaults.object(forKey: "meshEnabled") as? Bool ?? true
         dailyNotificationBudget = defaults.object(forKey: "dailyNotificationBudget") as? Int ?? 2
         lockScreenWidgetAllowed = defaults.bool(forKey: "lockScreenWidgetAllowed")
         analyticsEnabled = defaults.bool(forKey: "analyticsEnabled")
@@ -76,6 +79,10 @@ final class SettingsStore {
     var setupCompleted: Bool { didSet { defaults.set(setupCompleted, forKey: "setupCompleted") } }
     /// DEBUG builds only: run against the in-process backend with sample people and Moments.
     var demoMode: Bool { didSet { defaults.set(demoMode, forKey: "demoMode") } }
+    /// How Moments reach other people. `mesh` = phone-to-phone + open relays, no company database.
+    var networkMode: NetworkMode { didSet { defaults.set(networkMode.rawValue, forKey: "networkMode") } }
+    var relayURLs: [String] { didSet { defaults.set(relayURLs, forKey: "relayURLs") } }
+    var meshEnabled: Bool { didSet { defaults.set(meshEnabled, forKey: "meshEnabled") } }
     var dailyNotificationBudget: Int { didSet { defaults.set(dailyNotificationBudget, forKey: "dailyNotificationBudget") } }
     var lockScreenWidgetAllowed: Bool { didSet { defaults.set(lockScreenWidgetAllowed, forKey: "lockScreenWidgetAllowed") } }
     var analyticsEnabled: Bool { didSet { defaults.set(analyticsEnabled, forKey: "analyticsEnabled") } }
@@ -119,4 +126,15 @@ final class SettingsStore {
         showPeopleOnHome = true; showPlansOnHome = true; showMemoriesOnHome = true
         storyExportsMonthKey = ""; storyExportsThisMonth = 0; lastMonthRecapShown = ""; displayName = ""
     }
+}
+
+enum NetworkMode: String, CaseIterable, Sendable {
+    case mesh, icloud
+    var label: String { self == .mesh ? "Decentralised" : "iCloud" }
+    var explanation: String {
+        self == .mesh ? "Signed events go phone-to-phone and through relays anyone can run. Nobody hosts your data — not even us."
+                      : "Your Moments live in your own iCloud. Apple hosts the database; we still can't read it."
+    }
+    /// Community relays. Empty by default: the app works on mesh alone, and people add relays they trust.
+    static let defaultRelays: [String] = []
 }

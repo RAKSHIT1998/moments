@@ -32,6 +32,12 @@ struct SettingsView: View {
                 NavigationLink(value: SocialRoute.identity) { Label("Identity & recovery phrase", systemImage: "key") }
                 NavigationLink(value: SocialRoute.invite) { Label("Invite friends", systemImage: "person.badge.plus") }
             }
+            Section("Network") {
+                NavigationLink(value: SocialRoute.network) {
+                    HStack { Label("How Moments travel", systemImage: "point.3.connected.trianglepath.dotted"); Spacer(); Text(settings.networkMode.label).foregroundStyle(MColor.textSecondary) }
+                }
+                Text(settings.networkMode.explanation).font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            }
             Section("Setup") {
                 Button { settings.setupCompleted = false } label: { Label("Run setup again", systemImage: "checklist") }
                 #if DEBUG
