@@ -403,6 +403,32 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertFalse(env.subscriptions.canAdmit(attendees: SubscriptionService.freeEventAttendees))
     }
 
+    func testNearbyIsGeoFilteredAndPlacePagesAggregate() async throws {
+        let (env, backend) = await makeSocial()
+        // Bandra, Mumbai: the seeded Bastian Moment and Rahul's NOW are within 3 km; Goa is not.
+        await env.social.refreshNearby(latitude: 19.06, longitude: 72.83)
+        XCTAssertTrue(env.social.nearbyMoments.contains { $0.id == "m_bastian" })
+        XCTAssertFalse(env.social.nearbyMoments.contains { $0.id == "m_goa" })
+        let places = env.social.nearbyPlaces(latitude: 19.06, longitude: 72.83)
+        XCTAssertEqual(places.first?.place.name, "Bastian")
+        XCTAssertLessThan(places.first!.km, 1)
+        // Rahul's NOW is at Bastian but he hasn't allowed discovery → only visible because he follows me.
+        XCTAssertTrue(env.social.nearbyNow.contains { $0.id == "n3" })
+        // Place page pulls everything at that venue, and a new public Moment lands there.
+        let venue = places.first!.place
+        var input = SocialService.NewMomentInput(title: "Table 4", visibility: .publicAll)
+        input.place = venue
+        let created = await env.social.createMoment(input)
+        let m = try XCTUnwrap(created)
+        await env.social.loadPlace(venue.id)
+        XCTAssertTrue(env.social.placeMoments[venue.id]!.contains { $0.id == m.id })
+        XCTAssertEqual(m.place?.id, venue.id)
+        XCTAssertEqual(m.coarsePlace, "Mumbai", "coarse place is city-level from the venue area")
+        // Radius is honoured backend-side too.
+        let far = try await backend.nearby(latitude: 15.01, longitude: 74.02, radiusKm: 3)
+        XCTAssertEqual(far.map(\.id), [], "Goa Moment is group-visibility, not public")
+    }
+
     func testMediaPipelineStripsMetadataAndBounds() throws {
         let big = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000)).image { ctx in UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000)) }.jpegData(compressionQuality: 1)!
         let p = try XCTUnwrap(MediaPipeline.preparePhoto(big))

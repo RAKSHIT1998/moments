@@ -133,6 +133,21 @@ final class SocialService {
         for x in moms { moments[x.id] = x }
         nearbyMoments = moms.filter { !blocked.contains($0.creatorID) && !muted.contains($0.creatorID) }
         nearbyNow = nows.filter { !blocked.contains($0.authorID) && !muted.contains($0.authorID) }
+        notifyFriendsNearby()
+    }
+
+    private var notifiedNearby: Set<String> = []
+    /// "Rahul is at Bastian, 400 m away" — friends only, once per post, only if the user allowed it.
+    private func notifyFriendsNearby() {
+        guard settings.socialNotifications else { return }
+        for n in nearbyNow where n.authorID != myID && isFriend(n.authorID) && !notifiedNearby.contains(n.id) {
+            notifiedNearby.insert(n.id)
+            let content = UNMutableNotificationContent()
+            content.title = "\(n.authorName.split(separator: " ").first.map(String.init) ?? n.authorName) is nearby"
+            content.body = n.isStatus ? "\(n.activity.line.capitalizedFirst) at \(n.place?.name ?? "a place near you")" : "At \(n.place?.name ?? "a place near you")"
+            content.userInfo = ["nowID": n.id]
+            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "nearby.\(n.id)", content: content, trigger: nil))
+        }
     }
 
     /// Venues near you, built from public Moments and NOW posts — most active first.

@@ -102,6 +102,7 @@ enum SocialRoute: Hashable {
     case discover
     case now
     case nearby
+    case nearbyMap
     case place(SocialPlace)
 }
 

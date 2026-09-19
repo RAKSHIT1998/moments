@@ -123,6 +123,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if let nowID = response.notification.request.content.userInfo["nowID"] as? String {
+            await MainActor.run { Self.environment?.social.pendingNowID = nowID; Self.environment?.pendingTab = .now }
+            return
+        }
         if let momentID = response.notification.request.content.userInfo["momentID"] as? String {
             await MainActor.run { Self.environment?.social.pendingMomentID = momentID; Self.environment?.pendingTab = .home }
             return

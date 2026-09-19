@@ -166,6 +166,7 @@
 		E0C185D59FB14E5ABDFBCB51 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138469A6359AD25CB00CEAE2 /* OnboardingView.swift */; };
 		E0DEBBE3DD9C6DCD823BA5B2 /* PhotoMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8351DC4F38D2FFA323F3E9 /* PhotoMetadata.swift */; };
 		E13DB8C1AEC75D4839D32C10 /* ImageColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE17C8090CFD8B9147EE664 /* ImageColor.swift */; };
+		E1628EFB55F152CF15D9270B /* NearbyMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5C526FB81E25B1833ECA6D /* NearbyMapView.swift */; };
 		E2373A87064B4F2298A8FC8B /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39297A7D87A51444667E9B87 /* PhotosUI.framework */; };
 		E2379D9E578C8166808ABA5A /* StoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27C829D9BD2CCB12CBE38A0D /* StoryService.swift */; };
 		E2757A49197308447A4C360D /* PersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CCD337153CBB4FA6AEBB8C8 /* PersistenceTests.swift */; };
@@ -301,6 +302,7 @@
 		464154532F0FB495D0569F60 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		46D607AB349E4278D06776DF /* MomentViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentViewerView.swift; sourceTree = "<group>"; };
 		46DD6A0A48D1EF7D82CC70EC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		4A5C526FB81E25B1833ECA6D /* NearbyMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbyMapView.swift; sourceTree = "<group>"; };
 		4B9F341F53258CE9F9B1AA14 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		4C5BFF5C08501233D36B9CC9 /* MomentsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentsHubView.swift; sourceTree = "<group>"; };
 		4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentTools.swift; sourceTree = "<group>"; };
@@ -773,6 +775,7 @@
 				075796B622629115456247AA /* MomentQR.swift */,
 				78CDDCC14CAA01CA8B94AD72 /* MomentReplayView.swift */,
 				4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */,
+				4A5C526FB81E25B1833ECA6D /* NearbyMapView.swift */,
 				C85AA650345DA9A7C1180B73 /* NearbyViews.swift */,
 				7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */,
 				C968E2C58941908662506CAB /* NowView.swift */,
@@ -1240,6 +1243,7 @@
 				D5EC1F0A13BC8D5B159BBB2B /* MomentViewerView.swift in Sources */,
 				F6380C89DA9184446A464620 /* MomentsHubView.swift in Sources */,
 				0C5C103168D6547093BC820E /* Navigation.swift in Sources */,
+				E1628EFB55F152CF15D9270B /* NearbyMapView.swift in Sources */,
 				3A5B310FA521D72BC375BC45 /* NearbyViews.swift in Sources */,
 				3E37A8DB56E53CA53A00BAB6 /* NewMomentView.swift in Sources */,
 				B01FBD9272DFCB8AF5A074F4 /* NotificationService.swift in Sources */,
