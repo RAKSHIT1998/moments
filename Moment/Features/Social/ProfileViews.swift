@@ -98,6 +98,7 @@ struct SocialProfileView: View {
                 .font(MFont.caption.weight(.medium)).foregroundStyle(MColor.textSecondary)
             }
         }
+        .accessibilityElement(children: .contain)   // keep the children's own identifiers
         .accessibilityIdentifier("profileHeader")
     }
 

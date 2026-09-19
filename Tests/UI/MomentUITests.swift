@@ -23,7 +23,10 @@ final class MomentUITests: XCTestCase {
     private func openMoment(_ id: String) {
         let card = app.otherElements["feedMoment-\(id)"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 20))
-        card.buttons["open-\(id)"].firstMatch.tap()
+        let open = card.buttons["open-\(id)"].firstMatch
+        for _ in 0..<6 where !open.isHittable { app.swipeUp() }
+        if !open.isHittable { for _ in 0..<6 where !open.isHittable { app.swipeDown() } }
+        open.tap()
         XCTAssertTrue(app.descendants(matching: .any)["momentHero"].waitForExistence(timeout: 15))
     }
 
@@ -179,7 +182,9 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["myMemories"].waitForExistence(timeout: 5))
         app.buttons["myMemories"].tap()
         XCTAssertTrue(app.staticTexts["homeHeadline"].waitForExistence(timeout: 20), "private memory layer opens")
-        app.tabBars.buttons["Search"].tap()
+        let hubSearch = app.tabBars.allElementsBoundByIndex.map { $0.buttons["Search"] }.first { $0.isHittable }   // the private hub's own tab bar, not the covered main one
+        XCTAssertNotNil(hubSearch)
+        hubSearch?.tap()
         let field = app.textFields["searchField"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap(); field.typeText("What did Rahul promise me?\n")
