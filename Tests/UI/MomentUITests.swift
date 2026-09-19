@@ -173,11 +173,14 @@ final class MomentUITests: XCTestCase {
     func testSafetySettingsAndPrivateMemoryStillWork() {
         waitForFeed()
         app.tabBars.buttons["Profile"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["People"].waitForExistence(timeout: 10))
+        app.segmentedControls.buttons["People"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["safetyLink"].firstMatch.waitForExistence(timeout: 10))
         app.descendants(matching: .any)["safetyLink"].firstMatch.tap()
         XCTAssertTrue(app.switches["privateAccount"].firstMatch.waitForExistence(timeout: 5))
         app.switches["privateAccount"].firstMatch.tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
+        if app.segmentedControls.buttons["People"].waitForExistence(timeout: 5), !app.buttons["myMemories"].exists { app.segmentedControls.buttons["People"].tap() }
         for _ in 0..<8 where !app.buttons["myMemories"].exists { app.swipeUp() }
         XCTAssertTrue(app.buttons["myMemories"].waitForExistence(timeout: 5))
         app.buttons["myMemories"].tap()

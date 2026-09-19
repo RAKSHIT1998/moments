@@ -197,6 +197,9 @@ extension AppEnvironment {
         case "moment":
             social.pendingMomentID = url.lastPathComponent
             pendingTab = .home
+        case "profile": pendingTab = .profile
+        case "now": pendingTab = .now
+        case "nearby": pendingTab = .discover
         case "memory":
             if let id = UUID(uuidString: url.lastPathComponent) { openMemory(id) }
         case "capture":

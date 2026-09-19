@@ -597,6 +597,9 @@
     "Based on: “%@”" : {
 
     },
+    "Be there. Remember it." : {
+
+    },
     "Before %@" : {
 
     },
@@ -1439,9 +1442,6 @@
     "Needs review" : {
 
     },
-    "Never forget what matters." : {
-
-    },
     "New collection" : {
 
     },
@@ -1622,6 +1622,9 @@
     "Open" : {
 
     },
+    "Open %@" : {
+
+    },
     "Open it" : {
 
     },
@@ -1656,6 +1659,9 @@
 
     },
     "OUR STORY" : {
+
+    },
+    "Owner" : {
 
     },
     "Passport" : {
@@ -1767,6 +1773,9 @@
 
     },
     "Posted" : {
+
+    },
+    "Print your QR for the counter: every scan lands people on this page." : {
 
     },
     "Privacy" : {
@@ -2621,6 +2630,9 @@
 
     },
     "Your numbers" : {
+
+    },
+    "Your page, last 30 days" : {
 
     },
     "Your photos are compressed and stripped of location data before upload. You can remove them any time." : {
