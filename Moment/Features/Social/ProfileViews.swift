@@ -51,6 +51,8 @@ struct SocialProfileView: View {
                 if isMe {
                     Menu {
                         Button("Settings", systemImage: "gearshape") { showSettings = true }
+                        NavigationLink(value: SocialRoute.invite) { Label("Invite friends", systemImage: "person.badge.plus") }
+                        NavigationLink(value: SocialRoute.identity) { Label("Identity & recovery", systemImage: "key") }
                         Button("My private memory", systemImage: "lock") { showMemories = true }
                         NavigationLink(value: SocialRoute.collections) { Label("Collections", systemImage: "folder") }
                         NavigationLink(value: SocialRoute.timeMachine) { Label("Time Machine", systemImage: "clock.arrow.circlepath") }
@@ -98,14 +100,18 @@ struct SocialProfileView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(user?.displayName ?? "…").font(.subheadline.weight(.semibold))
+                HStack(spacing: 6) {
+                    Text(user?.displayName ?? "…").font(.subheadline.weight(.semibold))
+                    if user?.publicKey != nil { Image(systemName: "checkmark.seal.fill").font(.caption).foregroundStyle(MColor.accent).accessibilityLabel("Signed identity") }
+                }
+                if let id = isMe ? env.identity.momentID : user?.momentID { Text(id).font(.system(.caption, design: .monospaced)).foregroundStyle(MColor.textSecondary) }
                 if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.subheadline) }
                 else if isMe { Button("Add a line about you") { showEdit = true }.font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
             }
             if isMe {
                 HStack(spacing: MSpacing.s) {
                     Button { showEdit = true } label: { Text("Edit profile") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("editProfile")
-                    Button { shareItems = ["Add me on MOMENT: @\(user?.handle ?? "")"]; showShare = true } label: { Text("Share profile") }.buttonStyle(ProfileButtonStyle())
+                    NavigationLink(value: SocialRoute.invite) { Text("Invite friends") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("inviteFriends")
                     NavigationLink(value: SocialRoute.passport) { Image(systemName: "book.closed").frame(width: 44) }.buttonStyle(ProfileButtonStyle()).accessibilityLabel("Passport").accessibilityIdentifier("passportLink")
                 }
             }

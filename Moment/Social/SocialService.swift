@@ -13,6 +13,7 @@ final class SocialService {
     private let settings: SettingsStore
     private let analytics: AnalyticsService
     var subscriptions: SubscriptionService = SubscriptionService()
+    var identity: IdentityService?
 
     // Session
     private(set) var accountStatus: AccountStatus = .unknown
@@ -112,6 +113,10 @@ final class SocialService {
                 self.me = try? await backend.updateProfile(displayName: settings.displayName, handle: me.handle, bio: me.bio, avatar: nil)
             }
             if let ck = backend as? CloudKitBackend { Task { await ck.ensureSubscriptions() } }
+            if let identity, me?.publicKey != identity.publicKeyBase64 {
+                try? await backend.publishIdentity(publicKey: identity.publicKeyBase64, momentID: identity.momentID)
+                me = try? await backend.currentUser()
+            }
             await refreshAll()
             queue.drain()
         } catch { lastError = error.localizedDescription }
@@ -381,7 +386,15 @@ final class SocialService {
         let prepared = input.photos.compactMap(MediaPipeline.preparePhoto)
         let dates = prepared.compactMap(\.capturedAt).sorted()
         let locationName = input.locationName ?? input.place?.name
-        let draft = MomentDraft(title: input.title.isBlank ? "Untitled Moment" : input.title.trimmed, description: input.description.trimmed, startAt: input.startAt ?? dates.first, endAt: input.endAt ?? (dates.count > 1 ? dates.last : nil), locationName: locationName, coarsePlace: input.place.map { Self.coarse($0.area.isEmpty ? $0.name : $0.area) } ?? input.locationName.map(Self.coarse), visibility: input.visibility, templateID: input.templateID, remixedFromID: input.remixedFromID, isLive: input.isLive, coverData: prepared.first.flatMap { MediaPipeline.thumbnail($0.data, side: 1080) }, isTeaser: input.isTeaser, initialMemberIDs: input.initialMemberIDs, place: input.place)
+        var draft = MomentDraft(title: input.title.isBlank ? "Untitled Moment" : input.title.trimmed, description: input.description.trimmed, startAt: input.startAt ?? dates.first, endAt: input.endAt ?? (dates.count > 1 ? dates.last : nil), locationName: locationName, coarsePlace: input.place.map { Self.coarse($0.area.isEmpty ? $0.name : $0.area) } ?? input.locationName.map(Self.coarse), visibility: input.visibility, templateID: input.templateID, remixedFromID: input.remixedFromID, isLive: input.isLive, coverData: prepared.first.flatMap { MediaPipeline.thumbnail($0.data, side: 1080) }, isTeaser: input.isTeaser, initialMemberIDs: input.initialMemberIDs, place: input.place)
+        if let identity {
+            // Capture the key value now: the closure runs inside the backend, off the main actor.
+            let key = identity.privateKey, pk = identity.publicKeyBase64, creator = me.id, title = draft.title
+            draft.signer = { id, at in
+                let sig = (try? key.signature(for: Data(IdentityService.momentMessage(id: id, creatorID: creator, title: title, createdAt: at).utf8)))?.base64EncodedString() ?? ""
+                return (signature: sig, publicKey: pk)
+            }
+        }
         do {
             var m = try await backend.createMoment(draft)
             // CloudKit adds people through the share; the in-memory backend already did it in create.
@@ -419,6 +432,12 @@ final class SocialService {
             case .run: return "\(day) run"; case .festival: return "The festival"; case .game: return "Match day"; case .meetup: return "\(day) meetup"; case .other: return "Right now"
             }
         }
+    }
+
+    /// Signature check for a Moment: true only if the creator's published key verifies it.
+    func isVerified(_ m: SocialMoment) -> Bool {
+        guard let sig = m.signature, let pk = m.creatorPublicKey else { return false }
+        return IdentityService.verify(sig, message: IdentityService.momentMessage(id: m.id, creatorID: m.creatorID, title: m.title, createdAt: m.signedAt ?? m.createdAt), publicKeyBase64: pk)
     }
 
     /// ADD YOUR SIDE: photos, a video, a note — attributed to you, in the same Moment.

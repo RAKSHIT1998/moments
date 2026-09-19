@@ -104,6 +104,8 @@ enum SocialRoute: Hashable {
     case nearby
     case nearbyMap
     case place(SocialPlace)
+    case identity
+    case invite
 }
 
 extension View {

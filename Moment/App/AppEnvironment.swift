@@ -27,6 +27,7 @@ final class AppEnvironment {
     let flags: FeatureFlags
     let social: SocialService
     let location: LocationService
+    let identity: IdentityService
 
     /// Deep-link / notification navigation target.
     var pendingMemoryID: UUID?
@@ -69,7 +70,9 @@ final class AppEnvironment {
         self.flags = FeatureFlags()
         self.social = SocialService(backend: backend ?? AppEnvironment.defaultBackend(media: media, settings: settings), media: media, settings: settings, analytics: analytics, queueDirectory: mediaDirectory)
         self.location = LocationService()
+        self.identity = IdentityService()
         social.subscriptions = subscriptions
+        social.identity = identity
         actions.onChange = { [weak self] in self?.surface.noteDataChanged() }
         search.changeToken = { [weak self] in self?.surface.changeToken ?? 0 }
         importer.onChange = { [weak self] in self?.surface.noteDataChanged() }

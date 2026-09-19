@@ -28,6 +28,10 @@ struct SettingsView: View {
             Section("Notifications") {
                 NavigationLink(value: Route.notificationSettings) { Label("Reminders", systemImage: "bell") }
             }
+            Section("Identity") {
+                NavigationLink(value: SocialRoute.identity) { Label("Identity & recovery phrase", systemImage: "key") }
+                NavigationLink(value: SocialRoute.invite) { Label("Invite friends", systemImage: "person.badge.plus") }
+            }
             Section("Setup") {
                 Button { settings.setupCompleted = false } label: { Label("Run setup again", systemImage: "checklist") }
                 #if DEBUG

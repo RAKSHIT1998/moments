@@ -9,6 +9,8 @@ protocol SocialBackend: AnyObject, Sendable {
     func accountStatus() async -> AccountStatus
     func currentUser() async throws -> SocialUser
     func updateProfile(displayName: String, handle: String, bio: String, avatar: Data?) async throws -> SocialUser
+    /// Publishes the identity key on the public profile so others can verify what this person signs.
+    func publishIdentity(publicKey: String, momentID: String) async throws
     func user(id: String) async throws -> SocialUser
     func searchUsers(_ query: String) async throws -> [SocialUser]
 
@@ -99,7 +101,7 @@ protocol SocialBackend: AnyObject, Sendable {
 
 enum AccountStatus: Sendable, Equatable { case available, noAccount, restricted, unknown, offline }
 
-struct MomentDraft: Sendable, Equatable {
+struct MomentDraft: Sendable {
     var title: String
     var description: String
     var startAt: Date?
@@ -115,6 +117,8 @@ struct MomentDraft: Sendable, Equatable {
     /// Members to add at creation (a group's members, "Anyone up?" joiners).
     var initialMemberIDs: [String] = []
     var place: SocialPlace? = nil
+    /// Filled by the service: the creator signs the canonical message after the id is known.
+    var signer: (@Sendable (String, Date) -> (signature: String, publicKey: String))? = nil
 }
 
 /// Relationship strength from actual shared experience — the strongest feed signal.

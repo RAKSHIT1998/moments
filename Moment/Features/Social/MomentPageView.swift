@@ -141,6 +141,7 @@ struct MomentPageView: View {
                     AvatarStack(names: m.memberNames, size: 30)
                     Text(whoLine(m)).font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     Spacer()
+                    if env.social.isVerified(m) { Label("Signed", systemImage: "checkmark.seal.fill").font(MFont.caption).foregroundStyle(MColor.accent).accessibilityLabel("Signed by \(m.creatorName)'s key") }
                 }
             }
             .buttonStyle(.plain)

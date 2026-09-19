@@ -88,6 +88,14 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         return u
     }
 
+    func publishIdentity(publicKey: String, momentID: String) async throws {
+        let uid = try await userRecordName()
+        let id = CKRecord.ID(recordName: "profile_\(uid)")
+        let record = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "Profile", recordID: id)
+        record["userID"] = uid; record["publicKey"] = publicKey; record["momentID"] = momentID
+        cachedUser = Self.user(from: try await save(record, in: publicDB))
+    }
+
     func user(id: String) async throws -> SocialUser {
         do { return Self.user(from: try await publicDB.record(for: CKRecord.ID(recordName: "profile_\(id)"))) } catch { throw map(error) }
     }
@@ -137,6 +145,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["allowsContributions"] = 1
         record["isTeaser"] = draft.isTeaser ? 1 : 0
         Self.write(place: draft.place, to: record)
+        if let signer = draft.signer { let at = Date.now; let s = signer(record.recordID.recordName, at); record["signature"] = s.signature; record["creatorPublicKey"] = s.publicKey; record["signedAt"] = at }
         if let cover = draft.coverData, let url = try? Self.tempFile(cover, ext: "jpg") { record["cover"] = CKAsset(fileURL: url) }
         let saved = try await save(record, in: privateDB)
         let moment = try await moment(from: saved)
@@ -459,7 +468,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
     private func mirrorPublic(_ moment: SocialMoment, record: CKRecord) async throws {
         let id = CKRecord.ID(recordName: "public_\(moment.id)")
         let pub = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "PublicMoment", recordID: id)
-        for key in ["creatorID", "creatorName", "title", "description", "startAt", "endAt", "locationName", "coarsePlace", "memberIDs", "memberNames", "contributionCount", "mediaCount", "commentCount", "shareCount", "isLive", "templateID", "remixedFromID", "placeID", "placeName", "placeArea", "placeCategory", "location"] { pub[key] = record[key] }
+        for key in ["creatorID", "creatorName", "title", "description", "startAt", "endAt", "locationName", "coarsePlace", "memberIDs", "memberNames", "contributionCount", "mediaCount", "commentCount", "shareCount", "isLive", "templateID", "remixedFromID", "placeID", "placeName", "placeArea", "placeCategory", "location", "signature", "creatorPublicKey", "signedAt"] { pub[key] = record[key] }
         pub["visibility"] = MomentVisibility.publicAll.rawValue
         pub["sourceID"] = moment.id
         if let cover = record["cover"] as? CKAsset, let url = cover.fileURL { pub["cover"] = CKAsset(fileURL: url) }
@@ -900,7 +909,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
     static func user(from r: CKRecord) -> SocialUser {
         var avatar: MediaRef? = nil
         if let asset = r["avatar"] as? CKAsset, let url = asset.fileURL { avatar = MediaRef(kind: .photo, localRef: nil, remoteID: url.path()) }
-        return SocialUser(id: r["userID"] as? String ?? r.recordID.recordName.replacingOccurrences(of: "profile_", with: ""), displayName: r["displayName"] as? String ?? "Someone", handle: r["handle"] as? String ?? "", bio: r["bio"] as? String ?? "", avatarRef: avatar, isPrivateAccount: (r["privateAccount"] as? Int ?? 0) == 1, momentCount: r["momentCount"] as? Int ?? 0, sharedCount: r["sharedCount"] as? Int ?? 0, placeCount: r["placeCount"] as? Int ?? 0, peopleCount: r["peopleCount"] as? Int ?? 0, createdAt: r.creationDate ?? .now)
+        return SocialUser(id: r["userID"] as? String ?? r.recordID.recordName.replacingOccurrences(of: "profile_", with: ""), displayName: r["displayName"] as? String ?? "Someone", handle: r["handle"] as? String ?? "", bio: r["bio"] as? String ?? "", avatarRef: avatar, isPrivateAccount: (r["privateAccount"] as? Int ?? 0) == 1, momentCount: r["momentCount"] as? Int ?? 0, sharedCount: r["sharedCount"] as? Int ?? 0, placeCount: r["placeCount"] as? Int ?? 0, peopleCount: r["peopleCount"] as? Int ?? 0, createdAt: r.creationDate ?? .now, publicKey: r["publicKey"] as? String, momentID: r["momentID"] as? String)
     }
 
     func moment(from r: CKRecord) async throws -> SocialMoment {
@@ -918,7 +927,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
             else if let share = try? await (r.recordID.zoneID.ownerName == CKCurrentUserDefaultName ? privateDB : sharedDB).record(for: shareRef.recordID) as? CKShare { shareURL = share.url; shareURLCache[shareRef.recordID.recordName] = share.url }
         }
         let id = (r["sourceID"] as? String) ?? r.recordID.recordName
-        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1, place: Self.place(from: r))
+        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1, place: Self.place(from: r), signature: r["signature"] as? String, creatorPublicKey: r["creatorPublicKey"] as? String, signedAt: r["signedAt"] as? Date)
     }
 
     static func contribution(from r: CKRecord, media: MediaStore) async throws -> Contribution {

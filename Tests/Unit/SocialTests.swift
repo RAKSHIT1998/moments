@@ -455,6 +455,24 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertFalse(second, "free tier: one place")
     }
 
+    @MainActor func testIdentitySignsMomentsAndBackupRoundTrips() async throws {
+        let (env, _) = await makeSocial()
+        let id = env.identity.momentID
+        XCTAssertTrue(id.hasPrefix("MMT-") && id.count == 19, id)
+        XCTAssertEqual(env.social.me?.publicKey, env.identity.publicKeyBase64, "key is published on the profile at start")
+        let m = try XCTUnwrap(await env.social.createMoment(SocialService.NewMomentInput(title: "Signed night")))
+        XCTAssertNotNil(m.signature)
+        XCTAssertTrue(env.social.isVerified(m))
+        var tampered = m; tampered.title = "Edited"
+        XCTAssertFalse(env.social.isVerified(tampered), "changing the title breaks the signature")
+        // Recovery phrase → encrypted backup → restore gives the same ID; wrong phrase is refused.
+        let phrase = IdentityService.generateRecoveryPhrase()
+        XCTAssertEqual(phrase.count, 12); XCTAssertTrue(IdentityService.isValidPhrase(phrase))
+        let backup = try env.identity.exportBackup(phrase: phrase)
+        XCTAssertEqual(try env.identity.importBackup(backup, phrase: phrase), id)
+        XCTAssertThrowsError(try env.identity.importBackup(backup, phrase: IdentityService.generateRecoveryPhrase()))
+    }
+
     func testMediaPipelineStripsMetadataAndBounds() throws {
         let big = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000)).image { ctx in UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000)) }.jpegData(compressionQuality: 1)!
         let p = try XCTUnwrap(MediaPipeline.preparePhoto(big))

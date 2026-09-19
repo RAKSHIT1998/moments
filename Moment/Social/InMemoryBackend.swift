@@ -55,6 +55,7 @@ actor InMemoryBackend: SocialBackend {
         return me
     }
     func user(id: String) async throws -> SocialUser { try gate(); guard let u = users[id] else { throw SocialError.notFound }; return u }
+    func publishIdentity(publicKey: String, momentID: String) async throws { try gate(); me.publicKey = publicKey; me.momentID = momentID; users[me.id] = me }
     func searchUsers(_ query: String) async throws -> [SocialUser] {
         try gate()
         let q = query.lowercased().trimmed
@@ -68,6 +69,7 @@ actor InMemoryBackend: SocialBackend {
         if let data = draft.coverData { let id = "cover_\(UUID().uuidString)"; mediaBlobs[id] = data; cover = MediaRef(kind: .photo, localRef: nil, remoteID: id) }
         var m = SocialMoment(id: "m_\(UUID().uuidString)", creatorID: me.id, creatorName: me.displayName, title: draft.title, description: draft.description, coverRef: cover, createdAt: .now, startAt: draft.startAt, endAt: draft.endAt, locationName: draft.locationName, coarsePlace: draft.coarsePlace, visibility: draft.visibility, memberIDs: [me.id], memberNames: [me.displayName], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: draft.isLive, templateID: draft.templateID, remixedFromID: draft.remixedFromID, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: draft.isTeaser, place: draft.place)
         for id in draft.initialMemberIDs where !m.memberIDs.contains(id) { if let u = users[id] { m.memberIDs.append(id); m.memberNames.append(u.displayName) } }
+        if let signer = draft.signer { let s = signer(m.id, m.createdAt); m.signature = s.signature; m.creatorPublicKey = s.publicKey; m.signedAt = m.createdAt }
         m.shareURL = URL(string: "https://www.icloud.com/share/\(m.id)")
         moments[m.id] = m
         me.momentCount += 1; users[me.id] = me

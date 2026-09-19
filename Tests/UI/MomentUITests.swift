@@ -215,6 +215,8 @@ final class MomentUITests: XCTestCase {
             XCTAssertTrue(name.waitForExistence(timeout: 5))
             name.tap(); name.typeText("Rakshit")
             app.buttons["onboardingContinue"].tap()
+            XCTAssertTrue(app.descendants(matching: .any)["onboardingMomentID"].firstMatch.waitForExistence(timeout: 10), "identity step shows the MOMENT ID")
+            app.buttons["identityContinue"].tap()
             XCTAssertTrue(app.buttons["createMoment"].waitForExistence(timeout: 10), "first Moment builder opens")
             app.buttons["onboardingSkip"].tap()
         }

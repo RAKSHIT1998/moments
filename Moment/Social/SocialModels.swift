@@ -15,6 +15,9 @@ struct SocialUser: Codable, Sendable, Equatable, Identifiable, Hashable {
     var placeCount: Int
     var peopleCount: Int
     var createdAt: Date
+    /// Curve25519 public key (base64) + its fingerprint — the person's MOMENT ID. Lets anyone verify signatures.
+    var publicKey: String? = nil
+    var momentID: String? = nil
 }
 
 /// A pointer to a media file: a local file for pending uploads, a backend asset once uploaded.
@@ -125,6 +128,10 @@ struct SocialMoment: Codable, Sendable, Equatable, Identifiable, Hashable {
     var isTeaser: Bool = false
     /// The venue this happened at, when the creator picked one.
     var place: SocialPlace? = nil
+    /// Creator's signature over (id, creator, title, createdAt) — proves who made it and that it wasn't altered.
+    var signature: String? = nil
+    var creatorPublicKey: String? = nil
+    var signedAt: Date? = nil
 
     var isGroup: Bool { memberIDs.count > 1 }
     var dateLabel: String {

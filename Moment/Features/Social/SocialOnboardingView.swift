@@ -9,6 +9,7 @@ struct SocialOnboardingView: View {
     @State private var handle = ""
     @State private var saving = false
     @State private var showFirstMoment = false
+    @State private var showIdentity = false
     @FocusState private var nameFocused: Bool
 
     private let pages: [(title: String, body: String, symbol: String)] = [
@@ -49,6 +50,9 @@ struct SocialOnboardingView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showIdentity) {
+            ZStack { AmbientBackdrop().ignoresSafeArea(); IdentityOnboardingStep { showIdentity = false; showFirstMoment = true } }
+        }
         .fullScreenCover(isPresented: $showFirstMoment) {
             NavigationStack {
                 NewMomentView { _ in finish() }
@@ -77,7 +81,7 @@ struct SocialOnboardingView: View {
                     env.settings.displayName = name.trimmed
                     if env.social.isSignedIn { _ = await env.social.updateProfile(displayName: name.trimmed, handle: handle, bio: "", avatar: nil) }
                     saving = false
-                    showFirstMoment = true
+                    showIdentity = true
                 }
             }
             .buttonStyle(PrimaryButtonStyle()).disabled(name.isBlank || saving).accessibilityIdentifier("onboardingContinue")

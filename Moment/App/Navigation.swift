@@ -70,6 +70,8 @@ extension View {
             case .nearby: NearbyView(embedded: true)
             case .place(let p): PlaceView(place: p)
             case .nearbyMap: NearbyMapView()
+            case .identity: IdentityView()
+            case .invite: InviteFriendsView()
             }
         }
     }
