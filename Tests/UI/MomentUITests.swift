@@ -225,6 +225,39 @@ final class MomentUITests: XCTestCase {
     }
 
     /// Not an assertion test: walks the app and writes screenshots for design review.
+    func testCreatorPaywallSubscribeAndEarn() {
+        waitForFeed()
+        // Scroll until the locked paid Moment surfaces; unlock it.
+        let unlock = app.descendants(matching: .any)["unlock-m_raw"].firstMatch
+        for _ in 0..<12 where !unlock.exists { app.swipeUp() }
+        XCTAssertTrue(unlock.waitForExistence(timeout: 5), "paid preview from a followed creator is in the feed")
+        snap("12-locked")
+        unlock.tap()
+        let subscribe = app.buttons["subscribeButton"]
+        XCTAssertTrue(subscribe.waitForExistence(timeout: 8))
+        snap("13-subscribe")
+        subscribe.tap()   // demo host: recorded without an App Store purchase
+        XCTAssertTrue(app.staticTexts["You're in. Everything unlocks now."].waitForExistence(timeout: 8))
+        app.buttons["Done"].tap()
+        XCTAssertFalse(unlock.waitForExistence(timeout: 3), "lock is gone once subscribed")
+        // Creator side: set up a plan and see the earnings screen.
+        app.tabBars.buttons["Profile"].tap()
+        let earn = app.descendants(matching: .any)["earnLink"].firstMatch
+        XCTAssertTrue(earn.waitForExistence(timeout: 10))
+        earn.tap()
+        let title = app.descendants(matching: .any)["planTitle"].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 8))
+        title.tap(); title.typeText("Behind the lens")
+        let pitch = app.descendants(matching: .any)["planPitch"].firstMatch
+        pitch.tap(); pitch.typeText("Every frame, same night.\n")
+        app.descendants(matching: .any)["tier-t3"].firstMatch.tap()
+        snap("14-earn-setup")
+        app.swipeUp()
+        app.buttons["savePlan"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["earningsEstimate"].firstMatch.waitForExistence(timeout: 10))
+        snap("15-earn")
+    }
+
     func testScreenshotTour() {
         waitForFeed()
         snap("01-home"); app.swipeUp(); snap("02-home-scrolled")

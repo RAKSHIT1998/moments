@@ -119,3 +119,58 @@ final class DecentralizedTests: XCTestCase {
         XCTAssertTrue(cells.count >= 1 && cells.count <= 9)
     }
 }
+
+/// Paid content over the mesh: the creator's phone hands the key to whoever paid, sealed to their agreement key.
+final class DecentralizedCreatorTests: XCTestCase {
+    func testSubscriberGetsKeyViaGrantAndOthersStayLocked() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-creator-\(UUID().uuidString)")
+        func phone(_ n: String) -> (DecentralizedBackend, EventStore) {
+            let store = EventStore(directory: dir.appending(path: n))
+            return (DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), agreement: Curve25519.KeyAgreement.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m-\(n)")), store: store, keys: MomentKeys(namespace: "test.\(n).\(UUID().uuidString)")), store)
+        }
+        let (alice, aStore) = phone("alice"), (bob, bStore) = phone("bob"), (eve, eStore) = phone("eve")
+        _ = try await alice.updateProfile(displayName: "Alice", handle: "alice", bio: "", avatar: nil)
+        _ = try await bob.updateProfile(displayName: "Bob", handle: "bob", bio: "", avatar: nil)
+        _ = try await eve.updateProfile(displayName: "Eve", handle: "eve", bio: "", avatar: nil)
+        func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
+
+        // Alice sells; makes a paid Moment.
+        _ = try await alice.saveCreatorPlan(CreatorPlan(creatorID: "", creatorName: "", title: "Raw frames", pitch: "All of them", tier: .t2, perks: [], payoutHint: "alice@upi", createdAt: .now))
+        let m = try await alice.createMoment(MomentDraft(title: "Friday raw", description: "the whole set", visibility: .subscribers))
+        let root = await aStore.get([m.id]).first!
+        let aliceID = await alice.myID, bobID = await bob.myID
+        XCTAssertEqual(root.tags["sub"], aliceID)
+        XCTAssertFalse(root.content.contains("the whole set"), "full payload is sealed; only the preview is readable")
+        XCTAssertTrue(root.content.contains("Friday raw"), "preview title is public so the lock can sell")
+
+        // Everyone receives everything; nobody but Alice can open it yet.
+        await sync(aStore, bStore); await sync(aStore, eStore); await sync(bStore, aStore); await sync(eStore, aStore)
+        let bobLocked = try await bob.moment(id: m.id)
+        XCTAssertTrue(bobLocked.isLocked); XCTAssertEqual(bobLocked.title, "Friday raw"); XCTAssertEqual(bobLocked.description, "")
+
+        // Bob pays (test: no transaction). His subscribe event reaches Alice, whose phone grants him the key.
+        _ = try await bob.subscribe(to: aliceID, tier: .t2, transactionID: "txn-bob", days: 30)
+        await sync(bStore, aStore)
+        let subs = try await alice.subscribers()          // grants pending subscribers
+        XCTAssertEqual(subs.map(\.subscriberName), ["Bob"])
+        let grants = await aStore.all(.grant)
+        XCTAssertEqual(grants.count, 1)
+        XCTAssertEqual(grants.first?.tags["to"], bobID)
+
+        await sync(aStore, bStore); await sync(aStore, eStore)
+        await bob.processGrants()
+        await eve.processGrants()
+        let bobOpen = try await bob.moment(id: m.id)
+        XCTAssertFalse(bobOpen.isLocked); XCTAssertEqual(bobOpen.description, "the whole set")
+        let eveStill = try await eve.moment(id: m.id)
+        XCTAssertTrue(eveStill.isLocked, "Eve holds the same bytes as Bob, including his grant, and can't open any of it")
+
+        // Alice adds a side; Bob reads it, Eve can't.
+        _ = try await alice.addContribution(Contribution(id: "", momentID: m.id, authorID: "", authorName: "Alice", kind: .text, media: nil, caption: "frame 1", createdAt: .now, originalTimestamp: nil, reactionCounts: [:], commentCount: 0, uploadState: .pending), mediaData: nil)
+        try await Task.sleep(for: .milliseconds(50))
+        await sync(aStore, bStore); await sync(aStore, eStore)
+        let bobSides = try await bob.contributions(momentID: m.id)
+        XCTAssertEqual(bobSides.map(\.caption), ["frame 1"])
+        do { _ = try await eve.contributions(momentID: m.id); XCTFail("locked") } catch {}
+    }
+}

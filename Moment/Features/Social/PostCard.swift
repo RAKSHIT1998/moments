@@ -94,6 +94,9 @@ struct MomentPostCard: View {
                     HStack(spacing: 6) { Glyph(.addSide, size: 20); Text("Add your side") }.font(.subheadline.weight(.semibold))
                 }
                 .accessibilityIdentifier("addYourSide")
+            } else if moment.visibility == .subscribers {
+                // Paid Moments are the creator's; people subscribe, they don't join.
+                Label("Subscribers", systemImage: "crown.fill").font(.subheadline.weight(.semibold)).foregroundStyle(.orange)
             } else {
                 Button("I was there") { Task { if await env.social.join(momentID: moment.id) { env.toast("You're in.") } } }.font(.subheadline.weight(.semibold)).accessibilityIdentifier("iWasThere")
             }

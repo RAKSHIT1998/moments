@@ -484,3 +484,61 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertEqual(SocialService.coarse("Palolem Beach, Canacona, Goa"), "Goa")
     }
 }
+
+@MainActor
+final class CreatorEconomyTests: XCTestCase {
+    private func makeSocial() async -> (AppEnvironment, InMemoryBackend) {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try! StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        return (env, backend)
+    }
+
+    func testPaidMomentIsLockedUntilSubscribed() async throws {
+        let (env, _) = await makeSocial()
+        await env.social.loadCreatorPlan("u_public")
+        XCTAssertEqual(env.social.plan(for: "u_public")?.tier, .t2)
+        XCTAssertFalse(env.social.isSubscribed(to: "u_public"))
+        let locked = try XCTUnwrap(env.social.feed.first { $0.moment.id == "m_raw" }?.moment, "paid previews from people you follow are in the feed")
+        XCTAssertTrue(locked.isLocked)
+        XCTAssertNotNil(locked.coverRef, "the preview keeps its cover so the lock has something to sell")
+        await env.social.loadMoment("m_raw")
+        XCTAssertTrue(env.social.allContributions("m_raw").isEmpty, "sides never reach a non-subscriber")
+
+        let ok = await env.social.subscribe(to: "u_public")   // test host: no App Store, recorded without a transaction
+        XCTAssertTrue(ok)
+        XCTAssertTrue(env.social.isSubscribed(to: "u_public"))
+        let open = try XCTUnwrap(env.social.feed.first { $0.moment.id == "m_raw" }?.moment)
+        XCTAssertFalse(open.isLocked)
+        await env.social.loadMoment("m_raw")
+        XCTAssertEqual(env.social.allContributions("m_raw").count, 4)
+        XCTAssertEqual(env.social.subscription(to: "u_public")?.expiresAt.daysUntil(.now).magnitude ?? 0, 30, accuracy: 1)
+    }
+
+    func testCreatorPlanSubscribersAndEarnings() async throws {
+        let (env, backend) = await makeSocial()
+        XCTAssertNil(env.social.myPlan)
+        let saved = await env.social.savePlan(title: "Behind the lens", pitch: "Every frame.", tier: .t3, perks: ["RAW files", "", "Monthly call"], payoutHint: "rakshit@upi")
+        XCTAssertTrue(saved)
+        XCTAssertEqual(env.social.myPlan?.perks, ["RAW files", "Monthly call"])
+        // Rahul subscribes to me.
+        try await backend.acting(as: "u_rahul") { b in _ = try await b.subscribe(to: "me", tier: .t3, transactionID: "txn-1", days: 30) }
+        await env.social.refreshCreator()
+        XCTAssertEqual(env.social.activeSubscriberCount, 1)
+        XCTAssertEqual(env.social.earningsEstimate, 999 * 0.7 * 0.8, accuracy: 0.01)
+        // A paid Moment of mine is open to me and to Rahul, locked to Sarah.
+        let m = try await backend.createMoment(MomentDraft(title: "RAW set", description: "", visibility: .subscribers))
+        var asRahul: SocialMoment?, asSarah: SocialMoment?
+        try await backend.acting(as: "u_rahul") { b in asRahul = try await b.moment(id: m.id) }
+        XCTAssertEqual(asRahul?.isLocked, false)
+        try await backend.acting(as: "u_sarah") { b in asSarah = try await b.moment(id: m.id) }
+        XCTAssertEqual(asSarah?.isLocked, true)
+        // Stop selling: plan gone, new paid Moments impossible from the UI (visibility hidden), existing subs untouched.
+        await env.social.removePlan()
+        XCTAssertNil(env.social.myPlan)
+        var bought = false
+        try? await backend.acting(as: "u_sarah") { b in _ = try await b.subscribe(to: "me", tier: .t3, transactionID: nil, days: 30); bought = true }
+        XCTAssertFalse(bought, "nobody can buy a plan that no longer exists")
+    }
+}

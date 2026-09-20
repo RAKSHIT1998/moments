@@ -102,11 +102,11 @@ actor DecentralizedBackend: SocialBackend {
 
     /// Sign, store, fan out.
     @discardableResult
-    private func emit(_ kind: SignedEvent.Kind, tags: [String: String] = [:], payload: some Encodable, momentKey: SymmetricKey? = nil) throws -> SignedEvent {
+    private func emit(_ kind: SignedEvent.Kind, tags: [String: String] = [:], payload: some Encodable, momentKey: SymmetricKey? = nil) async throws -> SignedEvent {
         let (content, enc) = try SignedEvent.encode(payload, momentKey: momentKey)
         var t = tags; if enc { t["enc"] = "1" }
         let e = try SignedEvent.make(kind: kind, key: key, tags: t, content: content)
-        Task { await store.ingest(e) }
+        await store.ingest(e)
         for tr in transports { tr.publish(e) }
         return e
     }
@@ -123,7 +123,7 @@ actor DecentralizedBackend: SocialBackend {
         var avatarRef: String? = existing.flatMap { _ in nil }
         if let avatar, let thumb = MediaPipeline.thumbnail(avatar, side: 256) { avatarRef = thumb.base64EncodedString() }
         let p = Payloads.Profile(displayName: displayName, handle: handle.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "_" }, bio: bio, avatar: avatarRef, privateAccount: safety.privateAccount, momentID: IdentityService.fingerprint(of: key.publicKey.rawRepresentation), agreePK: agreement.publicKey.rawRepresentation.base64EncodedString())
-        try emit(.profile, payload: p)
+        try await emit(.profile, payload: p)
         profileCache[myID] = nil
         try? await Task.sleep(for: .milliseconds(20))
         return try await user(id: myID)
@@ -268,9 +268,9 @@ actor DecentralizedBackend: SocialBackend {
             tags["sub"] = myID
             var preview = p; preview.description = ""; preview.cover = draft.coverData.flatMap { MediaPipeline.thumbnail($0, side: 360) }?.base64EncodedString()
             let sealed = try AES.GCM.seal(JSONEncoder.event.encode(p), using: key).combined!.base64EncodedString()
-            e = try emit(.moment, tags: tags, payload: Payloads.Locked(preview: preview, sealed: sealed))
+            e = try await emit(.moment, tags: tags, payload: Payloads.Locked(preview: preview, sealed: sealed))
         } else {
-            e = try emit(.moment, tags: tags, payload: p, momentKey: key)
+            e = try await emit(.moment, tags: tags, payload: p, momentKey: key)
         }
         // The Moment's own id is the event id; index it under itself so children can be folded.
         if let key, !paid { keys.save(key, for: e.id) }
@@ -286,20 +286,20 @@ actor DecentralizedBackend: SocialBackend {
         // with their name, which the fold treats as membership (they can leave at any time).
         let name = (try? await user(id: userID))?.displayName ?? "Invited"
         let k = keys.load(momentID)
-        try emit(.join, tags: ["moment": momentID, "for": userID], payload: Payloads.Join(name: name), momentKey: k)
+        try await emit(.join, tags: ["moment": momentID, "for": userID], payload: Payloads.Join(name: name), momentKey: k)
     }
 
     func updateMoment(_ moment: SocialMoment) async throws -> SocialMoment {
         guard moment.creatorID == myID else { throw SocialError.notAllowed }
         let k = keys.load(moment.id)
-        try emit(.momentUpdate, tags: ["moment": moment.id], payload: Payloads.Update(title: moment.title, description: moment.description, visibility: moment.visibility.rawValue, isLive: moment.isLive, allowsContributions: moment.allowsContributions, isTeaser: moment.isTeaser, cover: nil), momentKey: k)
+        try await emit(.momentUpdate, tags: ["moment": moment.id], payload: Payloads.Update(title: moment.title, description: moment.description, visibility: moment.visibility.rawValue, isLive: moment.isLive, allowsContributions: moment.allowsContributions, isTeaser: moment.isTeaser, cover: nil), momentKey: k)
         try? await Task.sleep(for: .milliseconds(20))
         return try await self.moment(id: moment.id)
     }
 
     func deleteMoment(id: String) async throws {
         guard let m = await build(id), m.creatorID == myID else { throw SocialError.notAllowed }
-        try emit(.delete, tags: ["target": id, "moment": id], payload: ["reason": "deleted"])
+        try await emit(.delete, tags: ["target": id, "moment": id], payload: ["reason": "deleted"])
     }
 
     func myMoments(cursor: String?) async throws -> FeedPage<SocialMoment> { FeedPage(items: (await momentsInvolving(myID)).filter { $0.creatorID == myID }.sorted { $0.createdAt > $1.createdAt }, cursor: nil) }
@@ -334,7 +334,7 @@ actor DecentralizedBackend: SocialBackend {
         var b64: String? = nil
         if let mediaData { b64 = (c.kind == .video ? mediaData : (MediaPipeline.thumbnail(mediaData, side: 1280) ?? mediaData)).base64EncodedString() }
         let s = Payloads.Side(kind: c.kind.rawValue, caption: c.caption, media: b64, mediaKind: c.kind == .video ? "video" : "photo", originalTimestamp: c.originalTimestamp, authorName: c.authorName, w: c.media?.width, h: c.media?.height)
-        let e = try emit(.contribution, tags: ["moment": c.momentID], payload: s, momentKey: k)
+        let e = try await emit(.contribution, tags: ["moment": c.momentID], payload: s, momentKey: k)
         var out = c; out.id = e.id; out.uploadState = .uploaded; out.createdAt = e.createdAt
         return out
     }
@@ -343,7 +343,7 @@ actor DecentralizedBackend: SocialBackend {
         let evs = await store.get([id])
         let owner = await build(momentID)?.creatorID
         guard let e = evs.first, e.author == myID || owner == myID else { throw SocialError.notAllowed }
-        try emit(.delete, tags: ["target": id, "moment": momentID], payload: ["reason": "removed"])
+        try await emit(.delete, tags: ["target": id, "moment": momentID], payload: ["reason": "removed"])
     }
 
     func share(momentID: String, with userIDs: [String]) async throws -> URL {
@@ -367,27 +367,27 @@ actor DecentralizedBackend: SocialBackend {
     func join(momentID: String) async throws -> SocialMoment {
         guard let m = await build(momentID), canSee(m) else { throw SocialError.notFound }
         let me = try await currentUser()
-        if !m.memberIDs.contains(myID) { let ck = await childKey(momentID); try emit(.join, tags: ["moment": momentID], payload: Payloads.Join(name: me.displayName), momentKey: ck); try? await Task.sleep(for: .milliseconds(20)) }
+        if !m.memberIDs.contains(myID) { let ck = await childKey(momentID); try await emit(.join, tags: ["moment": momentID], payload: Payloads.Join(name: me.displayName), momentKey: ck); try? await Task.sleep(for: .milliseconds(20)) }
         return try await moment(id: momentID)
     }
 
     func leaveMoment(id: String) async throws {
-        let ck = await childKey(id); try emit(.leave, tags: ["moment": id], payload: ["left": "1"], momentKey: ck)
+        let ck = await childKey(id); try await emit(.leave, tags: ["moment": id], payload: ["left": "1"], momentKey: ck)
     }
 
     func merge(sourceID: String, into targetID: String) async throws -> SocialMoment {
         guard let src = await build(sourceID), let dst = await build(targetID), src.creatorID == myID, dst.creatorID == myID else { throw SocialError.notAllowed }
         let sk = keys.load(sourceID), dk = keys.load(targetID)
-        for e in await store.forMoment(sourceID) where e.kind == .contribution { if let s = e.payload(Payloads.Side.self, momentKey: sk) { try emit(.contribution, tags: ["moment": targetID, "movedFrom": e.id], payload: s, momentKey: dk) } }
-        for (id, name) in zip(src.memberIDs, src.memberNames) where !dst.memberIDs.contains(id) { try emit(.join, tags: ["moment": targetID, "for": id], payload: Payloads.Join(name: name), momentKey: dk) }
-        try emit(.delete, tags: ["target": sourceID, "moment": sourceID], payload: ["reason": "merged"])
+        for e in await store.forMoment(sourceID) where e.kind == .contribution { if let s = e.payload(Payloads.Side.self, momentKey: sk) { try await emit(.contribution, tags: ["moment": targetID, "movedFrom": e.id], payload: s, momentKey: dk) } }
+        for (id, name) in zip(src.memberIDs, src.memberNames) where !dst.memberIDs.contains(id) { try await emit(.join, tags: ["moment": targetID, "for": id], payload: Payloads.Join(name: name), momentKey: dk) }
+        try await emit(.delete, tags: ["target": sourceID, "moment": sourceID], payload: ["reason": "merged"])
         try? await Task.sleep(for: .milliseconds(30))
         return try await moment(id: targetID)
     }
 
     func setCover(momentID: String, data: Data) async throws -> SocialMoment {
         guard let m = await build(momentID), m.creatorID == myID else { throw SocialError.notAllowed }
-        try emit(.momentUpdate, tags: ["moment": momentID], payload: Payloads.Update(cover: MediaPipeline.thumbnail(data, side: 720)?.base64EncodedString()), momentKey: keys.load(momentID))
+        try await emit(.momentUpdate, tags: ["moment": momentID], payload: Payloads.Update(cover: MediaPipeline.thumbnail(data, side: 720)?.base64EncodedString()), momentKey: keys.load(momentID))
         coverCache[momentID] = nil
         try? await Task.sleep(for: .milliseconds(20))
         return try await moment(id: momentID)
@@ -447,7 +447,7 @@ actor DecentralizedBackend: SocialBackend {
     }
     func saveClaim(_ c: PlaceClaim) async throws -> PlaceClaim {
         if let existing = try await claim(for: c.placeID), existing.ownerID != myID { throw SocialError.notAllowed }
-        try emit(.claim, tags: ["place": c.placeID], payload: Payloads.Claim(businessName: c.businessName, role: c.role, note: c.note, ownerName: c.ownerName))
+        try await emit(.claim, tags: ["place": c.placeID], payload: Payloads.Claim(businessName: c.businessName, role: c.role, note: c.note, ownerName: c.ownerName))
         var out = c; out.ownerID = myID; out.verified = false; return out
     }
     func myClaims() async throws -> [PlaceClaim] {
@@ -464,12 +464,12 @@ actor DecentralizedBackend: SocialBackend {
     }
     func addComment(_ c: MomentComment) async throws -> MomentComment {
         guard ContentModeration.check(c.text) == .ok, let m = await build(c.momentID), canSee(m) else { throw SocialError.notAllowed }
-        let e = try emit(.comment, tags: ["moment": c.momentID], payload: Payloads.Comment(text: c.text, contributionID: c.contributionID, authorName: c.authorName), momentKey: await childKey(c.momentID))
+        let e = try await emit(.comment, tags: ["moment": c.momentID], payload: Payloads.Comment(text: c.text, contributionID: c.contributionID, authorName: c.authorName), momentKey: await childKey(c.momentID))
         var out = c; out.id = e.id; out.authorID = myID; return out
     }
-    func deleteComment(id: String, momentID: String) async throws { try emit(.delete, tags: ["target": id, "moment": momentID], payload: ["reason": "removed"]) }
+    func deleteComment(id: String, momentID: String) async throws { try await emit(.delete, tags: ["target": id, "moment": momentID], payload: ["reason": "removed"]) }
     func react(momentID: String, contributionID: String?, kind: ReactionKind?) async throws {
-        let ck = await childKey(momentID); try emit(.reaction, tags: ["moment": momentID], payload: Payloads.Reaction(kind: kind?.rawValue, contributionID: contributionID), momentKey: ck)
+        let ck = await childKey(momentID); try await emit(.reaction, tags: ["moment": momentID], payload: Payloads.Reaction(kind: kind?.rawValue, contributionID: contributionID), momentKey: ck)
     }
     func myReactions(momentID: String) async throws -> [MomentReaction] {
         let k = await childKey(momentID)
@@ -485,7 +485,7 @@ actor DecentralizedBackend: SocialBackend {
         var tags: [String: String] = ["exp": String(Int(post.expiresAt.timeIntervalSince1970))]
         if let p = post.place { tags["place"] = p.id; tags["geo"] = GeoCell.cell(lat: p.latitude, lon: p.longitude) }
         if safety.allowDiscoverByLocation { tags["disc"] = "1" }
-        let e = try emit(.now, tags: tags, payload: Payloads.Now(text: post.text, media: mediaData.flatMap { MediaPipeline.thumbnail($0, side: 1080) }?.base64EncodedString(), expiresAt: post.expiresAt, coarsePlace: post.coarsePlace, activity: post.activity.rawValue, place: post.place, authorName: post.authorName))
+        let e = try await emit(.now, tags: tags, payload: Payloads.Now(text: post.text, media: mediaData.flatMap { MediaPipeline.thumbnail($0, side: 1080) }?.base64EncodedString(), expiresAt: post.expiresAt, coarsePlace: post.coarsePlace, activity: post.activity.rawValue, place: post.place, authorName: post.authorName))
         var out = post; out.id = e.id; out.authorID = myID; return out
     }
     private func followsMe(_ id: String) -> Bool { followCache.contains(id) }
@@ -511,10 +511,10 @@ actor DecentralizedBackend: SocialBackend {
         }
         return out.sorted { $0.createdAt > $1.createdAt }
     }
-    func deleteNow(id: String) async throws { try emit(.delete, tags: ["target": id], payload: ["reason": "removed"]) }
+    func deleteNow(id: String) async throws { try await emit(.delete, tags: ["target": id], payload: ["reason": "removed"]) }
     func joinNow(id: String) async throws -> NowPost {
         let me = try await currentUser()
-        try emit(.nowJoin, tags: ["now": id], payload: Payloads.Join(name: me.displayName))
+        try await emit(.nowJoin, tags: ["now": id], payload: Payloads.Join(name: me.displayName))
         try? await Task.sleep(for: .milliseconds(20))
         guard let n = try await nowFeed(all: true).first(where: { $0.id == id }) else { throw SocialError.notFound }
         return n
@@ -522,8 +522,8 @@ actor DecentralizedBackend: SocialBackend {
 
     // MARK: - Graph & safety (follows are public signed events; blocks/mutes stay local)
 
-    func follow(userID: String, close: Bool) async throws { try emit(.follow, tags: ["to": userID, "close": close ? "1" : "0"], payload: ["ok": "1"]); followCache.insert(userID) }
-    func unfollow(userID: String) async throws { try emit(.unfollow, tags: ["to": userID], payload: ["ok": "1"]) }
+    func follow(userID: String, close: Bool) async throws { try await emit(.follow, tags: ["to": userID, "close": close ? "1" : "0"], payload: ["ok": "1"]); followCache.insert(userID) }
+    func unfollow(userID: String) async throws { try await emit(.unfollow, tags: ["to": userID], payload: ["ok": "1"]) }
     func following() async throws -> [Follow] { await follows(from: myID) }
     func followers() async throws -> [Follow] {
         var latest: [String: (Bool, Date, Bool)] = [:]
@@ -541,7 +541,7 @@ actor DecentralizedBackend: SocialBackend {
     func blockedUserIDs() async throws -> [String] { Array(localBlocked).sorted() }
     func mute(userID: String) async throws { localMuted.insert(userID); UserDefaults.standard.set(Array(localMuted), forKey: "mesh.muted") }
     func mutedUserIDs() async throws -> [String] { Array(localMuted).sorted() }
-    func report(_ report: UserReport) async throws { try emit(.report, tags: [:], payload: Payloads.Report(targetUserID: report.targetUserID, targetMomentID: report.targetMomentID, reason: report.reason.rawValue, details: report.details)) }
+    func report(_ report: UserReport) async throws { try await emit(.report, tags: [:], payload: Payloads.Report(targetUserID: report.targetUserID, targetMomentID: report.targetMomentID, reason: report.reason.rawValue, details: report.details)) }
     func safetySettings() async throws -> SafetySettings { safety }
     func updateSafetySettings(_ s: SafetySettings) async throws { safety = s; if let d = try? JSONEncoder().encode(s) { try? Keychain.set(d, for: "mesh.safety") } }
 
@@ -589,12 +589,12 @@ actor DecentralizedBackend: SocialBackend {
         var out = g; if out.ownerID.isEmpty { out.ownerID = myID }
         guard out.ownerID == myID else { throw SocialError.notAllowed }
         if !out.memberIDs.contains(myID) { out.memberIDs.insert(myID, at: 0); out.memberNames.insert((try? await currentUser())?.displayName ?? "You", at: 0) }
-        try emit(.group, tags: ["group": out.id], payload: Payloads.Group(name: out.name, emoji: out.emoji, memberIDs: out.memberIDs, memberNames: out.memberNames, ownerID: myID))
+        try await emit(.group, tags: ["group": out.id], payload: Payloads.Group(name: out.name, emoji: out.emoji, memberIDs: out.memberIDs, memberNames: out.memberNames, ownerID: myID))
         return out
     }
     func leaveGroup(id: String) async throws {
         guard var g = try await groups().first(where: { $0.id == id }) else { return }
-        if g.ownerID == myID { try emit(.group, tags: ["group": id], payload: Payloads.Group(name: g.name, emoji: g.emoji, memberIDs: [], memberNames: [], ownerID: myID)); return }
+        if g.ownerID == myID { try await emit(.group, tags: ["group": id], payload: Payloads.Group(name: g.name, emoji: g.emoji, memberIDs: [], memberNames: [], ownerID: myID)); return }
         g.memberIDs.removeAll { $0 == myID }
         // Non-owners can't rewrite the owner's record; membership is honoured locally by hiding it.
         UserDefaults.standard.set((UserDefaults.standard.stringArray(forKey: "mesh.leftGroups") ?? []) + [id], forKey: "mesh.leftGroups")
@@ -625,13 +625,13 @@ actor DecentralizedBackend: SocialBackend {
     }
     func saveCreatorPlan(_ plan: CreatorPlan) async throws -> CreatorPlan {
         let me = try await currentUser()
-        try emit(.plan, payload: Payloads.Plan(title: plan.title, pitch: plan.pitch, tier: plan.tier.rawValue, perks: plan.perks, payoutHint: plan.payoutHint, creatorName: me.displayName))
+        try await emit(.plan, payload: Payloads.Plan(title: plan.title, pitch: plan.pitch, tier: plan.tier.rawValue, perks: plan.perks, payoutHint: plan.payoutHint, creatorName: me.displayName))
         _ = creatorKey()
         try? await Task.sleep(for: .milliseconds(20))
         return try await creatorPlan(for: myID) ?? plan
     }
     func removeCreatorPlan() async throws {
-        try emit(.plan, payload: Payloads.Plan(title: "", pitch: "", tier: "none", perks: [], payoutHint: "", creatorName: ""))
+        try await emit(.plan, payload: Payloads.Plan(title: "", pitch: "", tier: "none", perks: [], payoutHint: "", creatorName: ""))
         keys.save(MomentKeys.new(), for: "creator.\(myID)")   // rotate: nothing new is readable with old grants
     }
     func subscribe(to creatorID: String, tier: CreatorPlan.Tier, transactionID: String?, days: Int) async throws -> CreatorSubscription {
@@ -640,7 +640,7 @@ actor DecentralizedBackend: SocialBackend {
         let existing = (try await mySubscriptions()).first { $0.creatorID == creatorID && $0.isActive }
         let start = existing?.expiresAt ?? .now
         let exp = start.addingTimeInterval(Double(days) * 86400)
-        let e = try emit(.subscribe, tags: ["to": creatorID, "exp": String(Int(exp.timeIntervalSince1970))], payload: Payloads.Subscribe(tier: tier.rawValue, days: days, transactionID: transactionID, name: me.displayName))
+        let e = try await emit(.subscribe, tags: ["to": creatorID, "exp": String(Int(exp.timeIntervalSince1970))], payload: Payloads.Subscribe(tier: tier.rawValue, days: days, transactionID: transactionID, name: me.displayName))
         for t in transports { (t as? RelayTransport)?.subscribe(id: "grants", .init(kinds: ["grant"], tags: ["to": myID])) }
         return CreatorSubscription(id: e.id, subscriberID: myID, subscriberName: me.displayName, creatorID: creatorID, tier: tier, startedAt: e.createdAt, expiresAt: exp, transactionID: transactionID)
     }
@@ -669,7 +669,7 @@ actor DecentralizedBackend: SocialBackend {
         for s in subs where s.isActive && !granted.contains(s.subscriberID) {
             guard let profile = await store.all(.profile).last(where: { $0.author == s.subscriberID })?.payload(Payloads.Profile.self), let agree = profile.agreePK,
                   let box = try? SealedForPeer.seal(k.withUnsafeBytes { Data($0) }, from: agreement, to: agree) else { continue }
-            _ = try? emit(.grant, tags: ["to": s.subscriberID, "key": fingerprint, "exp": String(Int(s.expiresAt.timeIntervalSince1970))], payload: ["box": box])
+            _ = try? await emit(.grant, tags: ["to": s.subscriberID, "key": fingerprint, "exp": String(Int(s.expiresAt.timeIntervalSince1970))], payload: ["box": box])
         }
     }
     /// A grant addressed to me: open it with my agreement key and keep the creator key.

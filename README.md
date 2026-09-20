@@ -42,6 +42,16 @@ What's built on top of that contract (all real data, nothing generated):
 
 Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the app uses `CloudKitBackend` with container `iCloud.com.rakshitbargotra.moment`. Nothing social is faked with local-only data in Release: if iCloud is unavailable the UI says so and keeps private Moments working.
 
+## Creator economy (subscriptions)
+
+Creators sell access to **subscribers-only Moments** from their profile (Profile → *Earn from your Moments*, or Settings → Creators). One plan per creator: a name, a pitch, up to three perks, and a price tier. Fans pay through the App Store — **non‑renewing 30‑day products** `creator.30d.t1/t2/t3` (≈ ₹199 / ₹499 / ₹999; Apple localises the price) — so there is no card handling in the app and nothing auto‑renews. `SocialService.subscribe(to:)` runs the StoreKit 2 purchase, then records the subscription (`SocialBackend.subscribe`). Locked Moments show a frosted preview (cover + title) with an *Unlock* button; sides never reach a non‑subscriber.
+
+**How access is enforced**
+- *Decentralised (default)*: a paid Moment's full payload is AES‑GCM sealed under the creator's content key; the event carries only a readable preview. When a `subscribe` event reaches the creator's phone, it emits a `grant` event with that key sealed to the subscriber's X25519 agreement key (published in their profile). Relays and everyone else store the grant but can't open it. Tested end to end in `DecentralizedCreatorTests`.
+- *iCloud*: the preview is a `PublicMoment` record with `visibility = subscribers`; the sides live in the creator's private zone, and the creator's phone adds active subscribers to the Moment's `CKShare` when it refreshes.
+
+**Money**: Apple pays MOMENT's developer account (after its ~30% cut); MOMENT pays creators `CreatorEconomics.creatorShare` (80%) of the net once a month to the payout handle they entered (UPI / PayPal / IBAN, stored in the plan record and read only by the payout process). The app's *Earn* screen shows an estimate computed from active subscriptions with exactly that formula. There is no wallet, no token, and no fee hidden in the app; fraud checks on transaction ids happen at payout time, not on‑device.
+
 ## Requirements
 
 - Xcode 16.2 (iOS 18.2 SDK), Swift 6 toolchain, Swift 5 language mode
