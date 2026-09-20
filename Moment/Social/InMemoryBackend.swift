@@ -31,6 +31,8 @@ actor InMemoryBackend: SocialBackend {
     var collectionsByID: [String: MomentCollection] = [:]
     var groupsByID: [String: SocialGroup] = [:]
     var claims: [String: PlaceClaim] = [:]
+    var plans: [String: CreatorPlan] = [:]
+    var subs: [CreatorSubscription] = []
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
     var offline = false
@@ -93,14 +95,21 @@ actor InMemoryBackend: SocialBackend {
     func moment(id: String) async throws -> SocialMoment {
         try gate(); guard let m = moments[id] else { throw SocialError.notFound }
         guard canSee(m) else { throw SocialError.notAllowed }
-        return m
+        return locked(m)
+    }
+    /// Subscribers-only Moments are visible to everyone as a locked preview; only paying subscribers get inside.
+    private func isSubscribed(to creatorID: String) -> Bool { subs.contains { $0.subscriberID == me.id && $0.creatorID == creatorID && $0.isActive } }
+    private func locked(_ m: SocialMoment) -> SocialMoment {
+        var out = m
+        out.isLocked = m.visibility == .subscribers && m.creatorID != me.id && !isSubscribed(to: m.creatorID)
+        return out
     }
     private func canSee(_ m: SocialMoment) -> Bool {
         if blocked.contains(m.creatorID) { return false }
         if m.memberIDs.contains(me.id) { return true }
         switch m.visibility {
         case .privateOnly, .group: return false
-        case .publicAll: return true
+        case .publicAll, .subscribers: return true
         case .friends: return isFriend(m.creatorID)
         case .closeFriends: return follows.contains { $0.fromID == m.creatorID && $0.toID == me.id && $0.isClose }
         }
@@ -114,7 +123,11 @@ actor InMemoryBackend: SocialBackend {
     func sharedWithMe(cursor: String?) async throws -> FeedPage<SocialMoment> {
         try gate(); return FeedPage(items: moments.values.filter { $0.creatorID != me.id && $0.memberIDs.contains(me.id) }.sorted { $0.createdAt > $1.createdAt }, cursor: nil)
     }
-    func contributions(momentID: String) async throws -> [Contribution] { try gate(); _ = try await moment(id: momentID); return contributions[momentID] ?? [] }
+    func contributions(momentID: String) async throws -> [Contribution] {
+        try gate(); let m = try await moment(id: momentID)
+        guard !m.isLocked else { throw SocialError.notAllowed }
+        return contributions[momentID] ?? []
+    }
     func addContribution(_ c: Contribution, mediaData: Data?) async throws -> Contribution {
         try gate(); guard var m = moments[c.momentID] else { throw SocialError.notFound }
         guard m.allowsContributions, m.memberIDs.contains(me.id) || m.visibility == .publicAll else { throw SocialError.notAllowed }
@@ -201,7 +214,7 @@ actor InMemoryBackend: SocialBackend {
     // MARK: Feed / discover
     func feed(cursor: String?) async throws -> FeedPage<SocialMoment> {
         try gate()
-        let items = moments.values.filter { $0.visibility != .privateOnly || $0.creatorID == me.id }.filter { canSee($0) }.filter { !muted.contains($0.creatorID) }
+        let items = moments.values.filter { $0.visibility != .privateOnly || $0.creatorID == me.id }.filter { canSee($0) }.filter { !muted.contains($0.creatorID) }.map { locked($0) }
         return FeedPage(items: items.sorted { $0.createdAt > $1.createdAt }, cursor: nil)
     }
     func discover(query: String?, place: String?, cursor: String?) async throws -> FeedPage<SocialMoment> {
@@ -387,6 +400,25 @@ actor InMemoryBackend: SocialBackend {
         throw SocialError.notFound
     }
 
+    // MARK: Creator economy
+    func creatorPlan(for userID: String) async throws -> CreatorPlan? { try gate(); return plans[userID] }
+    func saveCreatorPlan(_ plan: CreatorPlan) async throws -> CreatorPlan {
+        try gate(); var p = plan; p.creatorID = me.id; p.creatorName = me.displayName; plans[me.id] = p; return p
+    }
+    func removeCreatorPlan() async throws { try gate(); plans[me.id] = nil }
+    func subscribe(to creatorID: String, tier: CreatorPlan.Tier, transactionID: String?, days: Int) async throws -> CreatorSubscription {
+        try gate()
+        guard creatorID != me.id, plans[creatorID] != nil else { throw SocialError.notAllowed }
+        let existing = subs.first { $0.subscriberID == me.id && $0.creatorID == creatorID && $0.isActive }
+        let start = existing?.expiresAt ?? .now
+        let s = CreatorSubscription(id: "sub_\(UUID().uuidString)", subscriberID: me.id, subscriberName: me.displayName, creatorID: creatorID, tier: tier, startedAt: .now, expiresAt: start.addingTimeInterval(Double(days) * 86400), transactionID: transactionID)
+        subs.removeAll { $0.subscriberID == me.id && $0.creatorID == creatorID }
+        subs.append(s)
+        return s
+    }
+    func mySubscriptions() async throws -> [CreatorSubscription] { try gate(); return subs.filter { $0.subscriberID == me.id }.sorted { $0.expiresAt > $1.expiresAt } }
+    func subscribers() async throws -> [CreatorSubscription] { try gate(); return subs.filter { $0.creatorID == me.id }.sorted { $0.startedAt > $1.startedAt } }
+
     // MARK: Test helpers
 
     /// Act as another (fictional) user for a call — lets tests exercise permission checks.
@@ -463,6 +495,14 @@ actor InMemoryBackend: SocialBackend {
         add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), cover: "demo_223", contribs: [("u_public", .photo, "Bar", 0, "demo_195"), ("u_rahul", .photo, "Cocktails", 40, "demo_113")])
         add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), cover: "demo_92", contribs: [(me.id, .photo, "Anjuna", 0, "demo_200"), ("u_rahul", .photo, "Same beach", 30, "demo_215")])
         add("m_marine", creator: "u_public", title: "Marine Drive, 6am", desc: "Sunday run club. Before the city wakes up.", daysAgo: 0, members: ["u_public", "u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.3, green: 0.5, blue: 0.7, alpha: 1), cover: "demo_176", isLive: true, contribs: [("u_public", .photo, "First light", 0, "demo_176"), ("u_dev", .photo, "Coffee after", 45, "demo_30")])
+        plans["u_public"] = CreatorPlan(creatorID: "u_public", creatorName: "Sunset Society", title: "The raw frames", pitch: "Every full-resolution frame from every Friday, before the edit. Prints at cost.", tier: .t2, perks: ["Full-res photos, same night", "Vote on next week's spot", "Prints at cost"], payoutHint: "", createdAt: .now.adding(days: -60))
+        plans["u_sarah"] = CreatorPlan(creatorID: "u_sarah", creatorName: "Sarah Kim", title: "Sarah's kitchen", pitch: "The recipes behind the photos. One a week, no ads, no scrolling past a life story.", tier: .t1, perks: ["Weekly recipe with photos", "Ask me anything Sundays"], payoutHint: "", createdAt: .now.adding(days: -30))
+        add("m_raw", creator: "u_public", title: "Versova, the raw frames", desc: "Friday's full set. Subscribers only.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .subscribers, color: UIColor(red: 0.9, green: 0.5, blue: 0.3, alpha: 1), cover: "demo_213", contribs: [("u_public", .photo, "Frame 1", 0, "demo_213"), ("u_public", .photo, "Frame 2", 3, "demo_110"), ("u_public", .photo, "Frame 3", 5, "demo_173"), ("u_public", .photo, "Frame 4", 9, "demo_270")])
+        add("m_recipe", creator: "u_sarah", title: "Tonkotsu, the long way", desc: "18 hours. Worth it.", daysAgo: 1, members: ["u_sarah"], place: "Lower Parel", vis: .subscribers, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), cover: "demo_312", contribs: [("u_sarah", .photo, "The broth", 0, "demo_312"), ("u_sarah", .photo, "Aromatics", 20, "demo_292"), ("u_sarah", .text, "Roast the bones first. Everyone skips this.", 30, nil)])
+        subs = [
+            CreatorSubscription(id: "sub_r1", subscriberID: "u_rahul", subscriberName: "Rahul Mehta", creatorID: "u_public", tier: .t2, startedAt: .now.adding(days: -20), expiresAt: .now.adding(days: 10), transactionID: nil),
+            CreatorSubscription(id: "sub_d1", subscriberID: "u_dev", subscriberName: "Dev Patel", creatorID: "u_sarah", tier: .t1, startedAt: .now.adding(days: -5), expiresAt: .now.adding(days: 25), transactionID: nil)
+        ]
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
         func story(_ id: String, _ photo: String) -> MediaRef? {

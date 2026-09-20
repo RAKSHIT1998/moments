@@ -97,6 +97,17 @@ protocol SocialBackend: AnyObject, Sendable {
 
     // Media
     func download(_ ref: MediaRef) async throws -> Data
+
+    // Creator economy
+    func creatorPlan(for userID: String) async throws -> CreatorPlan?
+    func saveCreatorPlan(_ plan: CreatorPlan) async throws -> CreatorPlan
+    func removeCreatorPlan() async throws
+    /// Records a paid 30-day subscription. `transactionID` is the App Store transaction; the backend trusts the
+    /// device that paid (same trust model as the rest of the app — the creator's phone grants access).
+    func subscribe(to creatorID: String, tier: CreatorPlan.Tier, transactionID: String?, days: Int) async throws -> CreatorSubscription
+    func mySubscriptions() async throws -> [CreatorSubscription]
+    /// People subscribed to me.
+    func subscribers() async throws -> [CreatorSubscription]
 }
 
 enum AccountStatus: Sendable, Equatable { case available, noAccount, restricted, unknown, offline }

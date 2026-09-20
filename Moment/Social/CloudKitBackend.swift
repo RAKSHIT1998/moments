@@ -149,7 +149,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         if let cover = draft.coverData, let url = try? Self.tempFile(cover, ext: "jpg") { record["cover"] = CKAsset(fileURL: url) }
         let saved = try await save(record, in: privateDB)
         let moment = try await moment(from: saved)
-        if draft.visibility == .publicAll { try await mirrorPublic(moment, record: saved) }
+        if draft.visibility == .publicAll || draft.visibility == .subscribers { try await mirrorPublic(moment, record: saved) }
+        if draft.visibility == .subscribers { try? await grantSubscribers(momentID: moment.id) }
         return moment
     }
 
@@ -167,7 +168,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         record["isTeaser"] = moment.isTeaser ? 1 : 0
         let saved = try await save(record, in: db)
         let updated = try await self.moment(from: saved)
-        if moment.visibility == .publicAll { try await mirrorPublic(updated, record: saved) } else { _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: "public_\(moment.id)")) }
+        if moment.visibility == .publicAll || moment.visibility == .subscribers { try await mirrorPublic(updated, record: saved) } else { _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: "public_\(moment.id)")) }
         return updated
     }
 
@@ -451,6 +452,65 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         PlaceClaim(id: r["placeID"] as? String ?? "", placeID: r["placeID"] as? String ?? "", ownerID: r["ownerID"] as? String ?? "", ownerName: r["ownerName"] as? String ?? "", businessName: r["businessName"] as? String ?? "", role: r["role"] as? String ?? "", note: r["note"] as? String ?? "", verified: (r["verified"] as? Int ?? 0) == 1, createdAt: r.creationDate ?? .now)
     }
 
+    // MARK: - Creator economy (public DB records; access to paid sides is a CKShare the creator's phone grants)
+
+    private var subscribedCreators: Set<String> = []
+
+    func creatorPlan(for userID: String) async throws -> CreatorPlan? {
+        guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "plan_\(userID)")) else { return nil }
+        return Self.plan(from: r)
+    }
+    func saveCreatorPlan(_ plan: CreatorPlan) async throws -> CreatorPlan {
+        let me = try await currentUser()
+        let id = CKRecord.ID(recordName: "plan_\(me.id)")
+        let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "CreatorPlan", recordID: id)
+        r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["title"] = plan.title; r["pitch"] = plan.pitch; r["tier"] = plan.tier.rawValue
+        r["perks"] = plan.perks; r["payoutHint"] = plan.payoutHint
+        return Self.plan(from: try await save(r, in: publicDB))
+    }
+    func removeCreatorPlan() async throws {
+        let me = try await currentUser()
+        _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: "plan_\(me.id)"))
+    }
+    func subscribe(to creatorID: String, tier: CreatorPlan.Tier, transactionID: String?, days: Int) async throws -> CreatorSubscription {
+        let me = try await currentUser()
+        guard creatorID != me.id, (try await creatorPlan(for: creatorID)) != nil else { throw SocialError.notAllowed }
+        let id = CKRecord.ID(recordName: "sub_\(me.id)_\(creatorID)")
+        let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "CreatorSubscription", recordID: id)
+        let previous = r["expiresAt"] as? Date
+        let start = (previous ?? .distantPast) > .now ? previous! : Date.now
+        r["subscriberID"] = me.id; r["subscriberName"] = me.displayName; r["creatorID"] = creatorID; r["tier"] = tier.rawValue
+        r["startedAt"] = Date.now; r["expiresAt"] = start.addingTimeInterval(Double(days) * 86400); r["transactionID"] = transactionID
+        let saved = try await save(r, in: publicDB)
+        subscribedCreators.insert(creatorID)
+        return Self.subscription(from: saved)
+    }
+    func mySubscriptions() async throws -> [CreatorSubscription] {
+        let me = try await currentUser()
+        let subs = try await query(CKQuery(recordType: "CreatorSubscription", predicate: NSPredicate(format: "subscriberID == %@", me.id)), in: publicDB, limit: 200).map(Self.subscription(from:))
+        subscribedCreators = Set(subs.filter(\.isActive).map(\.creatorID))
+        return subs.sorted { $0.expiresAt > $1.expiresAt }
+    }
+    func subscribers() async throws -> [CreatorSubscription] {
+        let me = try await currentUser()
+        let subs = try await query(CKQuery(recordType: "CreatorSubscription", predicate: NSPredicate(format: "creatorID == %@", me.id)), in: publicDB, limit: 500).map(Self.subscription(from:))
+        // The creator's phone is what lets paying people in: add every active subscriber to every paid Moment's share.
+        for m in (try? await myMoments(cursor: nil).items.filter { $0.visibility == .subscribers }) ?? [] { try? await grantSubscribers(momentID: m.id, to: subs) }
+        return subs.sorted { $0.startedAt > $1.startedAt }
+    }
+    private func grantSubscribers(momentID: String, to subs: [CreatorSubscription]? = nil) async throws {
+        let list: [CreatorSubscription]
+        if let subs { list = subs } else { list = try await subscribers() }
+        let ids = list.filter(\.isActive).map(\.subscriberID)
+        if !ids.isEmpty { _ = try? await share(momentID: momentID, with: ids) }
+    }
+    static func plan(from r: CKRecord) -> CreatorPlan {
+        CreatorPlan(creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", pitch: r["pitch"] as? String ?? "", tier: CreatorPlan.Tier(rawValue: r["tier"] as? String ?? "") ?? .t1, perks: r["perks"] as? [String] ?? [], payoutHint: r["payoutHint"] as? String ?? "", createdAt: r.creationDate ?? .now)
+    }
+    static func subscription(from r: CKRecord) -> CreatorSubscription {
+        CreatorSubscription(id: r.recordID.recordName, subscriberID: r["subscriberID"] as? String ?? "", subscriberName: r["subscriberName"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", tier: CreatorPlan.Tier(rawValue: r["tier"] as? String ?? "") ?? .t1, startedAt: r["startedAt"] as? Date ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, transactionID: r["transactionID"] as? String)
+    }
+
     static func write(place: SocialPlace?, to r: CKRecord) {
         r["placeID"] = place?.id; r["placeName"] = place?.name; r["placeArea"] = place?.area; r["placeCategory"] = place?.category
         r["location"] = place.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
@@ -469,7 +529,9 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let id = CKRecord.ID(recordName: "public_\(moment.id)")
         let pub = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "PublicMoment", recordID: id)
         for key in ["creatorID", "creatorName", "title", "description", "startAt", "endAt", "locationName", "coarsePlace", "memberIDs", "memberNames", "contributionCount", "mediaCount", "commentCount", "shareCount", "isLive", "templateID", "remixedFromID", "placeID", "placeName", "placeArea", "placeCategory", "location", "signature", "creatorPublicKey", "signedAt"] { pub[key] = record[key] }
-        pub["visibility"] = MomentVisibility.publicAll.rawValue
+        // Subscribers-only Moments are listed publicly as a locked preview (cover + title); their sides stay in the
+        // creator's private zone and reach subscribers through the CKShare the creator's phone grants them.
+        pub["visibility"] = moment.visibility == .subscribers ? MomentVisibility.subscribers.rawValue : MomentVisibility.publicAll.rawValue
         pub["sourceID"] = moment.id
         if let cover = record["cover"] as? CKAsset, let url = cover.fileURL { pub["cover"] = CKAsset(fileURL: url) }
         _ = try await save(pub, in: publicDB)
@@ -927,7 +989,12 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
             else if let share = try? await (r.recordID.zoneID.ownerName == CKCurrentUserDefaultName ? privateDB : sharedDB).record(for: shareRef.recordID) as? CKShare { shareURL = share.url; shareURLCache[shareRef.recordID.recordName] = share.url }
         }
         let id = (r["sourceID"] as? String) ?? r.recordID.recordName
-        return SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1, place: Self.place(from: r), signature: r["signature"] as? String, creatorPublicKey: r["creatorPublicKey"] as? String, signedAt: r["signedAt"] as? Date)
+        let vis = MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends
+        let creator = r["creatorID"] as? String ?? ""
+        let locked = vis == .subscribers && r.recordID.zoneID.ownerName != CKCurrentUserDefaultName && r.recordID.recordName.hasPrefix("public_") && !subscribedCreators.contains(creator)
+        var out = SocialMoment(id: id, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "Moment", description: r["description"] as? String ?? "", coverRef: cover, createdAt: r.creationDate ?? .now, startAt: r["startAt"] as? Date, endAt: r["endAt"] as? Date, locationName: r["locationName"] as? String, coarsePlace: r["coarsePlace"] as? String, visibility: MomentVisibility(rawValue: r["visibility"] as? String ?? "") ?? .friends, memberIDs: r["memberIDs"] as? [String] ?? [], memberNames: r["memberNames"] as? [String] ?? [], contributionCount: r["contributionCount"] as? Int ?? 0, mediaCount: r["mediaCount"] as? Int ?? 0, commentCount: r["commentCount"] as? Int ?? 0, reactionCounts: [:], shareCount: r["shareCount"] as? Int ?? 0, isLive: (r["isLive"] as? Int ?? 0) == 1, templateID: r["templateID"] as? String, remixedFromID: r["remixedFromID"] as? String, shareURL: shareURL, allowsReshare: (r["allowsReshare"] as? Int ?? 1) == 1, allowsDownload: (r["allowsDownload"] as? Int ?? 1) == 1, allowsContributions: (r["allowsContributions"] as? Int ?? 1) == 1, isTeaser: (r["isTeaser"] as? Int ?? 0) == 1, place: Self.place(from: r), signature: r["signature"] as? String, creatorPublicKey: r["creatorPublicKey"] as? String, signedAt: r["signedAt"] as? Date)
+        out.isLocked = locked
+        return out
     }
 
     static func contribution(from r: CKRecord, media: MediaStore) async throws -> Contribution {

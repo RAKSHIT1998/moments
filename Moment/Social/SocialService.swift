@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UserNotifications
+import StoreKit
 
 /// The one object the UI talks to for anything social. Wraps the backend, the offline queue and
 /// a small in-memory cache so screens render instantly and refresh in the background.
@@ -52,6 +53,13 @@ final class SocialService {
     private(set) var exploreMoments: [String: SocialMoment] = [:]
     private(set) var exploreNow: [String: NowPost] = [:]
     private(set) var myClaims: [PlaceClaim] = []
+    // Creator economy
+    private(set) var creatorPlans: [String: CreatorPlan] = [:]
+    private(set) var myPlan: CreatorPlan?
+    private(set) var mySubscriptions: [CreatorSubscription] = []
+    private(set) var subscribers: [CreatorSubscription] = []
+    private(set) var creatorProducts: [String: Product] = [:]
+    private(set) var purchasing = false
     var nearbyRadiusKm: Double = 3
     private(set) var hasLoadedOnce = false
     private var imageCache: [String: UIImage] = [:]
@@ -130,9 +138,75 @@ final class SocialService {
         async let s: () = refreshSafety()
         async let c: () = refreshCollections()
         async let g: () = refreshGroups()
-        _ = await (f, n, i, s, c, g)
+        async let e: () = refreshCreator()
+        _ = await (f, n, i, s, c, g, e)
         hasLoadedOnce = true
     }
+
+    // MARK: - Creator economy
+
+    func refreshCreator() async {
+        myPlan = try? await backend.creatorPlan(for: myID)
+        if let myPlan { creatorPlans[myID] = myPlan }
+        mySubscriptions = (try? await backend.mySubscriptions()) ?? []
+        subscribers = myPlan == nil ? [] : ((try? await backend.subscribers()) ?? [])
+        if let mesh = backend as? DecentralizedBackend { await mesh.processGrants() }
+        if creatorProducts.isEmpty, let products = try? await Product.products(for: CreatorPlan.Tier.allCases.map(\.productID)) {
+            creatorProducts = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
+        }
+    }
+    func loadCreatorPlan(_ userID: String) async { if let p = try? await backend.creatorPlan(for: userID) { creatorPlans[userID] = p } else { creatorPlans[userID] = nil } }
+    func plan(for userID: String) -> CreatorPlan? { creatorPlans[userID] }
+    func isSubscribed(to userID: String) -> Bool { mySubscriptions.contains { $0.creatorID == userID && $0.isActive } }
+    func subscription(to userID: String) -> CreatorSubscription? { mySubscriptions.first { $0.creatorID == userID && $0.isActive } }
+    /// Localized price from the App Store, else the reference amount.
+    func price(for tier: CreatorPlan.Tier) -> String { creatorProducts[tier.productID]?.displayPrice ?? tier.fallbackPrice }
+    var earningsEstimate: Double { CreatorEconomics.creatorEstimate(subscribers) }
+    var activeSubscriberCount: Int { subscribers.filter(\.isActive).count }
+
+    @discardableResult
+    func savePlan(title: String, pitch: String, tier: CreatorPlan.Tier, perks: [String], payoutHint: String) async -> Bool {
+        let p = CreatorPlan(creatorID: myID, creatorName: displayName, title: title.trimmed, pitch: pitch.trimmed, tier: tier, perks: perks.map(\.trimmed).filter { !$0.isEmpty }, payoutHint: payoutHint.trimmed, createdAt: myPlan?.createdAt ?? .now)
+        do {
+            let saved = try await backend.saveCreatorPlan(p)
+            if myPlan == nil { analytics.track(.creatorPlanCreated) }
+            myPlan = saved; creatorPlans[myID] = saved
+            return true
+        } catch { lastError = error.localizedDescription; return false }
+    }
+    func removePlan() async { try? await backend.removeCreatorPlan(); myPlan = nil; creatorPlans[myID] = nil; subscribers = [] }
+
+    /// Pays through the App Store (non-renewing 30-day product for the creator's tier), then records the subscription.
+    /// Returns true when the person is now subscribed.
+    func subscribe(to creatorID: String) async -> Bool {
+        var cached = creatorPlans[creatorID]
+        if cached == nil { cached = try? await backend.creatorPlan(for: creatorID) }
+        guard let plan = cached else { lastError = "This person isn't selling anything yet."; return false }
+        purchasing = true; defer { purchasing = false }
+        var transactionID: String? = nil
+        if !isTestHost, let product = creatorProducts[plan.tier.productID] {
+            do {
+                switch try await product.purchase() {
+                case .success(let verification):
+                    guard case .verified(let t) = verification else { lastError = "Purchase couldn't be verified."; return false }
+                    await t.finish(); transactionID = String(t.id)
+                case .userCancelled, .pending: return false
+                @unknown default: return false
+                }
+            } catch { lastError = error.localizedDescription; return false }
+        } else if !isTestHost {
+            lastError = "Prices aren't available right now. Try again in a moment."; return false
+        }
+        do {
+            let s = try await backend.subscribe(to: creatorID, tier: plan.tier, transactionID: transactionID, days: 30)
+            mySubscriptions.removeAll { $0.creatorID == creatorID }; mySubscriptions.append(s)
+            analytics.track(.creatorSubscribed, category: plan.tier.rawValue)
+            await refreshFeed()
+            return true
+        } catch { lastError = error.localizedDescription; return false }
+    }
+    /// Unit tests and the in-process demo have no App Store; a subscription there is recorded without a transaction.
+    private var isTestHost: Bool { ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || ProcessInfo.processInfo.arguments.contains("-uitest") || ProcessInfo.processInfo.arguments.contains("-demo") || settings.demoMode }
 
     // MARK: - Nearby & places
 

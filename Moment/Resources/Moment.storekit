@@ -1,56 +1,125 @@
 {
-  "identifier" : "MOMENT-STOREKIT",
-  "nonRenewingSubscriptions" : [ ],
-  "products" : [
+  "identifier": "MOMENT-STOREKIT",
+  "nonRenewingSubscriptions": [],
+  "products": [
     {
-      "displayPrice" : "49.99",
-      "familyShareable" : false,
-      "internalID" : "moment_pro_lifetime",
-      "localizations" : [ { "description" : "Everything, forever.", "displayName" : "Pro — Lifetime", "locale" : "en_US" } ],
-      "productID" : "moment_pro_lifetime",
-      "referenceName" : "Pro Lifetime",
-      "type" : "NonConsumable"
+      "displayPrice": "49.99",
+      "familyShareable": false,
+      "internalID": "moment_pro_lifetime",
+      "localizations": [
+        {
+          "description": "Everything, forever.",
+          "displayName": "Pro \u2014 Lifetime",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "moment_pro_lifetime",
+      "referenceName": "Pro Lifetime",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "7011",
+      "localizations": [
+        {
+          "description": "30 days of one creator's subscriber-only Moments.",
+          "displayName": "Creator \u00b7 Starter (30 days)",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "creator.30d.t1",
+      "referenceName": "Creator \u00b7 Starter (30 days)",
+      "type": "NonRenewingSubscription"
+    },
+    {
+      "displayPrice": "5.99",
+      "familyShareable": false,
+      "internalID": "7012",
+      "localizations": [
+        {
+          "description": "30 days of one creator's subscriber-only Moments.",
+          "displayName": "Creator \u00b7 Standard (30 days)",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "creator.30d.t2",
+      "referenceName": "Creator \u00b7 Standard (30 days)",
+      "type": "NonRenewingSubscription"
+    },
+    {
+      "displayPrice": "11.99",
+      "familyShareable": false,
+      "internalID": "7013",
+      "localizations": [
+        {
+          "description": "30 days of one creator's subscriber-only Moments.",
+          "displayName": "Creator \u00b7 Premium (30 days)",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "creator.30d.t3",
+      "referenceName": "Creator \u00b7 Premium (30 days)",
+      "type": "NonRenewingSubscription"
     }
   ],
-  "settings" : { "_applicationInternalID" : "0", "_developerTeamID" : "48TGY734WW" },
-  "subscriptionGroups" : [
+  "settings": {
+    "_applicationInternalID": "0",
+    "_developerTeamID": "48TGY734WW"
+  },
+  "subscriptionGroups": [
     {
-      "id" : "moment_pro",
-      "localizations" : [ ],
-      "name" : "MOMENT Pro",
-      "subscriptions" : [
+      "id": "moment_pro",
+      "localizations": [],
+      "name": "MOMENT Pro",
+      "subscriptions": [
         {
-          "adHocOffers" : [ ],
-          "codeOffers" : [ ],
-          "displayPrice" : "3.99",
-          "familyShareable" : false,
-          "groupNumber" : 1,
-          "internalID" : "moment_pro_monthly",
-          "introductoryOffer" : null,
-          "localizations" : [ { "description" : "Unlimited memories, advanced understanding.", "displayName" : "Pro — Monthly", "locale" : "en_US" } ],
-          "productID" : "moment_pro_monthly",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Pro Monthly",
-          "subscriptionGroupID" : "moment_pro",
-          "type" : "RecurringSubscription"
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "3.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "moment_pro_monthly",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Unlimited memories, advanced understanding.",
+              "displayName": "Pro \u2014 Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "moment_pro_monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Pro Monthly",
+          "subscriptionGroupID": "moment_pro",
+          "type": "RecurringSubscription"
         },
         {
-          "adHocOffers" : [ ],
-          "codeOffers" : [ ],
-          "displayPrice" : "29.99",
-          "familyShareable" : false,
-          "groupNumber" : 1,
-          "internalID" : "moment_pro_yearly",
-          "introductoryOffer" : null,
-          "localizations" : [ { "description" : "Unlimited memories, advanced understanding. Best value.", "displayName" : "Pro — Yearly", "locale" : "en_US" } ],
-          "productID" : "moment_pro_yearly",
-          "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Pro Yearly",
-          "subscriptionGroupID" : "moment_pro",
-          "type" : "RecurringSubscription"
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "29.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "moment_pro_yearly",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Unlimited memories, advanced understanding. Best value.",
+              "displayName": "Pro \u2014 Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "moment_pro_yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Pro Yearly",
+          "subscriptionGroupID": "moment_pro",
+          "type": "RecurringSubscription"
         }
       ]
     }
   ],
-  "version" : { "major" : 3, "minor" : 0 }
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
 }

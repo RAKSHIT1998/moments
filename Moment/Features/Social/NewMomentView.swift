@@ -8,6 +8,8 @@ struct NewMomentView: View {
     @Environment(\.dismiss) private var dismiss
     var initial: SocialService.NewMomentInput? = nil
     var groupID: String? = nil
+    /// Opened from "For subscribers": preselects the paid audience.
+    var forSubscribers = false
     var onCreated: ((SocialMoment) -> Void)? = nil
 
     @State private var title = ""
@@ -129,6 +131,7 @@ struct NewMomentView: View {
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             if let initial, title.isEmpty { title = initial.title; description = initial.description; visibility = initial.visibility; venue = initial.place }
+            if forSubscribers, env.social.myPlan != nil { visibility = .subscribers }
             if let groupID, let g = env.social.groups.first(where: { $0.id == groupID }), people.isEmpty {
                 // A group Moment: everyone in the group is invited from the start.
                 for (id, name) in zip(g.memberIDs, g.memberNames) where id != env.social.myID { people.append(SocialUser(id: id, displayName: name, handle: "", bio: "", avatarRef: nil, isPrivateAccount: false, momentCount: 0, sharedCount: 0, placeCount: 0, peopleCount: 0, createdAt: .now)) }
@@ -205,7 +208,7 @@ struct NewMomentView: View {
             Text("WHO CAN SEE IT").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: MSpacing.s) {
-                    ForEach(MomentVisibility.allCases, id: \.self) { v in
+                    ForEach(MomentVisibility.allCases.filter { $0 != .subscribers || env.social.myPlan != nil }, id: \.self) { v in
                         Button { visibility = v } label: { Label(v.label, systemImage: v.symbol) }.buttonStyle(ChipButtonStyle(prominent: visibility == v)).accessibilityIdentifier("vis-\(v.rawValue)")
                     }
                 }

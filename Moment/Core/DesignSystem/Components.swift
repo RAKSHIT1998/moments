@@ -10,8 +10,14 @@ struct PrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 16)
             .foregroundStyle(.white)
             .background {
-                // Solid action blue, 8pt corners: the button people already know how to press.
-                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(tint ?? MColor.accent)
+                // Tinted glass: the accent seen through a curved lens, with a specular rim.
+                let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+                ZStack {
+                    shape.fill(LinearGradient(colors: [(tint ?? MColor.accent).opacity(0.95), (tint ?? MColor.accent).opacity(0.72)], startPoint: .top, endPoint: .bottom))
+                    Glass.sheen(shape)
+                    Glass.rim(shape, strength: 0.9)
+                }
+                .shadow(color: (tint ?? MColor.accent).opacity(0.4), radius: 16, y: 8)
             }
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.985 : 1)
@@ -27,7 +33,7 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .foregroundStyle(MColor.textPrimary)
-            .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .glass(radius: 14)
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Rectangle())
     }
@@ -46,11 +52,16 @@ struct ChipButtonStyle: ButtonStyle {
             .frame(minHeight: MTouch.minimum - 8)
             .foregroundStyle(light ? (prominent ? Color.black : Color.white) : (prominent ? Color.white : MColor.textPrimary))
             .background {
-                if light { Capsule().fill(prominent ? Color.white : Color.white.opacity(0.18)) }
-                else if prominent { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(MColor.accent) } else { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(MColor.surfaceSecondary) }
+                ZStack {
+                    if light { Capsule().fill(prominent ? Color.white : Color.white.opacity(0.18)) }
+                    else if prominent { Capsule().fill(LinearGradient(colors: [MColor.accent.opacity(0.95), MColor.accent.opacity(0.72)], startPoint: .top, endPoint: .bottom)) }
+                    else { Capsule().fill(.ultraThinMaterial) }
+                    if !light { Glass.sheen(Capsule()); Glass.rim(Capsule(), strength: 0.7) }
+                }
             }
+            .clipShape(Capsule())
             .opacity(configuration.isPressed ? 0.7 : 1)
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(Capsule())
     }
 }
 

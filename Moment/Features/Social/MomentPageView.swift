@@ -22,6 +22,7 @@ struct MomentPageView: View {
     @State private var showReplay = false
     @State private var showQR = false
     @State private var revealed = false
+    @State private var showSubscribe = false
     @State private var mergeCandidate: SocialMoment?
     @State private var showDetails = false
     @State private var showLiveCamera = false
@@ -87,6 +88,7 @@ struct MomentPageView: View {
         .task { await env.social.loadMoment(momentID); mergeCandidate = env.social.mergeCandidates(for: momentID).first }
         .refreshable { await env.social.loadMoment(momentID) }
         .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
+        .sheet(isPresented: $showSubscribe) { if let m = moment { SubscribeSheet(creatorID: m.creatorID) } }
         .sheet(isPresented: $showCloudSharing) { if let m = moment { CloudSharingView(momentID: m.id) } }
         .sheet(isPresented: $showReport) { ReportSheet(momentID: momentID, userID: moment?.creatorID) }
         .sheet(isPresented: $showInvitePicker) { InvitePickerSheet(momentID: momentID) }
@@ -110,8 +112,10 @@ struct MomentPageView: View {
         let hidden = m.isTeaser && !isMember && !revealed
         return ZStack(alignment: .bottomLeading) {
             SocialImage(ref: m.coverRef).frame(height: 520 + stretch).frame(maxWidth: .infinity).offset(y: -stretch)
-                .blur(radius: hidden ? 28 : 0).animation(.easeOut(duration: 0.6), value: hidden)
-            if hidden {
+                .blur(radius: hidden || m.isLocked ? 28 : 0).animation(.easeOut(duration: 0.6), value: hidden)
+            if m.isLocked {
+                LockedOverlay(moment: m) { showSubscribe = true }.frame(height: 520 + stretch).offset(y: -stretch)
+            } else if hidden {
                 VStack(spacing: MSpacing.m) {
                     Text("You had to be there.").font(MFont.heroSmall).foregroundStyle(MColor.overlayLight)
                     Button { withAnimation { revealed = true }; Haptics.saved() } label: { Label("Reveal", systemImage: "eye") }.buttonStyle(ChipButtonStyle(prominent: true, light: true)).accessibilityIdentifier("reveal")

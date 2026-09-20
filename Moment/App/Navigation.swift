@@ -62,6 +62,8 @@ extension View {
             case .newMomentForGroup(let id): NewMomentView(groupID: id)
             case .map: MomentMapView()
             case .passport: PassportView()
+            case .earn: CreatorEarnView()
+            case .subscriptions: MySubscriptionsView()
             case .scan: QRScannerView()
             case .inbox: InboxView(embedded: true)
             case .messages: InboxView(embedded: true, segment: 2)

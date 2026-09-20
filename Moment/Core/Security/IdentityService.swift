@@ -10,7 +10,10 @@ import UIKit
 @Observable
 final class IdentityService {
     private static let keyItem = "identity.signing.v1"
+    private static let agreementItem = "identity.agreement.v1"
     private(set) var privateKey: Curve25519.Signing.PrivateKey
+    /// Separate X25519 key for receiving secrets (creator subscriptions). Ed25519 signing keys can't do ECDH.
+    private(set) var agreementKey: Curve25519.KeyAgreement.PrivateKey
     private(set) var createdAt: Date
 
     init() {
@@ -24,7 +27,10 @@ final class IdentityService {
             privateKey = key
             createdAt = .now
         }
+        if let data = Keychain.get(Self.agreementItem), let k = try? Curve25519.KeyAgreement.PrivateKey(rawRepresentation: data) { agreementKey = k }
+        else { let k = Curve25519.KeyAgreement.PrivateKey(); try? Keychain.set(k.rawRepresentation, for: Self.agreementItem); agreementKey = k }
     }
+    var agreementPublicKeyBase64: String { agreementKey.publicKey.rawRepresentation.base64EncodedString() }
 
     var publicKey: Curve25519.Signing.PublicKey { privateKey.publicKey }
     var publicKeyBase64: String { publicKey.rawRepresentation.base64EncodedString() }

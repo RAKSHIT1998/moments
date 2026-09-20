@@ -106,12 +106,14 @@
 		71FF3FA7CB4DE33F66FC0916 /* VisionKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4559536074D2EA9A4DC7E75E /* VisionKit.framework */; };
 		7268C3F672F20FC37A20A68E /* SharedCaptureItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54497CFEEEB3446AC4AA41A5 /* SharedCaptureItem.swift */; };
 		73B6DC7295C5DE5644295FF5 /* MemoryRelation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10EF72351F9CDF34B8F42CF6 /* MemoryRelation.swift */; };
+		741C8BEA4785D2CC78AB3D38 /* Glass.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AB1858D29A536432601D6E /* Glass.swift */; };
 		7446B31D1CEECE937D323AD6 /* DiagnosticsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED70F3581744EC11FD901E91 /* DiagnosticsUITests.swift */; };
 		78075C9B0407279F7E8D241C /* SocialOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52CF4190AA7B1191468EEFE6 /* SocialOnboardingView.swift */; };
 		7BCEDE1AA2915B7E885EC088 /* DecentralizedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAF5BED3DED33ACE8AE9C43 /* DecentralizedTests.swift */; };
 		7C9B33D9A9F6FC4BDF31E97A /* CloudKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF14D5A43B7EE1B3BA53078A /* CloudKitBackend.swift */; };
 		7CB4CF16BD50ED00C9941548 /* demo_154.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 90501606CD3C44FD180A5BD8 /* demo_154.jpg */; };
 		7DC95ED419ABA2B4A37C4A9A /* demo_270.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C9ACC4551F899B2FA695A957 /* demo_270.jpg */; };
+		7E7A00BE7F1EB36866B470A3 /* CreatorViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */; };
 		7E8219B83E5B2FFF255B7848 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AA2E43C2DA317B153F92DF /* Source.swift */; };
 		7F8C0F76AF86C4F0A32AF7C1 /* MemoryExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97670D7D495DC8C9D24B011F /* MemoryExtractor.swift */; };
 		80B8B43F5D8947F386C00D15 /* StorySlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 879C6AD575C6CCDCD84FB776 /* StorySlideView.swift */; };
@@ -419,6 +421,7 @@
 		9DFC21D1E077E0C4D8E0D5C6 /* PlanIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanIntelligence.swift; sourceTree = "<group>"; };
 		9E67AB191F9FF477B99FD522 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		9F20C282EA7E6382CF81F28A /* DecentralizedBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecentralizedBackend.swift; sourceTree = "<group>"; };
+		A0AB1858D29A536432601D6E /* Glass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glass.swift; sourceTree = "<group>"; };
 		A1235B60480B3A0BDEF9A3CF /* demo_173.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_173.jpg; sourceTree = "<group>"; };
 		A29CE3D3931CAD0A1A835421 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		A30A2DD7ACE9C387984B8F46 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
@@ -449,6 +452,7 @@
 		BEAD57EA9D1FFD36650CD927 /* demo_117.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_117.jpg; sourceTree = "<group>"; };
 		C4044A98C2B9BD83976C6F03 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		C4F88226C474FB582A9563B0 /* demo_108.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_108.jpg; sourceTree = "<group>"; };
+		C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorViews.swift; sourceTree = "<group>"; };
 		C76267B68999829C54D5DE22 /* avatar_65.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = avatar_65.jpg; sourceTree = "<group>"; };
 		C7A5F365A8464F0635F14CBA /* SocialPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPolish.swift; sourceTree = "<group>"; };
 		C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialComponents.swift; sourceTree = "<group>"; };
@@ -662,6 +666,7 @@
 			children = (
 				668FCB0BEBD20F6BED6AC0EF /* Cards.swift */,
 				D67E5A60008179094BB66554 /* Components.swift */,
+				A0AB1858D29A536432601D6E /* Glass.swift */,
 				3E509AA7790AB7184A8D1767 /* Glyphs.swift */,
 				839FD5950DFAF95EF50BAA35 /* Theme.swift */,
 				0D5E7FF001AE74D299FFE511 /* Tokens.swift */,
@@ -894,6 +899,7 @@
 				8F1F0F2A25A452A34A9667B1 /* AddSideView.swift */,
 				2262C63D4642A003CB7BBC35 /* AnyoneUpViews.swift */,
 				117AB0C48540E075181FF08E /* CollectionsView.swift */,
+				C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */,
 				2758C294DACD68F438B13F88 /* DiscoverView.swift */,
 				966FE654C032FA2AA510099B /* ExploreMapView.swift */,
 				CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */,
@@ -1352,6 +1358,7 @@
 				60055EC2744563371C87C806 /* Components.swift in Sources */,
 				30DCA2993B30609151FCADD1 /* ContactsService.swift in Sources */,
 				C0148922EF8461FFE5BFB648 /* ContextResolver.swift in Sources */,
+				7E7A00BE7F1EB36866B470A3 /* CreatorViews.swift in Sources */,
 				FECE727353FCE24EA2ADBC6D /* DataLifecycleService.swift in Sources */,
 				586AC5418F64B115245013E9 /* Date+Moment.swift in Sources */,
 				E8682028214FB5555DCA3E8A /* DecentralizedBackend.swift in Sources */,
@@ -1368,6 +1375,7 @@
 				317548CE115F3F4912ED2AC2 /* FeatureFlags.swift in Sources */,
 				354D344A35AB2A30ACF617AD /* FileCrypto.swift in Sources */,
 				5736D62CCE23E9A8DAAE7409 /* GiftIdea.swift in Sources */,
+				741C8BEA4785D2CC78AB3D38 /* Glass.swift in Sources */,
 				EA95E7B025D724397F6974F6 /* Glyphs.swift in Sources */,
 				08ADB64DD5A6A0E0F539CEE4 /* GroupsViews.swift in Sources */,
 				2733058E3DDD07CC1C2CD571 /* Haptics.swift in Sources */,

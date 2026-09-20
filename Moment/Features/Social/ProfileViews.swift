@@ -71,7 +71,7 @@ struct SocialProfileView: View {
                 }
             }
         }
-        .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims() } }
+        .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims(); await env.social.refreshCreator() } else { await env.social.loadCreatorPlan(userID) } }
         .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
         .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
         .fullScreenCover(isPresented: $showMemories) { PrivateMemoryHubView() }
@@ -114,6 +114,17 @@ struct SocialProfileView: View {
                     NavigationLink(value: SocialRoute.invite) { Text("Invite friends") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("inviteFriends")
                     NavigationLink(value: SocialRoute.passport) { Image(systemName: "book.closed").frame(width: 44) }.buttonStyle(ProfileButtonStyle()).accessibilityLabel("Passport").accessibilityIdentifier("passportLink")
                 }
+                NavigationLink(value: SocialRoute.earn) {
+                    HStack(spacing: MSpacing.s) {
+                        Image(systemName: "crown.fill").foregroundStyle(.orange)
+                        if let plan = env.social.myPlan { Text("\(env.social.activeSubscriberCount) \(env.social.activeSubscriberCount == 1 ? "subscriber" : "subscribers") · \(plan.title)") } else { Text("Earn from your Moments") }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                    }
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
+                }
+                .buttonStyle(.plain).glass(radius: 12, tint: .orange).accessibilityIdentifier("earnLink")
             }
         }
         .accessibilityElement(children: .contain)
@@ -121,6 +132,7 @@ struct SocialProfileView: View {
         .navigationDestination(isPresented: $showEdit) { EditProfileView() }
     }
     @State private var showEdit = false
+    @State private var showSubscribe = false
 
     private func stat(_ value: String, _ label: String) -> some View {
         VStack(spacing: 0) { Text(value).font(.headline.weight(.semibold)).monospacedDigit(); Text(label).font(MFont.caption).foregroundStyle(MColor.textPrimary) }
@@ -305,6 +317,23 @@ struct SocialProfileView: View {
                     Button(user?.isPrivateAccount == true ? "Request to follow" : "Follow") { Task { await env.social.follow(userID) } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("followToggle")
                 }
                 Button { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } } label: { Label("Message", systemImage: "bubble") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("messageButton")
+            }
+            if let plan = env.social.plan(for: userID) {
+                Button { if !env.social.isSubscribed(to: userID) { showSubscribe = true } } label: {
+                    HStack(spacing: MSpacing.m) {
+                        Image(systemName: env.social.isSubscribed(to: userID) ? "checkmark.seal.fill" : "crown.fill").foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(env.social.isSubscribed(to: userID) ? "Subscribed" : "Subscribe · \(env.social.price(for: plan.tier)) / 30 days").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                            Text(plan.title).font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                        }
+                        Spacer()
+                        if !env.social.isSubscribed(to: userID) { Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary) }
+                    }
+                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
+                }
+                .buttonStyle(.plain).glass(radius: 14, tint: .orange)
+                .accessibilityIdentifier("subscribeLink")
+                .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: userID) }
             }
             if !shared.isEmpty {
                 NavigationLink(value: SocialRoute.friendship(userID)) {
@@ -544,7 +573,7 @@ struct ProfileButtonStyle: ButtonStyle {
             .padding(.vertical, 8)
             .frame(minHeight: 34)
             .frame(maxWidth: .infinity)
-            .background(MColor.fill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))   // visible grey in light mode too
+            .glass(radius: 12)
             .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

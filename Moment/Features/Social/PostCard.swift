@@ -10,6 +10,7 @@ struct MomentPostCard: View {
     @State private var showComments = false
     @State private var showShare = false
     @State private var shareItems: [Any] = []
+    @State private var showSubscribe = false
 
     private var isMember: Bool { moment.memberIDs.contains(env.social.myID) }
     private var mine: ReactionKind? { env.social.myReaction(momentID: moment.id) }
@@ -34,6 +35,7 @@ struct MomentPostCard: View {
         .reactionBurst($burst)
         .sheet(isPresented: $showComments) { CommentsSheet(momentID: moment.id) }
         .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
+        .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: moment.creatorID) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("feedMoment-\(moment.id)")
     }
@@ -64,7 +66,8 @@ struct MomentPostCard: View {
         NavigationLink(value: SocialRoute.moment(moment.id)) {
             ZStack(alignment: .topTrailing) {
                 SocialImage(ref: moment.coverRef).aspectRatio(4/5, contentMode: .fill).frame(maxWidth: .infinity)
-                    .blur(radius: moment.isTeaser && !isMember ? 24 : 0)
+                    .blur(radius: (moment.isTeaser && !isMember) || moment.isLocked ? 24 : 0)
+                if moment.isLocked { LockedOverlay(moment: moment) { showSubscribe = true } }
                 if moment.mediaCount > 1 {
                     Image(systemName: "square.on.square.fill").foregroundStyle(.white).shadow(radius: 3).padding(MSpacing.m).accessibilityHidden(true)
                 }

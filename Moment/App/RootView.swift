@@ -55,6 +55,9 @@ struct RootView: View {
             Tab(value: .profile) { NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() } } label: { Label { Text(RootTab.profile.label) } icon: { Image(uiImage: MomentGlyph.profile.image()) } }
         }
         .tint(MColor.textPrimary)
+        // Liquid glass bars: content scrolls under translucent chrome.
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .onChange(of: tab) { old, new in
             // The centre "+" is an action, not a place: open the create sheet and stay where you were.
             if new == .create { showCreate = true; tab = old == .create ? .home : old } else { lastTab = new }
@@ -68,7 +71,7 @@ struct CreateSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var next: Kind?
-    enum Kind: String, Identifiable { case moment, now, event; var id: String { rawValue } }
+    enum Kind: String, Identifiable { case moment, now, event, paid; var id: String { rawValue } }
 
     var body: some View {
         NavigationStack {
@@ -77,14 +80,16 @@ struct CreateSheet: View {
                 row(.moment, "Moment", "From photos. Invite the people who were there.", .home)
                 row(.now, "NOW", "What you're up to, right now. Gone in hours.", .now)
                 row(.event, "Event", "A QR on the table. People scan, they're in.", .scan)
+                if env.social.myPlan != nil { row(.paid, "For subscribers", "A Moment only paying subscribers can open.", .spark) }
                 Spacer()
             }
             .padding(.horizontal, MSpacing.page)
-            .background(MColor.background)
+            .background(LiquidBackdrop())
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .navigationDestination(item: $next) { kind in
                 switch kind {
                 case .moment: NewMomentView(initial: env.social.remixDraft) { m in env.social.remixDraft = nil; dismiss(); env.social.pendingMomentID = m.id }.socialDestinations()
+                case .paid: NewMomentView(initial: env.social.remixDraft, forSubscribers: true) { m in env.social.remixDraft = nil; dismiss(); env.social.pendingMomentID = m.id }.socialDestinations()
                 case .now: AnyoneUpComposerBody()
                 case .event: StartActivityBody()
                 }
@@ -106,10 +111,11 @@ struct CreateSheet: View {
                 Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
             }
             .padding(.vertical, MSpacing.m)
+            .padding(.horizontal, MSpacing.l)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .overlay(Rectangle().fill(MColor.separator).frame(height: 0.5), alignment: .bottom)
+        .glass(radius: 18)
         .accessibilityIdentifier("create-\(kind.rawValue)")
     }
 }

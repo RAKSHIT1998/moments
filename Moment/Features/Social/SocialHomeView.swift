@@ -96,6 +96,8 @@ enum SocialRoute: Hashable {
     case newMomentForGroup(String)
     case map
     case passport
+    case earn
+    case subscriptions
     case scan
     case inbox
     case messages

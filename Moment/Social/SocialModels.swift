@@ -34,15 +34,15 @@ struct MediaRef: Codable, Sendable, Equatable, Hashable {
 }
 
 enum MomentVisibility: String, Codable, CaseIterable, Sendable {
-    case privateOnly, closeFriends, friends, group, publicAll
+    case privateOnly, closeFriends, friends, group, publicAll, subscribers
     var label: String {
         switch self {
-        case .privateOnly: "Private"; case .closeFriends: "Close friends"; case .friends: "Friends"; case .group: "People in it"; case .publicAll: "Public"
+        case .privateOnly: "Private"; case .closeFriends: "Close friends"; case .friends: "Friends"; case .group: "People in it"; case .publicAll: "Public"; case .subscribers: "Subscribers"
         }
     }
     var symbol: String {
         switch self {
-        case .privateOnly: "lock"; case .closeFriends: "star"; case .friends: "person.2"; case .group: "person.3"; case .publicAll: "globe"
+        case .privateOnly: "lock"; case .closeFriends: "star"; case .friends: "person.2"; case .group: "person.3"; case .publicAll: "globe"; case .subscribers: "crown"
         }
     }
     var explanation: String {
@@ -52,8 +52,11 @@ enum MomentVisibility: String, Codable, CaseIterable, Sendable {
         case .friends: "People you follow who follow you back."
         case .group: "Only the people who are part of this Moment."
         case .publicAll: "Anyone can find it in Discover and remix it."
+        case .subscribers: "Paying subscribers only. Everyone else sees a locked preview."
         }
     }
+    /// Sold content: the creator earns from it.
+    var isPaid: Bool { self == .subscribers }
 }
 
 /// A venue or area: a café, a beach, a club, a city. Venue coordinates are public knowledge;
@@ -132,6 +135,8 @@ struct SocialMoment: Codable, Sendable, Equatable, Identifiable, Hashable {
     var signature: String? = nil
     var creatorPublicKey: String? = nil
     var signedAt: Date? = nil
+    /// Set by the backend for the viewer: a subscribers-only Moment they haven't paid for. Cover shows, nothing else.
+    var isLocked: Bool = false
 
     var isGroup: Bool { memberIDs.count > 1 }
     var dateLabel: String {
@@ -320,6 +325,54 @@ struct MomentCollection: Codable, Sendable, Equatable, Identifiable, Hashable {
     var emoji: String
     var momentIDs: [String]
     var createdAt: Date
+}
+
+// MARK: - Creator economy
+
+/// What a creator sells: one plan per creator, priced at a fixed tier (App Store products), 30 days at a time.
+struct CreatorPlan: Codable, Sendable, Equatable, Hashable, Identifiable {
+    enum Tier: String, Codable, CaseIterable, Sendable {
+        case t1, t2, t3
+        /// Non-renewing subscription products; 30 days of access to one creator.
+        var productID: String { "creator.30d.\(rawValue)" }
+        /// Shown until StoreKit returns the localized price.
+        var fallbackPrice: String { switch self { case .t1: "₹199"; case .t2: "₹499"; case .t3: "₹999" } }
+        var label: String { switch self { case .t1: "Starter"; case .t2: "Standard"; case .t3: "Premium" } }
+        /// Reference amounts (INR) used for the creator's earnings estimate.
+        var referenceAmount: Double { switch self { case .t1: 199; case .t2: 499; case .t3: 999 } }
+    }
+    var id: String { creatorID }
+    var creatorID: String
+    var creatorName: String
+    var title: String
+    var pitch: String
+    var tier: Tier
+    var perks: [String]
+    /// How the creator wants to be paid (UPI / PayPal / IBAN). Read only by the payouts process.
+    var payoutHint: String
+    var createdAt: Date
+}
+
+struct CreatorSubscription: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var subscriberID: String
+    var subscriberName: String
+    var creatorID: String
+    var tier: CreatorPlan.Tier
+    var startedAt: Date
+    var expiresAt: Date
+    /// App Store transaction id; nil only for test/demo grants.
+    var transactionID: String?
+    var isActive: Bool { expiresAt > .now }
+}
+
+/// The split. MOMENT receives net proceeds from the App Store; creators are paid this share of that.
+enum CreatorEconomics {
+    static let creatorShare = 0.80
+    static let appStoreShare = 0.30
+    static func creatorEstimate(_ subs: [CreatorSubscription]) -> Double {
+        subs.filter(\.isActive).reduce(0) { $0 + $1.tier.referenceAmount } * (1 - appStoreShare) * creatorShare
+    }
 }
 
 struct FeedPage<T: Sendable>: Sendable {

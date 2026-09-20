@@ -8,7 +8,7 @@ import CryptoKit
 /// carry ciphertext: relays and strangers store bytes they cannot read.
 struct SignedEvent: Codable, Sendable, Equatable, Identifiable, Hashable {
     enum Kind: String, Codable, Sendable, CaseIterable {
-        case profile, moment, momentUpdate, join, leave, contribution, comment, reaction, now, nowJoin, follow, unfollow, report, claim, group, delete
+        case profile, moment, momentUpdate, join, leave, contribution, comment, reaction, now, nowJoin, follow, unfollow, report, claim, group, delete, plan, subscribe, grant
     }
     var id: String              // hex SHA-256 of the canonical form
     var kind: Kind
@@ -81,5 +81,22 @@ enum GeoCell {
         var out: [String] = []
         for dy in -steps...steps { for dx in -steps...steps { out.append("\(cy + dy)_\(cx + dx)") } }
         return out
+    }
+}
+
+/// Sealing a secret for one specific person: X25519 agreement → HKDF → AES-GCM. Used to hand a creator's
+/// content key to a paying subscriber. Only the two of them can open it.
+enum SealedForPeer {
+    static func seal(_ secret: Data, from me: Curve25519.KeyAgreement.PrivateKey, to peerPublicKeyBase64: String) throws -> String {
+        guard let pk = Data(base64Encoded: peerPublicKeyBase64), let peer = try? Curve25519.KeyAgreement.PublicKey(rawRepresentation: pk) else { throw SocialError.notFound }
+        let shared = try me.sharedSecretFromKeyAgreement(with: peer)
+        let key = shared.hkdfDerivedSymmetricKey(using: SHA256.self, salt: Data("moment.grant.v1".utf8), sharedInfo: Data(), outputByteCount: 32)
+        return try AES.GCM.seal(secret, using: key).combined!.base64EncodedString()
+    }
+    static func open(_ boxBase64: String, with me: Curve25519.KeyAgreement.PrivateKey, from peerPublicKeyBase64: String) -> Data? {
+        guard let pk = Data(base64Encoded: peerPublicKeyBase64), let peer = try? Curve25519.KeyAgreement.PublicKey(rawRepresentation: pk),
+              let shared = try? me.sharedSecretFromKeyAgreement(with: peer), let boxed = Data(base64Encoded: boxBase64), let box = try? AES.GCM.SealedBox(combined: boxed) else { return nil }
+        let key = shared.hkdfDerivedSymmetricKey(using: SHA256.self, salt: Data("moment.grant.v1".utf8), sharedInfo: Data(), outputByteCount: 32)
+        return try? AES.GCM.open(box, using: key)
     }
 }

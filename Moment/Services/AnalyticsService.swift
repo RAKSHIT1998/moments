@@ -42,6 +42,8 @@ final class AnalyticsService {
         case activityStarted = "activity_started"
         case qrScanned = "qr_scanned"
         case placeClaimed = "place_claimed"
+        case creatorPlanCreated = "creator_plan_created"
+        case creatorSubscribed = "creator_subscribed"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

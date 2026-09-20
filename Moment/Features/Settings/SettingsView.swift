@@ -32,6 +32,10 @@ struct SettingsView: View {
                 NavigationLink(value: SocialRoute.identity) { Label("Identity & recovery phrase", systemImage: "key") }
                 NavigationLink(value: SocialRoute.invite) { Label("Invite friends", systemImage: "person.badge.plus") }
             }
+            Section("Creators") {
+                NavigationLink(value: SocialRoute.earn) { Label("Earn from your Moments", systemImage: "crown") }
+                NavigationLink(value: SocialRoute.subscriptions) { Label("My subscriptions", systemImage: "heart.text.square") }
+            }
             Section("Network") {
                 NavigationLink(value: SocialRoute.network) {
                     HStack { Label("How Moments travel", systemImage: "point.3.connected.trianglepath.dotted"); Spacer(); Text(settings.networkMode.label).foregroundStyle(MColor.textSecondary) }
