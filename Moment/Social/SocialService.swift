@@ -113,6 +113,7 @@ final class SocialService {
                 self.me = try? await backend.updateProfile(displayName: settings.displayName, handle: me.handle, bio: me.bio, avatar: nil)
             }
             if let ck = backend as? CloudKitBackend { Task { await ck.ensureSubscriptions() } }
+            if let mesh = backend as? DecentralizedBackend { await mesh.startObserving { [weak self] in Task { @MainActor in self?.scheduleMeshRefresh() } } }
             if let identity, me?.publicKey != identity.publicKeyBase64 {
                 try? await backend.publishIdentity(publicKey: identity.publicKeyBase64, momentID: identity.momentID)
                 me = try? await backend.currentUser()
@@ -877,6 +878,13 @@ final class SocialService {
     }
 
     // MARK: - Notifications ("Rahul added 8 photos")
+
+    /// Events arrive one at a time over mesh/relays; coalesce them into one refresh.
+    private var meshRefreshTask: Task<Void, Never>?
+    private func scheduleMeshRefresh() {
+        meshRefreshTask?.cancel()
+        meshRefreshTask = Task { try? await Task.sleep(for: .milliseconds(600)); guard !Task.isCancelled else { return }; await handleRemoteChange() }
+    }
 
     /// Called from a CloudKit push (or a foreground refresh). Compares contribution counts and
     /// posts one local notification per Moment that grew — never content, just who and how many.

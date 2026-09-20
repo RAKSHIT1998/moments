@@ -6,3 +6,4 @@ DerivedData/
 xcuserdata/
 .DS_Store
 Moment.xcodeproj/project.xcworkspace/xcuserdata/
+node_modules/

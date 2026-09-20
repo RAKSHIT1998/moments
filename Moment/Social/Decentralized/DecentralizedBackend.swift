@@ -71,6 +71,26 @@ actor DecentralizedBackend: SocialBackend {
     }
 
     func attach(_ t: EventTransport) { transports.append(t); t.start() }
+
+    /// Called for every new event from anywhere (mesh, relay, or this phone). Invalidates derived caches
+    /// and lets the UI know something changed. `foreign` is true when another person authored it.
+    func startObserving(_ onForeign: @escaping @Sendable () -> Void) async {
+        let me = myID
+        await store.setOnNew { [weak self] e in
+            guard let self else { return }
+            Task { await self.invalidate(for: e) }
+            if e.author != me { onForeign() }
+        }
+    }
+    private func invalidate(for e: SignedEvent) {
+        switch e.kind {
+        case .profile: profileCache[e.author] = nil
+        case .follow, .unfollow: if e.tags["to"] == myID { followCache.removeAll() }
+        case .momentUpdate: if let m = e.tags["moment"] { coverCache[m] = nil }
+        default: break
+        }
+        profileCache.removeAll()   // counts (moments/places/people) derive from everything
+    }
     func detachAll() { transports.forEach { $0.stop() }; transports = [] }
 
     /// Sign, store, fan out.
