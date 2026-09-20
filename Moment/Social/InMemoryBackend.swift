@@ -398,18 +398,20 @@ actor InMemoryBackend: SocialBackend {
         try await body(self)
     }
 
-    func addUser(_ id: String, name: String, handle: String, bio: String = "", isPrivate: Bool = false) {
-        users[id] = SocialUser(id: id, displayName: name, handle: handle, bio: bio, avatarRef: nil, isPrivateAccount: isPrivate, momentCount: Int.random(in: 3...30), sharedCount: Int.random(in: 1...12), placeCount: Int.random(in: 2...9), peopleCount: Int.random(in: 3...20), createdAt: .now.adding(days: -200))
+    func addUser(_ id: String, name: String, handle: String, bio: String = "", isPrivate: Bool = false, avatar: String? = nil) {
+        var ref: MediaRef? = nil
+        if let avatar, let data = DemoPhotos.data(avatar) { mediaBlobs["avatar_\(id)"] = data; ref = MediaRef(kind: .photo, localRef: nil, remoteID: "avatar_\(id)") }
+        users[id] = SocialUser(id: id, displayName: name, handle: handle, bio: bio, avatarRef: ref, isPrivateAccount: isPrivate, momentCount: Int.random(in: 3...30), sharedCount: Int.random(in: 1...12), placeCount: Int.random(in: 2...9), peopleCount: Int.random(in: 3...20), createdAt: .now.adding(days: -200))
     }
 
     /// Fictional friends and Moments for the simulator and UI tests. Idempotent.
     func seedDemo() {
         guard moments.isEmpty else { return }
-        addUser("u_rahul", name: "Rahul Mehta", handle: "rahul", bio: "Goa loyalist. Will not wake up at 7.")
-        addUser("u_sarah", name: "Sarah Kim", handle: "sarahk", bio: "Photos of food, mostly.")
-        addUser("u_dev", name: "Dev Patel", handle: "devp", bio: "Runs. Talks about running.")
-        addUser("u_anaya", name: "Anaya Rao", handle: "anaya", bio: "", isPrivate: true)
-        addUser("u_public", name: "Sunset Society", handle: "sunsets", bio: "We chase the last light. Public Moments from the coast.")
+        addUser("u_rahul", name: "Rahul Mehta", handle: "rahul", bio: "Goa loyalist. Will not wake up at 7.", avatar: "avatar_91")
+        addUser("u_sarah", name: "Sarah Kim", handle: "sarahk", bio: "Photos of food, mostly.", avatar: "avatar_64")
+        addUser("u_dev", name: "Dev Patel", handle: "devp", bio: "Runs. Talks about running.", avatar: "avatar_177")
+        addUser("u_anaya", name: "Anaya Rao", handle: "anaya", bio: "", isPrivate: true, avatar: "avatar_65")
+        addUser("u_public", name: "Sunset Society", handle: "sunsets", bio: "We chase the last light. Public Moments from the coast.", avatar: "demo_270")
         follows = [
             Follow(fromID: me.id, toID: "u_rahul", createdAt: .now.adding(days: -90), isClose: true),
             Follow(fromID: "u_rahul", toID: me.id, createdAt: .now.adding(days: -90), isClose: true),
@@ -417,8 +419,10 @@ actor InMemoryBackend: SocialBackend {
             Follow(fromID: "u_sarah", toID: me.id, createdAt: .now.adding(days: -60), isClose: false),
             Follow(fromID: "u_dev", toID: me.id, createdAt: .now.adding(days: -20), isClose: false)
         ]
-        func img(_ color: UIColor, _ label: String) -> Data {
-            UIGraphicsImageRenderer(size: CGSize(width: 900, height: 1200)).image { ctx in
+        /// Real photo from the bundled demo set when one is named; otherwise a painted placeholder.
+        func img(_ color: UIColor, _ label: String, _ photo: String? = nil) -> Data {
+            if let photo, let d = DemoPhotos.data(photo) { return d }
+            return UIGraphicsImageRenderer(size: CGSize(width: 900, height: 1200)).image { ctx in
                 color.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 900, height: 1200))
                 let attrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 64, weight: .bold), .foregroundColor: UIColor.white.withAlphaComponent(0.9)]
                 (label as NSString).draw(at: CGPoint(x: 60, y: 1020), withAttributes: attrs)
@@ -431,15 +435,15 @@ actor InMemoryBackend: SocialBackend {
             "Versova": SocialPlace(id: SocialPlace.makeID(name: "Versova Beach", latitude: 19.131, longitude: 72.812), name: "Versova Beach", area: "Andheri West, Mumbai", latitude: 19.131, longitude: 72.812, category: "Beach"),
             "Lower Parel": SocialPlace(id: SocialPlace.makeID(name: "Kokoro Ramen", latitude: 18.997, longitude: 72.828), name: "Kokoro Ramen", area: "Lower Parel, Mumbai", latitude: 18.997, longitude: 72.828, category: "Café")
         ]
-        func add(_ id: String, creator: String, title: String, desc: String, daysAgo: Int, members: [String], place: String?, vis: MomentVisibility, color: UIColor, isLive: Bool = false, contribs: [(String, Contribution.Kind, String, Int)]) {
+        func add(_ id: String, creator: String, title: String, desc: String, daysAgo: Int, members: [String], place: String?, vis: MomentVisibility, color: UIColor, cover: String? = nil, isLive: Bool = false, contribs: [(String, Contribution.Kind, String, Int, String?)]) {
             let creatorUser = users[creator]!
-            mediaBlobs["cover_\(id)"] = img(color, title)
+            mediaBlobs["cover_\(id)"] = img(color, title, cover)
             var m = SocialMoment(id: id, creatorID: creator, creatorName: creatorUser.displayName, title: title, description: desc, coverRef: MediaRef(kind: .photo, localRef: nil, remoteID: "cover_\(id)"), createdAt: .now.adding(days: -daysAgo), startAt: .now.adding(days: -daysAgo), endAt: nil, locationName: place, coarsePlace: place, visibility: vis, memberIDs: members, memberNames: members.map { users[$0]?.displayName ?? $0 }, contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: members.count, isLive: isLive, templateID: nil, remixedFromID: nil, shareURL: URL(string: "https://www.icloud.com/share/\(id)"), allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: false, place: place.flatMap { venues[$0] })
             var list: [Contribution] = []
             for (i, c) in contribs.enumerated() {
                 let cid = "c_\(id)_\(i)"
                 var ref: MediaRef? = nil
-                if c.1 != .text { mediaBlobs[cid] = img(color.withAlphaComponent(0.7 + Double(i % 3) * 0.1), c.2); ref = MediaRef(kind: .photo, localRef: nil, remoteID: cid) }
+                if c.1 != .text { mediaBlobs[cid] = img(color.withAlphaComponent(0.7 + Double(i % 3) * 0.1), c.2, c.4); ref = MediaRef(kind: .photo, localRef: nil, remoteID: cid) }
                 list.append(Contribution(id: cid, momentID: id, authorID: c.0, authorName: users[c.0]?.displayName ?? c.0, kind: c.1, media: ref, caption: c.2, createdAt: .now.adding(days: -daysAgo).addingTimeInterval(Double(c.3) * 60), originalTimestamp: .now.adding(days: -daysAgo).addingTimeInterval(Double(c.3) * 60), reactionCounts: i == 0 ? ["core": 3, "forgot": 1] : [:], commentCount: 0, uploadState: .uploaded))
             }
             m.contributionCount = list.count; m.mediaCount = list.filter { $0.media != nil }.count
@@ -447,23 +451,32 @@ actor InMemoryBackend: SocialBackend {
             contributions[id] = list
             moments[id] = m
         }
-        add("m_goa", creator: me.id, title: "Goa '26", desc: "Three days. Zero 7am wake-ups.", daysAgo: 9, members: [me.id, "u_rahul", "u_sarah"], place: "Goa", vis: .group, color: UIColor(red: 0.95, green: 0.55, blue: 0.25, alpha: 1), contribs: [
-            (me.id, .photo, "Palolem at 6", 0), ("u_rahul", .photo, "Told you", 40), ("u_sarah", .photo, "Fish thali", 180), ("u_rahul", .text, "we're waking up at 7 tomorrow 😂", 600), ("u_sarah", .photo, "Last night", 1400)
+        add("m_goa", creator: me.id, title: "Goa '26", desc: "Three days. Zero 7am wake-ups.", daysAgo: 9, members: [me.id, "u_rahul", "u_sarah"], place: "Goa", vis: .group, color: UIColor(red: 0.95, green: 0.55, blue: 0.25, alpha: 1), cover: "demo_154", contribs: [
+            (me.id, .photo, "Palolem at 6", 0, "demo_213"), ("u_rahul", .photo, "Told you", 40, "demo_108"), ("u_sarah", .photo, "Fish thali", 180, "demo_292"), ("u_rahul", .text, "we're waking up at 7 tomorrow 😂", 600, nil), ("u_sarah", .photo, "Last night", 1400, "demo_195")
         ])
-        add("m_bday", creator: "u_rahul", title: "Sarah's 30th", desc: "", daysAgo: 2, members: ["u_rahul", "u_sarah", me.id, "u_dev"], place: "Bandra", vis: .group, color: UIColor(red: 0.45, green: 0.3, blue: 0.85, alpha: 1), contribs: [
-            ("u_rahul", .photo, "Cake situation", 0), ("u_dev", .photo, "Speech", 25), ("u_sarah", .photo, "Everyone", 90)
+        add("m_bday", creator: "u_rahul", title: "Sarah's 30th", desc: "", daysAgo: 2, members: ["u_rahul", "u_sarah", me.id, "u_dev"], place: "Bandra", vis: .group, color: UIColor(red: 0.45, green: 0.3, blue: 0.85, alpha: 1), cover: "demo_56", contribs: [
+            ("u_rahul", .photo, "Cake situation", 0, "demo_56"), ("u_dev", .photo, "Speech", 25, "demo_117"), ("u_sarah", .photo, "Everyone", 90, "demo_158")
         ])
-        add("m_run", creator: "u_dev", title: "Sunday long run", desc: "21k, no walking.", daysAgo: 1, members: ["u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.2, green: 0.6, blue: 0.5, alpha: 1), contribs: [("u_dev", .photo, "Km 18", 0), ("u_dev", .photo, "Done", 70)])
-        add("m_sunset", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), isLive: true, contribs: [("u_public", .photo, "6:41pm", 0), ("u_public", .photo, "6:52pm", 11), ("u_public", .photo, "7:03pm", 22)])
-        add("m_cafe", creator: "u_sarah", title: "Ramen night", desc: "The tonkotsu. That's the review.", daysAgo: 3, members: ["u_sarah", "u_dev"], place: "Lower Parel", vis: .publicAll, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), contribs: [("u_sarah", .photo, "Tonkotsu", 0), ("u_dev", .photo, "Gyoza", 15)])
-        add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), contribs: [("u_public", .photo, "Bar", 0), ("u_rahul", .photo, "Cocktails", 40)])
-        add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), contribs: [(me.id, .photo, "Anjuna", 0), ("u_rahul", .photo, "Same beach", 30)])
+        add("m_run", creator: "u_dev", title: "Sunday long run", desc: "21k, no walking.", daysAgo: 1, members: ["u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.2, green: 0.6, blue: 0.5, alpha: 1), cover: "demo_314", contribs: [("u_dev", .photo, "Km 18", 0, "demo_182"), ("u_dev", .photo, "Done", 70, "demo_103")])
+        add("m_sunset", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), cover: "demo_270", isLive: true, contribs: [("u_public", .photo, "6:41pm", 0, "demo_110"), ("u_public", .photo, "6:52pm", 11, "demo_173"), ("u_public", .photo, "7:03pm", 22, "demo_213")])
+        add("m_cafe", creator: "u_sarah", title: "Ramen night", desc: "The tonkotsu. That's the review.", daysAgo: 3, members: ["u_sarah", "u_dev"], place: "Lower Parel", vis: .publicAll, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), cover: "demo_312", contribs: [("u_sarah", .photo, "Tonkotsu", 0, "demo_312"), ("u_dev", .photo, "Gyoza", 15, "demo_292")])
+        add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), cover: "demo_223", contribs: [("u_public", .photo, "Bar", 0, "demo_195"), ("u_rahul", .photo, "Cocktails", 40, "demo_113")])
+        add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), cover: "demo_92", contribs: [(me.id, .photo, "Anjuna", 0, "demo_200"), ("u_rahul", .photo, "Same beach", 30, "demo_215")])
+        add("m_marine", creator: "u_public", title: "Marine Drive, 6am", desc: "Sunday run club. Before the city wakes up.", daysAgo: 0, members: ["u_public", "u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.3, green: 0.5, blue: 0.7, alpha: 1), cover: "demo_176", isLive: true, contribs: [("u_public", .photo, "First light", 0, "demo_176"), ("u_dev", .photo, "Coffee after", 45, "demo_30")])
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
+        func story(_ id: String, _ photo: String) -> MediaRef? {
+            guard let d = DemoPhotos.data(photo) else { return nil }
+            mediaBlobs["now_\(id)"] = d
+            return MediaRef(kind: .photo, localRef: nil, remoteID: "now_\(id)")
+        }
         nows = [
-            NowPost(id: "n1", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Chai run. Who's up", media: nil, createdAt: .now.addingTimeInterval(-1800), expiresAt: .now.addingTimeInterval(22 * 3600), coarsePlace: "Bandra", savedToMomentID: nil),
-            NowPost(id: "n2", authorID: "u_sarah", authorName: "Sarah Kim", text: "Finally trying that ramen place", media: nil, createdAt: .now.addingTimeInterval(-5400), expiresAt: .now.addingTimeInterval(18 * 3600), coarsePlace: "Lower Parel", savedToMomentID: nil),
-            NowPost(id: "n3", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Anyone out?", media: nil, createdAt: .now.addingTimeInterval(-600), expiresAt: .now.addingTimeInterval(4 * 3600), coarsePlace: "Bandra", savedToMomentID: nil, activity: .drinks, place: venues["Bandra"], joinerIDs: ["u_sarah"], joinerNames: ["Sarah Kim"])
+            NowPost(id: "n1", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Chai run. Who's up", media: story("n1", "demo_30"), createdAt: .now.addingTimeInterval(-1800), expiresAt: .now.addingTimeInterval(22 * 3600), coarsePlace: "Bandra", savedToMomentID: nil),
+            NowPost(id: "n2", authorID: "u_sarah", authorName: "Sarah Kim", text: "Finally trying that ramen place", media: story("n2", "demo_225"), createdAt: .now.addingTimeInterval(-5400), expiresAt: .now.addingTimeInterval(18 * 3600), coarsePlace: "Lower Parel", savedToMomentID: nil),
+            NowPost(id: "n3", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Anyone out?", media: nil, createdAt: .now.addingTimeInterval(-600), expiresAt: .now.addingTimeInterval(4 * 3600), coarsePlace: "Bandra", savedToMomentID: nil, activity: .drinks, place: venues["Bandra"], joinerIDs: ["u_sarah"], joinerNames: ["Sarah Kim"]),
+            NowPost(id: "n4", authorID: "u_dev", authorName: "Dev Patel", text: "Sea's flat. Rare.", media: story("n4", "demo_176"), createdAt: .now.addingTimeInterval(-2400), expiresAt: .now.addingTimeInterval(20 * 3600), coarsePlace: "Marine Drive", savedToMomentID: "m_marine", activity: .exploring, place: venues["Marine Drive"]),
+            NowPost(id: "n5", authorID: "u_public", authorName: "Sunset Society", text: "Setting up at Versova. 6:30 sharp.", media: story("n5", "demo_270"), createdAt: .now.addingTimeInterval(-900), expiresAt: .now.addingTimeInterval(6 * 3600), coarsePlace: "Versova", savedToMomentID: nil, activity: .beach, place: venues["Versova"], joinerIDs: ["u_rahul", "u_anaya"], joinerNames: ["Rahul Mehta", "Anaya Rao"]),
+            NowPost(id: "n6", authorID: "u_sarah", authorName: "Sarah Kim", text: "Berries for breakfast. Living.", media: story("n6", "demo_102"), createdAt: .now.addingTimeInterval(-9000), expiresAt: .now.addingTimeInterval(14 * 3600), coarsePlace: "Bandra", savedToMomentID: nil)
         ]
         groupsByID["g_boys"] = SocialGroup(id: "g_boys", ownerID: me.id, name: "The Goa crew", emoji: "🏖️", memberIDs: [me.id, "u_rahul", "u_sarah"], memberNames: [me.displayName, "Rahul Mehta", "Sarah Kim"], conversationID: nil, createdAt: .now.adding(days: -100))
         activityItems = [
@@ -481,3 +494,11 @@ actor InMemoryBackend: SocialBackend {
     }
 }
 #endif
+
+/// Real photographs bundled for the fictional demo (Unsplash-licensed via picsum.photos, no people identifiable).
+enum DemoPhotos {
+    static func data(_ name: String) -> Data? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "jpg") else { return nil }
+        return try? Data(contentsOf: url)
+    }
+}

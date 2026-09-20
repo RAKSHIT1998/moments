@@ -1144,6 +1144,9 @@
     "How it came together" : {
 
     },
+    "How Moments travel" : {
+
+    },
     "https://" : {
 
     },
@@ -1543,6 +1546,9 @@
     "Needs review" : {
 
     },
+    "Network" : {
+
+    },
     "New" : {
 
     },
@@ -1822,6 +1828,9 @@
     "Person" : {
 
     },
+    "Phone‑to‑phone" : {
+
+    },
     "Photo" : {
 
     },
@@ -1947,6 +1956,12 @@
 
     },
     "Relationship (optional, e.g. brother)" : {
+
+    },
+    "Relays" : {
+
+    },
+    "Relays are open servers anyone can run — a friend, a café, you. They store signed events and can't read private Moments. Add several; the app dedupes. Run your own with the `relay/` folder in the source." : {
 
     },
     "Remember more. Forget less." : {
@@ -2643,6 +2658,9 @@
     "When is this?" : {
 
     },
+    "When on, people in the same room get your Moments instantly — even offline. Others only ever see signed events, never your identity beyond your MOMENT ID." : {
+
+    },
     "When people add to a Moment I'm in" : {
 
     },
@@ -2704,6 +2722,9 @@
 
     },
     "Write it down. It's the only way to move your identity to a new phone — we can't recover it for you." : {
+
+    },
+    "wss://relay.example.org" : {
 
     },
     "You + %@" : {

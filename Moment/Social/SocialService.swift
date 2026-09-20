@@ -274,8 +274,10 @@ final class SocialService {
             if let p = m.coarsePlace, !p.isEmpty { places[p, default: 0] += 1 }
             months[cal.component(.month, from: m.startAt ?? m.createdAt), default: 0] += 1
         }
-        let busiest = months.max { $0.value < $1.value }.map { cal.monthSymbols[$0.key - 1] }
-        return YearSummary(year: year, moments: mine.count, people: people.count, places: places.count, photos: mine.reduce(0) { $0 + $1.mediaCount }, topPerson: people.max { $0.value < $1.value }?.key, topPlace: places.max { $0.value < $1.value }?.key, busiestMonth: busiest)
+        // Ties resolve by name so the summary is stable between launches.
+        func top(_ d: [String: Int]) -> String? { d.max { ($0.value, $1.key) < ($1.value, $0.key) }?.key }
+        let busiest = months.max { ($0.value, $1.key) < ($1.value, $0.key) }.map { cal.monthSymbols[$0.key - 1] }
+        return YearSummary(year: year, moments: mine.count, people: people.count, places: places.count, photos: mine.reduce(0) { $0 + $1.mediaCount }, topPerson: top(people), topPlace: top(places), busiestMonth: busiest)
     }
 
     func updateProfile(displayName: String, handle: String, bio: String, avatar: Data?) async -> Bool {
