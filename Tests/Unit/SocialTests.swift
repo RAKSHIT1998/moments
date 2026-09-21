@@ -516,6 +516,20 @@ final class CreatorEconomyTests: XCTestCase {
         XCTAssertEqual(env.social.subscription(to: "u_public")?.expiresAt.daysUntil(.now).magnitude ?? 0, 30, accuracy: 1)
     }
 
+    func testTipsReachTheCreatorAndCountTowardEarnings() async throws {
+        let (env, backend) = await makeSocial()
+        await env.social.loadCreatorPlan("u_sarah")
+        let sent = await env.social.tip(creatorID: "u_sarah", momentID: "m_cafe", amount: .large, note: "best ramen")
+        XCTAssertTrue(sent)
+        let noPlan = await env.social.tip(creatorID: "u_rahul", momentID: nil, amount: .small, note: "")
+        XCTAssertFalse(noPlan, "you can only tip someone who has set up a plan (that's where their payout handle lives)")
+        var received: [CreatorTip] = []
+        try await backend.acting(as: "u_sarah") { b in received = try await b.tips() }
+        XCTAssertEqual(received.map(\.note), ["best ramen", "that broth 🙏"])
+        let estimate = CreatorEconomics.creatorEstimate([], tips: received, since: .distantPast)
+        XCTAssertEqual(estimate, (499 + 99) * 0.7 * 0.8, accuracy: 0.01)
+    }
+
     func testCreatorPlanSubscribersAndEarnings() async throws {
         let (env, backend) = await makeSocial()
         XCTAssertNil(env.social.myPlan)

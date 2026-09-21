@@ -61,6 +61,51 @@
       "productID": "creator.30d.t3",
       "referenceName": "Creator \u00b7 Premium (30 days)",
       "type": "NonRenewingSubscription"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "7104",
+      "localizations": [
+        {
+          "description": "A one-off thank-you to a creator.",
+          "displayName": "Tip \u00b7 Coffee",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "creator.tip.small",
+      "referenceName": "Tip \u00b7 Coffee",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "7105",
+      "localizations": [
+        {
+          "description": "A one-off thank-you to a creator.",
+          "displayName": "Tip \u00b7 Dinner",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "creator.tip.medium",
+      "referenceName": "Tip \u00b7 Dinner",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "6.99",
+      "familyShareable": false,
+      "internalID": "7106",
+      "localizations": [
+        {
+          "description": "A one-off thank-you to a creator.",
+          "displayName": "Tip \u00b7 Big thanks",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "creator.tip.large",
+      "referenceName": "Tip \u00b7 Big thanks",
+      "type": "Consumable"
     }
   ],
   "settings": {

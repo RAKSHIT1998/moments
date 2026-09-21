@@ -366,12 +366,34 @@ struct CreatorSubscription: Codable, Sendable, Equatable, Hashable, Identifiable
     var isActive: Bool { expiresAt > .now }
 }
 
+/// A one-off thank-you on a Moment. Consumable App Store products; the creator gets the same share as subscriptions.
+struct CreatorTip: Codable, Sendable, Equatable, Hashable, Identifiable {
+    enum Amount: String, Codable, CaseIterable, Sendable {
+        case small, medium, large
+        var productID: String { "creator.tip.\(rawValue)" }
+        var fallbackPrice: String { switch self { case .small: "₹49"; case .medium: "₹99"; case .large: "₹499" } }
+        var referenceAmount: Double { switch self { case .small: 49; case .medium: 99; case .large: 499 } }
+        var emoji: String { switch self { case .small: "☕️"; case .medium: "🍜"; case .large: "🎉" } }
+    }
+    var id: String
+    var fromID: String
+    var fromName: String
+    var creatorID: String
+    var momentID: String?
+    var amount: Amount
+    var note: String
+    var createdAt: Date
+    var transactionID: String?
+}
+
 /// The split. MOMENT receives net proceeds from the App Store; creators are paid this share of that.
 enum CreatorEconomics {
     static let creatorShare = 0.80
     static let appStoreShare = 0.30
-    static func creatorEstimate(_ subs: [CreatorSubscription]) -> Double {
-        subs.filter(\.isActive).reduce(0) { $0 + $1.tier.referenceAmount } * (1 - appStoreShare) * creatorShare
+    static func creatorEstimate(_ subs: [CreatorSubscription], tips: [CreatorTip] = [], since: Date = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .distantPast) -> Double {
+        let subTotal = subs.filter(\.isActive).reduce(0) { $0 + $1.tier.referenceAmount }
+        let tipTotal = tips.filter { $0.createdAt >= since }.reduce(0) { $0 + $1.amount.referenceAmount }
+        return (subTotal + tipTotal) * (1 - appStoreShare) * creatorShare
     }
 }
 

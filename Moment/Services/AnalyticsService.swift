@@ -44,6 +44,7 @@ final class AnalyticsService {
         case placeClaimed = "place_claimed"
         case creatorPlanCreated = "creator_plan_created"
         case creatorSubscribed = "creator_subscribed"
+        case creatorTipped = "creator_tipped"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

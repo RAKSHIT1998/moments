@@ -62,6 +62,16 @@
         }
       }
     },
+    "%@ · %@ / 30 days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@ / 30 days"
+          }
+        }
+      }
+    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -256,6 +266,16 @@
         }
       }
     },
+    "%lld %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$@"
+          }
+        }
+      }
+    },
     "%lld %@ · %lld people%@" : {
       "localizations" : {
         "en" : {
@@ -292,6 +312,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@%3$@"
+          }
+        }
+      }
+    },
+    "%lld active %@ · %@ each · %lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld active %2$@ · %3$@ each · %4$lld %5$@"
           }
         }
       }
@@ -458,6 +488,9 @@
     "A NOTE" : {
 
     },
+    "A one-off. They get %lld%% of what's left after the App Store." : {
+
+    },
     "About" : {
 
     },
@@ -465,6 +498,9 @@
 
     },
     "Active" : {
+
+    },
+    "Active until %@" : {
 
     },
     "Activity" : {
@@ -606,6 +642,9 @@
 
     },
     "Around you" : {
+
+    },
+    "Ask me anything" : {
 
     },
     "Ask MOMENT a question about what you've saved." : {
@@ -815,6 +854,12 @@
     "Creating…" : {
 
     },
+    "Creators" : {
+
+    },
+    "Current subscribers keep what they already have until it expires. New Moments can't be sold until you set up a plan again." : {
+
+    },
     "Daily brief" : {
 
     },
@@ -896,6 +941,12 @@
     "Drop in photos from a trip or a night out and MOMENT turns them into a story you can send to the people who were there." : {
 
     },
+    "Earn" : {
+
+    },
+    "Earn from your Moments" : {
+
+    },
     "Edit" : {
 
     },
@@ -916,6 +967,16 @@
     },
     "End this activity?" : {
 
+    },
+    "Estimate after App Store fees (%lld%%) and MOMENT's share; you keep %lld%% of the net. Paid out monthly to the details below." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Estimate after App Store fees (%1$lld%%) and MOMENT's share; you keep %2$lld%% of the net. Paid out monthly to the details below."
+          }
+        }
+      }
     },
     "Event" : {
 
@@ -945,6 +1006,9 @@
 
     },
     "Example" : {
+
+    },
+    "Expired %@" : {
 
     },
     "Explore" : {
@@ -1019,6 +1083,9 @@
     "Follows your iPhone's Light/Dark setting, including schedules. Text, cards and colours adapt automatically." : {
 
     },
+    "For subscribers" : {
+
+    },
     "Format" : {
 
     },
@@ -1056,6 +1123,9 @@
           }
         }
       }
+    },
+    "Full-res photos, same night" : {
+
     },
     "Generate a 12-word phrase, write it down, and you can bring this identity to a new phone. We never see it." : {
 
@@ -1261,6 +1331,9 @@
     "Known" : {
 
     },
+    "Lapsed %@" : {
+
+    },
     "Last meaningful Moment · %@" : {
 
     },
@@ -1337,6 +1410,9 @@
 
     },
     "Look around first" : {
+
+    },
+    "Made by %@" : {
 
     },
     "Made with MOMENT" : {
@@ -1525,10 +1601,16 @@
     "My private memory" : {
 
     },
+    "My subscriptions" : {
+
+    },
     "Mystery Moment" : {
 
     },
     "Name" : {
+
+    },
+    "Name it — “The raw frames”" : {
 
     },
     "Name or @handle" : {
@@ -1562,6 +1644,9 @@
 
     },
     "New name" : {
+
+    },
+    "New subscribers-only Moment" : {
 
     },
     "Next" : {
@@ -1631,6 +1716,9 @@
 
     },
     "Nobody — remove person" : {
+
+    },
+    "Nobody yet. Share a subscribers-only Moment — the locked preview does the selling." : {
 
     },
     "Nobody's out yet" : {
@@ -1723,6 +1811,9 @@
     "One alert per Moment that grew — who and how many, never the photos." : {
 
     },
+    "One payment through the App Store, no auto-renew. The creator gets the majority; MOMENT keeps no card details and never sees your name against a purchase." : {
+
+    },
     "Only friends you follow back can join, even with the QR." : {
 
     },
@@ -1795,6 +1886,9 @@
     "Payment is charged to your Apple Account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period, and you can manage or cancel them in your Apple Account settings. Lifetime is a one-time purchase." : {
 
     },
+    "PAYOUT" : {
+
+    },
     "Pending Promises" : {
 
     },
@@ -1820,6 +1914,9 @@
 
     },
     "People, places, the plans you made and the ones that happened. Yours to keep or share." : {
+
+    },
+    "PERKS" : {
 
     },
     "Permissions" : {
@@ -1894,6 +1991,12 @@
     "Posted" : {
 
     },
+    "PRICE · 30 DAYS" : {
+
+    },
+    "Prices are set by the App Store in each country. Apple takes its cut on every purchase." : {
+
+    },
     "Print your QR for the counter: every scan lands people on this page." : {
 
     },
@@ -1934,6 +2037,9 @@
 
     },
     "React" : {
+
+    },
+    "Read only by the payouts process, once a month. You can change it any time." : {
 
     },
     "Reading %lld of %lld…" : {
@@ -2114,6 +2220,9 @@
     "Say something" : {
 
     },
+    "Say something (optional)" : {
+
+    },
     "Say what you're up for and see who joins." : {
 
     },
@@ -2168,7 +2277,13 @@
     "See what's happening around you" : {
 
     },
+    "Sell what you make" : {
+
+    },
     "Send" : {
+
+    },
+    "Send %@" : {
 
     },
     "Send as a Moment" : {
@@ -2178,6 +2293,9 @@
 
     },
     "Send it back to %@" : {
+
+    },
+    "Sent. They'll see it on their Earn page." : {
 
     },
     "Set" : {
@@ -2349,6 +2467,9 @@
     "Start an event here" : {
 
     },
+    "Start selling" : {
+
+    },
     "Start with photos" : {
 
     },
@@ -2356,6 +2477,36 @@
 
     },
     "Status" : {
+
+    },
+    "Stop selling" : {
+
+    },
+    "Stop selling?" : {
+
+    },
+    "Subscribe" : {
+
+    },
+    "Subscribe · %@ / 30 days" : {
+
+    },
+    "Subscribe · %@ for 30 days" : {
+
+    },
+    "Subscribed" : {
+
+    },
+    "Subscribers" : {
+
+    },
+    "SUBSCRIBERS" : {
+
+    },
+    "Subscribers pay for 30 days at a time and see every Moment you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt." : {
+
+    },
+    "Subscriptions" : {
 
     },
     "Summary" : {
@@ -2368,6 +2519,9 @@
 
     },
     "Terms of Use" : {
+
+    },
+    "Thank %@" : {
 
     },
     "Thank you. Everything is unlocked." : {
@@ -2427,6 +2581,9 @@
     "This looks like a core memory." : {
 
     },
+    "THIS MONTH" : {
+
+    },
     "This permanently deletes your MOMENT memories and stored media from this device. There is no hidden copy." : {
 
     },
@@ -2449,6 +2606,12 @@
 
     },
     "Timeline" : {
+
+    },
+    "Tip" : {
+
+    },
+    "TIPS" : {
 
     },
     "Title" : {
@@ -2517,6 +2680,9 @@
     "Unlike" : {
 
     },
+    "Unlock · %@" : {
+
+    },
     "Unlock with %@" : {
 
     },
@@ -2529,6 +2695,9 @@
     "Unpin from profile" : {
 
     },
+    "Until %@" : {
+
+    },
     "Up for" : {
 
     },
@@ -2536,6 +2705,9 @@
 
     },
     "Upcoming Plans" : {
+
+    },
+    "UPI ID, PayPal email or IBAN" : {
 
     },
     "Uploading" : {
@@ -2583,6 +2755,9 @@
     "Voice note" : {
 
     },
+    "Vote on the next spot" : {
+
+    },
     "Waiting for the people who were there." : {
 
     },
@@ -2608,6 +2783,9 @@
 
     },
     "What are you up for?" : {
+
+    },
+    "What do they get?" : {
 
     },
     "What do you remember?" : {
@@ -2748,6 +2926,12 @@
     "You were there too." : {
 
     },
+    "You're in. Everything unlocks now." : {
+
+    },
+    "You're not subscribed to anyone. Creators you support show up here, with what you paid for and until when." : {
+
+    },
     "You're on MOMENT Pro." : {
 
     },
@@ -2818,6 +3002,9 @@
 
     },
     "Your place" : {
+
+    },
+    "Your plan" : {
 
     },
     "Your profile is stored in your iCloud. Only people you share with see your Moments." : {

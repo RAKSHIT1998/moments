@@ -150,11 +150,18 @@ struct MomentPageView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("momentMembers")
-            if !isMember {
+            if !isMember && m.visibility != .subscribers {
                 HStack(spacing: MSpacing.m) {
                     Text("Were you there?").font(MFont.body)
                     Spacer()
                     Button("I was there") { Task { if await env.social.join(momentID: m.id) { env.toast("You're in.") } } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("iWasThere")
+                }
+            }
+            if m.creatorID != env.social.myID, env.social.plan(for: m.creatorID) != nil {
+                HStack(spacing: MSpacing.m) {
+                    Text("Made by \(m.creatorName)").font(MFont.body)
+                    Spacer()
+                    TipButton(creatorID: m.creatorID, creatorName: m.creatorName, momentID: m.id)
                 }
             }
         }

@@ -33,6 +33,7 @@ actor InMemoryBackend: SocialBackend {
     var claims: [String: PlaceClaim] = [:]
     var plans: [String: CreatorPlan] = [:]
     var subs: [CreatorSubscription] = []
+    var tipsList: [CreatorTip] = []
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
     var offline = false
@@ -418,6 +419,12 @@ actor InMemoryBackend: SocialBackend {
     }
     func mySubscriptions() async throws -> [CreatorSubscription] { try gate(); return subs.filter { $0.subscriberID == me.id }.sorted { $0.expiresAt > $1.expiresAt } }
     func subscribers() async throws -> [CreatorSubscription] { try gate(); return subs.filter { $0.creatorID == me.id }.sorted { $0.startedAt > $1.startedAt } }
+    func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip {
+        try gate(); guard creatorID != me.id, plans[creatorID] != nil else { throw SocialError.notAllowed }
+        let t = CreatorTip(id: "tip_\(UUID().uuidString)", fromID: me.id, fromName: me.displayName, creatorID: creatorID, momentID: momentID, amount: amount, note: note, createdAt: .now, transactionID: transactionID)
+        tipsList.append(t); return t
+    }
+    func tips() async throws -> [CreatorTip] { try gate(); return tipsList.filter { $0.creatorID == me.id }.sorted { $0.createdAt > $1.createdAt } }
 
     // MARK: Test helpers
 
@@ -503,6 +510,7 @@ actor InMemoryBackend: SocialBackend {
             CreatorSubscription(id: "sub_r1", subscriberID: "u_rahul", subscriberName: "Rahul Mehta", creatorID: "u_public", tier: .t2, startedAt: .now.adding(days: -20), expiresAt: .now.adding(days: 10), transactionID: nil),
             CreatorSubscription(id: "sub_d1", subscriberID: "u_dev", subscriberName: "Dev Patel", creatorID: "u_sarah", tier: .t1, startedAt: .now.adding(days: -5), expiresAt: .now.adding(days: 25), transactionID: nil)
         ]
+        tipsList = [CreatorTip(id: "tip_1", fromID: "u_dev", fromName: "Dev Patel", creatorID: "u_sarah", momentID: "m_cafe", amount: .medium, note: "that broth 🙏", createdAt: .now.adding(days: -2), transactionID: nil)]
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
         func story(_ id: String, _ photo: String) -> MediaRef? {

@@ -108,6 +108,9 @@ protocol SocialBackend: AnyObject, Sendable {
     func mySubscriptions() async throws -> [CreatorSubscription]
     /// People subscribed to me.
     func subscribers() async throws -> [CreatorSubscription]
+    func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip
+    /// Tips I've received.
+    func tips() async throws -> [CreatorTip]
 }
 
 enum AccountStatus: Sendable, Equatable { case available, noAccount, restricted, unknown, offline }

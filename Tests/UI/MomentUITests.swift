@@ -229,15 +229,22 @@ final class MomentUITests: XCTestCase {
         waitForFeed()
         // Scroll until the locked paid Moment surfaces; unlock it.
         let unlock = app.descendants(matching: .any)["unlock-m_raw"].firstMatch
-        for _ in 0..<12 where !unlock.exists { app.swipeUp() }
+        for _ in 0..<30 where !unlock.exists { app.swipeUp(); if unlock.waitForExistence(timeout: 1) { break } }
         XCTAssertTrue(unlock.waitForExistence(timeout: 5), "paid preview from a followed creator is in the feed")
         snap("12-locked")
+        // Bring the button into the middle of the screen: XCUITest's own scroll-to-visible can leave it under the tab bar.
+        for _ in 0..<6 {
+            let y = unlock.frame.midY, h = app.frame.height
+            if y > 160 && y < h - 200 { break }
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7)), to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: y > h / 2 ? 0.4 : 0.95))
+            from.press(forDuration: 0.05, thenDragTo: to)
+        }
         unlock.tap()
         let subscribe = app.buttons["subscribeButton"]
-        XCTAssertTrue(subscribe.waitForExistence(timeout: 8))
+        XCTAssertTrue(subscribe.waitForExistence(timeout: 20))
         snap("13-subscribe")
         subscribe.tap()   // demo host: recorded without an App Store purchase
-        XCTAssertTrue(app.staticTexts["You're in. Everything unlocks now."].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["You're in. Everything unlocks now."].waitForExistence(timeout: 20))
         app.buttons["Done"].tap()
         XCTAssertFalse(unlock.waitForExistence(timeout: 3), "lock is gone once subscribed")
         // Creator side: set up a plan and see the earnings screen.

@@ -504,6 +504,21 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let ids = list.filter(\.isActive).map(\.subscriberID)
         if !ids.isEmpty { _ = try? await share(momentID: momentID, with: ids) }
     }
+    func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip {
+        let me = try await currentUser()
+        guard creatorID != me.id, (try await creatorPlan(for: creatorID)) != nil else { throw SocialError.notAllowed }
+        let r = CKRecord(recordType: "CreatorTip", recordID: CKRecord.ID(recordName: "tip_\(UUID().uuidString)"))
+        r["fromID"] = me.id; r["fromName"] = me.displayName; r["creatorID"] = creatorID; r["momentID"] = momentID; r["amount"] = amount.rawValue; r["note"] = note; r["transactionID"] = transactionID
+        return Self.tip(from: try await save(r, in: publicDB))
+    }
+    func tips() async throws -> [CreatorTip] {
+        let me = try await currentUser()
+        let q = CKQuery(recordType: "CreatorTip", predicate: NSPredicate(format: "creatorID == %@", me.id)); q.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        return try await query(q, in: publicDB, limit: 500).map(Self.tip(from:))
+    }
+    static func tip(from r: CKRecord) -> CreatorTip {
+        CreatorTip(id: r.recordID.recordName, fromID: r["fromID"] as? String ?? "", fromName: r["fromName"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", momentID: r["momentID"] as? String, amount: CreatorTip.Amount(rawValue: r["amount"] as? String ?? "") ?? .small, note: r["note"] as? String ?? "", createdAt: r.creationDate ?? .now, transactionID: r["transactionID"] as? String)
+    }
     static func plan(from r: CKRecord) -> CreatorPlan {
         CreatorPlan(creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", pitch: r["pitch"] as? String ?? "", tier: CreatorPlan.Tier(rawValue: r["tier"] as? String ?? "") ?? .t1, perks: r["perks"] as? [String] ?? [], payoutHint: r["payoutHint"] as? String ?? "", createdAt: r.creationDate ?? .now)
     }

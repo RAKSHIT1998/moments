@@ -27,6 +27,7 @@ actor DecentralizedBackend: SocialBackend {
         struct Locked: Codable { var preview: Moment; var sealed: String }
         struct Plan: Codable { var title: String; var pitch: String; var tier: String; var perks: [String]; var payoutHint: String; var creatorName: String }
         struct Subscribe: Codable { var tier: String; var days: Int; var transactionID: String?; var name: String }
+        struct Tip: Codable { var amount: String; var note: String; var transactionID: String?; var name: String }
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
@@ -659,6 +660,16 @@ actor DecentralizedBackend: SocialBackend {
         let list = latest.values.sorted { $0.startedAt > $1.startedAt }
         await grantPending(list)
         return list
+    }
+    func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip {
+        guard creatorID != myID, (try await creatorPlan(for: creatorID)) != nil else { throw SocialError.notAllowed }
+        let me = try await currentUser()
+        var tags = ["to": creatorID]; if let momentID { tags["about"] = momentID }
+        let e = try await emit(.tip, tags: tags, payload: Payloads.Tip(amount: amount.rawValue, note: note, transactionID: transactionID, name: me.displayName))
+        return CreatorTip(id: e.id, fromID: myID, fromName: me.displayName, creatorID: creatorID, momentID: momentID, amount: amount, note: note, createdAt: e.createdAt, transactionID: transactionID)
+    }
+    func tips() async throws -> [CreatorTip] {
+        await store.all(.tip).filter { $0.tags["to"] == myID }.compactMap { e in e.payload(Payloads.Tip.self).map { CreatorTip(id: e.id, fromID: e.author, fromName: $0.name, creatorID: myID, momentID: e.tags["about"], amount: CreatorTip.Amount(rawValue: $0.amount) ?? .small, note: $0.note, createdAt: e.createdAt, transactionID: $0.transactionID) } }.sorted { $0.createdAt > $1.createdAt }
     }
     /// For every active subscriber who doesn't yet hold my current key, seal it to their agreement key. Idempotent.
     private func grantPending(_ subs: [CreatorSubscription]) async {

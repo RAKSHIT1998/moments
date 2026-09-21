@@ -45,7 +45,7 @@ struct CreatorEarnView: View {
                 Text("THIS MONTH").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                 Text(env.social.earningsEstimate, format: .currency(code: "INR").precision(.fractionLength(0))).font(MFont.hero).monospacedDigit()
                     .accessibilityIdentifier("earningsEstimate")
-                Text("\(env.social.activeSubscriberCount) active \(env.social.activeSubscriberCount == 1 ? "subscriber" : "subscribers") · \(env.social.price(for: plan.tier)) each").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                Text("\(env.social.activeSubscriberCount) active \(env.social.activeSubscriberCount == 1 ? "subscriber" : "subscribers") · \(env.social.price(for: plan.tier)) each · \(env.social.tipsReceived.count) \(env.social.tipsReceived.count == 1 ? "tip" : "tips")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                 Text("Estimate after App Store fees (\(Int(CreatorEconomics.appStoreShare * 100))%) and MOMENT's share; you keep \(Int(CreatorEconomics.creatorShare * 100))% of the net. Paid out monthly to the details below.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
             }
             .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass(tint: .orange)
@@ -84,6 +84,23 @@ struct CreatorEarnView: View {
             }
             .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
 
+            if !env.social.tipsReceived.isEmpty {
+                VStack(alignment: .leading, spacing: MSpacing.m) {
+                    Text("TIPS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                    ForEach(env.social.tipsReceived.prefix(20)) { t in
+                        HStack(spacing: MSpacing.m) {
+                            Text(t.amount.emoji).font(.title3)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("\(t.fromName) · \(env.social.price(for: t.amount))").font(.subheadline.weight(.semibold))
+                                if !t.note.isEmpty { Text(t.note).font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+                            }
+                            Spacer()
+                            Text(t.createdAt.formatted(.relative(presentation: .named))).font(MFont.caption).foregroundStyle(MColor.textTertiary)
+                        }
+                    }
+                }
+                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+            }
             NavigationLink(value: SocialRoute.newMoment) { Label("New subscribers-only Moment", systemImage: "crown") }.buttonStyle(PrimaryButtonStyle(tint: .orange))
             Button("Stop selling", role: .destructive) { confirmRemove = true }.font(MFont.footnote).frame(maxWidth: .infinity)
                 .confirmationDialog("Stop selling?", isPresented: $confirmRemove) {
@@ -250,5 +267,77 @@ struct MySubscriptionsView: View {
         .background(LiquidBackdrop())
         .navigationTitle("Subscriptions")
         .task { await env.social.refreshCreator() }
+    }
+}
+
+// MARK: - Tips
+
+/// Three amounts, an optional line, one tap. Shows on any Moment by a creator who has a plan.
+struct TipSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let creatorID: String
+    let creatorName: String
+    var momentID: String? = nil
+    @State private var amount: CreatorTip.Amount = .medium
+    @State private var note = ""
+    @State private var sent = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MSpacing.xl) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Thank \(creatorName.split(separator: " ").first.map(String.init) ?? creatorName)").font(MFont.title)
+                Text("A one-off. They get \(Int(CreatorEconomics.creatorShare * 100))% of what's left after the App Store.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+            }
+            HStack(spacing: MSpacing.s) {
+                ForEach(CreatorTip.Amount.allCases, id: \.self) { a in
+                    Button { amount = a } label: {
+                        VStack(spacing: 4) { Text(a.emoji).font(.title2); Text(env.social.price(for: a)).font(.headline.weight(.semibold)) }
+                            .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    }
+                    .buttonStyle(.plain).foregroundStyle(amount == a ? Color.white : MColor.textPrimary)
+                    .background { if amount == a { RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.orange) } }
+                    .glass(radius: 16)
+                    .accessibilityIdentifier("tip-\(a.rawValue)")
+                }
+            }
+            TextField("Say something (optional)", text: $note).padding(.horizontal, MSpacing.l).padding(.vertical, 12).glass(radius: 14)
+            Spacer(minLength: 0)
+            if sent {
+                Label("Sent. They'll see it on their Earn page.", systemImage: "checkmark.seal.fill").font(MFont.headline).frame(maxWidth: .infinity)
+                Button("Done") { dismiss() }.buttonStyle(PrimaryButtonStyle())
+            } else {
+                Button {
+                    Task { if await env.social.tip(creatorID: creatorID, momentID: momentID, amount: amount, note: note) { sent = true; Haptics.saved() } }
+                } label: { if env.social.purchasing { ProgressView().tint(.white) } else { Text("Send \(env.social.price(for: amount))") } }
+                    .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(env.social.purchasing)
+                    .accessibilityIdentifier("sendTip")
+            }
+        }
+        .padding(MSpacing.page)
+        .background(LiquidBackdrop(tint: .orange))
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .modifier(SocialErrorAlert())
+    }
+}
+
+/// The small glass "Tip" pill that lives in action rows. Only renders when the creator sells something.
+struct TipButton: View {
+    @Environment(AppEnvironment.self) private var env
+    let creatorID: String
+    let creatorName: String
+    var momentID: String? = nil
+    @State private var show = false
+    var body: some View {
+        Group {
+            if creatorID != env.social.myID, env.social.plan(for: creatorID) != nil {
+                Button { show = true } label: { HStack(spacing: 4) { Image(systemName: "gift.fill"); Text("Tip") }.font(.subheadline.weight(.semibold)).foregroundStyle(.orange) }
+                    .padding(.horizontal, 12).padding(.vertical, 6).glassPill(tint: .orange)
+                    .accessibilityIdentifier("tip-\(momentID ?? creatorID)")
+                    .sheet(isPresented: $show) { TipSheet(creatorID: creatorID, creatorName: creatorName, momentID: momentID) }
+            }
+        }
+        .task { if env.social.plan(for: creatorID) == nil, !env.social.checkedPlans.contains(creatorID) { await env.social.loadCreatorPlan(creatorID) } }
     }
 }

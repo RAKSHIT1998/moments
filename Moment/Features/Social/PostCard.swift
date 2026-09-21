@@ -88,6 +88,7 @@ struct MomentPostCard: View {
                 .accessibilityLabel(mine == .core ? "Unlike" : "Like").accessibilityIdentifier("react-core")
             Button { showComments = true } label: { Glyph(.reply, size: 24) }.accessibilityLabel("Comments").accessibilityIdentifier("comments-\(moment.id)")
             Button { Task { await share() } } label: { Glyph(.send, size: 24) }.accessibilityLabel("Share")
+            TipButton(creatorID: moment.creatorID, creatorName: moment.creatorName, momentID: moment.id)
             Spacer()
             if isMember {
                 NavigationLink(value: SocialRoute.addSide(moment.id)) {

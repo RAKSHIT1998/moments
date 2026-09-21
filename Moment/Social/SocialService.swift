@@ -58,6 +58,7 @@ final class SocialService {
     private(set) var myPlan: CreatorPlan?
     private(set) var mySubscriptions: [CreatorSubscription] = []
     private(set) var subscribers: [CreatorSubscription] = []
+    private(set) var tipsReceived: [CreatorTip] = []
     private(set) var creatorProducts: [String: Product] = [:]
     private(set) var purchasing = false
     var nearbyRadiusKm: Double = 3
@@ -150,18 +151,44 @@ final class SocialService {
         if let myPlan { creatorPlans[myID] = myPlan }
         mySubscriptions = (try? await backend.mySubscriptions()) ?? []
         subscribers = myPlan == nil ? [] : ((try? await backend.subscribers()) ?? [])
+        tipsReceived = myPlan == nil ? [] : ((try? await backend.tips()) ?? [])
         if let mesh = backend as? DecentralizedBackend { await mesh.processGrants() }
-        if creatorProducts.isEmpty, let products = try? await Product.products(for: CreatorPlan.Tier.allCases.map(\.productID)) {
+        if creatorProducts.isEmpty, let products = try? await Product.products(for: CreatorPlan.Tier.allCases.map(\.productID) + CreatorTip.Amount.allCases.map(\.productID)) {
             creatorProducts = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
         }
     }
-    func loadCreatorPlan(_ userID: String) async { if let p = try? await backend.creatorPlan(for: userID) { creatorPlans[userID] = p } else { creatorPlans[userID] = nil } }
+    /// Creators we've already asked about, so feed cards don't re-query for people who sell nothing.
+    private(set) var checkedPlans: Set<String> = []
+    func loadCreatorPlan(_ userID: String) async {
+        checkedPlans.insert(userID)
+        if let p = try? await backend.creatorPlan(for: userID) { creatorPlans[userID] = p } else { creatorPlans[userID] = nil }
+    }
     func plan(for userID: String) -> CreatorPlan? { creatorPlans[userID] }
     func isSubscribed(to userID: String) -> Bool { mySubscriptions.contains { $0.creatorID == userID && $0.isActive } }
     func subscription(to userID: String) -> CreatorSubscription? { mySubscriptions.first { $0.creatorID == userID && $0.isActive } }
     /// Localized price from the App Store, else the reference amount.
     func price(for tier: CreatorPlan.Tier) -> String { creatorProducts[tier.productID]?.displayPrice ?? tier.fallbackPrice }
-    var earningsEstimate: Double { CreatorEconomics.creatorEstimate(subscribers) }
+    var earningsEstimate: Double { CreatorEconomics.creatorEstimate(subscribers, tips: tipsReceived) }
+    func price(for amount: CreatorTip.Amount) -> String { creatorProducts[amount.productID]?.displayPrice ?? amount.fallbackPrice }
+
+    /// A one-off thank-you: consumable App Store purchase, then a signed record for the creator. Returns true when sent.
+    func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String) async -> Bool {
+        purchasing = true; defer { purchasing = false }
+        var transactionID: String? = nil
+        if !isTestHost, let product = creatorProducts[amount.productID] {
+            do {
+                switch try await product.purchase() {
+                case .success(let verification):
+                    guard case .verified(let t) = verification else { lastError = "Purchase couldn't be verified."; return false }
+                    await t.finish(); transactionID = String(t.id)
+                case .userCancelled, .pending: return false
+                @unknown default: return false
+                }
+            } catch { lastError = error.localizedDescription; return false }
+        } else if !isTestHost { lastError = "Prices aren't available right now. Try again in a moment."; return false }
+        do { _ = try await backend.tip(creatorID: creatorID, momentID: momentID, amount: amount, note: note.trimmed, transactionID: transactionID); analytics.track(.creatorTipped, category: amount.rawValue); return true }
+        catch { lastError = error.localizedDescription; return false }
+    }
     var activeSubscriberCount: Int { subscribers.filter(\.isActive).count }
 
     @discardableResult
