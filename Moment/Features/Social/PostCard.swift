@@ -208,6 +208,9 @@ struct StoriesRow: View {
     @Environment(AppEnvironment.self) private var env
     @Binding var showComposer: Bool
     @Binding var selectedNow: NowPost?
+    /// Over a photo (immersive home): white labels.
+    var onDark = false
+    private var label: Color { onDark ? .white : MColor.textPrimary }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -218,7 +221,7 @@ struct StoriesRow: View {
                             AvatarView(userID: env.social.myID, name: env.social.displayName, size: 64)
                             Glyph(.create, size: 20, weight: 2.2).foregroundStyle(MColor.background).padding(2).background(MColor.accent, in: Circle())
                         }
-                        Text("Your NOW").font(MFont.caption).foregroundStyle(MColor.textPrimary)
+                        Text("Your NOW").font(MFont.caption).foregroundStyle(label)
                     }
                 }
                 .buttonStyle(.plain).accessibilityLabel("Post to NOW").accessibilityIdentifier("nowCompose")
@@ -227,7 +230,7 @@ struct StoriesRow: View {
                         VStack(spacing: 6) {
                             SocialImage(ref: m.coverRef).frame(width: 64, height: 64).clipShape(Circle())
                                 .overlay(Circle().strokeBorder(MColor.danger, lineWidth: 2.5).padding(-3))
-                            Text("Live · \(m.title)").font(MFont.caption).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                            Text("Live · \(m.title)").font(MFont.caption).foregroundStyle(label).lineLimit(1)
                         }
                         .frame(width: 76)
                     }
@@ -239,7 +242,7 @@ struct StoriesRow: View {
                             AvatarView(userID: post.authorID, name: post.authorName, size: 64)
                                 .overlay(Circle().strokeBorder(post.savedToMomentID == nil ? MColor.accent : MColor.separator, lineWidth: 2.5).padding(-3))
                                 .overlay(alignment: .bottomTrailing) { if post.isStatus { Text(post.activity.emoji).font(.caption).padding(3).background(MColor.background, in: Circle()) } }
-                            Text(post.authorName.split(separator: " ").first.map(String.init) ?? post.authorName).font(MFont.caption).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                            Text(post.authorName.split(separator: " ").first.map(String.init) ?? post.authorName).font(MFont.caption).foregroundStyle(label).lineLimit(1)
                         }
                         .frame(width: 76)
                     }

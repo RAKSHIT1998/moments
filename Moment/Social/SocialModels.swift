@@ -263,6 +263,11 @@ struct Conversation: Codable, Sendable, Equatable, Identifiable, Hashable {
     var participantNames: [String]
     var lastMessage: String
     var updatedAt: Date
+    /// Group chats carry the group's name/emoji; 1:1 chats leave these nil.
+    var title: String? = nil
+    var emoji: String? = nil
+    var groupID: String? = nil
+    var isGroup: Bool { participantIDs.count > 2 || groupID != nil }
 }
 
 struct DirectMessage: Codable, Sendable, Equatable, Identifiable, Hashable {
@@ -274,6 +279,10 @@ struct DirectMessage: Codable, Sendable, Equatable, Identifiable, Hashable {
     var media: MediaRef?
     var momentID: String?
     var createdAt: Date
+    /// Quote-reply to another message in the thread.
+    var replyToID: String? = nil
+    /// A single-emoji message with `replyToID` set is a reaction: shown under the target, not as a bubble.
+    var isReaction: Bool { replyToID != nil && text.count <= 2 && text.unicodeScalars.allSatisfy { $0.properties.isEmoji } && !text.isEmpty && media == nil && momentID == nil }
 }
 
 struct ActivityItem: Codable, Sendable, Equatable, Identifiable, Hashable {

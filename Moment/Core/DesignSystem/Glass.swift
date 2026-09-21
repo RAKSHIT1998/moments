@@ -120,7 +120,8 @@ struct LiquidBackdrop: View {
             Circle().fill(Color.pink.opacity(scheme == .dark ? 0.18 : 0.12)).frame(width: 320).blur(radius: 100).offset(x: phase ? -60 : 20, y: phase ? 320 : 260)
         }
         .ignoresSafeArea()
-        .onAppear { if !reduceMotion { withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { phase = true } } }
+        // A forever animation never lets XCUITest see the app as idle, so it's static in UI tests.
+        .onAppear { if !reduceMotion && !ProcessInfo.processInfo.arguments.contains("-uitest") { withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { phase = true } } }
         .accessibilityHidden(true)
     }
 }

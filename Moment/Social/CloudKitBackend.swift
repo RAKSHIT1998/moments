@@ -781,7 +781,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
             let zones: [CKRecordZone.ID] = db === privateDB ? [zoneID] : ((try? await sharedDB.allRecordZones().map(\.zoneID)) ?? [])
             for z in zones {
                 for r in (try? await query(q, in: db, zone: z, limit: 100)) ?? [] {
-                    out.append(Conversation(id: r.recordID.recordName, participantIDs: r["participantIDs"] as? [String] ?? [], participantNames: r["participantNames"] as? [String] ?? [], lastMessage: r["lastMessage"] as? String ?? "", updatedAt: r.modificationDate ?? .now))
+                    out.append(Conversation(id: r.recordID.recordName, participantIDs: r["participantIDs"] as? [String] ?? [], participantNames: r["participantNames"] as? [String] ?? [], lastMessage: r["lastMessage"] as? String ?? "", updatedAt: r.modificationDate ?? .now, title: r["title"] as? String, emoji: r["emoji"] as? String, groupID: r["groupID"] as? String))
                 }
             }
         }
@@ -792,9 +792,13 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let (record, db) = try await anyRecord(name: conversationID, type: "Conversation")
         let q = CKQuery(recordType: "Message", predicate: NSPredicate(format: "conversationRef == %@", CKRecord.Reference(recordID: record.recordID, action: .deleteSelf)))
         q.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-        return try await query(q, in: db, zone: record.recordID.zoneID, limit: 500).map { r in
-            DirectMessage(id: r.recordID.recordName, conversationID: conversationID, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: nil, momentID: r["momentID"] as? String, createdAt: r.creationDate ?? .now)
+        var out: [DirectMessage] = []
+        for r in try await query(q, in: db, zone: record.recordID.zoneID, limit: 500) {
+            var ref: MediaRef? = nil
+            if let asset = r["media"] as? CKAsset, let url = asset.fileURL, let data = try? Data(contentsOf: url), let local = try? await media.store(data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: r.recordID.recordName) }
+            out.append(DirectMessage(id: r.recordID.recordName, conversationID: conversationID, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: ref, momentID: r["momentID"] as? String, createdAt: r.creationDate ?? .now, replyToID: r["replyToID"] as? String))
         }
+        return out
     }
 
     func send(_ message: DirectMessage, mediaData: Data?) async throws -> DirectMessage {
@@ -803,11 +807,10 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let r = CKRecord(recordType: "Message", recordID: CKRecord.ID(recordName: "msg_\(message.id)", zoneID: conv.recordID.zoneID))
         r["conversationRef"] = CKRecord.Reference(recordID: conv.recordID, action: .deleteSelf)
         r.parent = CKRecord.Reference(recordID: conv.recordID, action: .none)
-        r["authorID"] = message.authorID; r["authorName"] = message.authorName; r["text"] = message.text; r["momentID"] = message.momentID
+        r["authorID"] = message.authorID; r["authorName"] = message.authorName; r["text"] = message.text; r["momentID"] = message.momentID; r["replyToID"] = message.replyToID
         if let mediaData, let url = try? Self.tempFile(mediaData, ext: "jpg") { r["media"] = CKAsset(fileURL: url) }
         let saved = try await save(r, in: db)
-        conv["lastMessage"] = message.text
-        _ = try? await save(conv, in: db)
+        if !message.isReaction { conv["lastMessage"] = message.text.isEmpty ? (message.momentID != nil ? "Shared a Moment" : "Photo") : message.text; _ = try? await save(conv, in: db) }
         var out = message; out.id = saved.recordID.recordName
         return out
     }
@@ -828,6 +831,18 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         share.addParticipant(part)
         do { _ = try await privateDB.modifyRecords(saving: [r, share], deleting: []) } catch { throw map(error) }
         return Conversation(id: r.recordID.recordName, participantIDs: [me.id, userID], participantNames: [me.displayName, other.displayName], lastMessage: "", updatedAt: .now)
+    }
+    func conversation(forGroup group: SocialGroup) async throws -> Conversation {
+        try await ensureZone()
+        let me = try await currentUser()
+        if let existing = try await conversations().first(where: { $0.groupID == group.id }) { return existing }
+        guard group.ownerID == me.id else { throw SocialError.notFound }   // members receive it through the share once the owner opens it
+        let r = CKRecord(recordType: "Conversation", recordID: CKRecord.ID(recordName: "convg_\(group.id)", zoneID: zoneID))
+        r["participantIDs"] = group.memberIDs; r["participantNames"] = group.memberNames; r["lastMessage"] = ""; r["title"] = group.name; r["emoji"] = group.emoji; r["groupID"] = group.id
+        let share = CKShare(rootRecord: r); share.publicPermission = .none
+        for uid in group.memberIDs where uid != me.id { if let p = try? await container.shareParticipant(forUserRecordID: CKRecord.ID(recordName: uid)) { p.permission = .readWrite; share.addParticipant(p) } }
+        do { _ = try await privateDB.modifyRecords(saving: [r, share], deleting: []) } catch { throw map(error) }
+        return Conversation(id: r.recordID.recordName, participantIDs: group.memberIDs, participantNames: group.memberNames, lastMessage: "", updatedAt: .now, title: group.name, emoji: group.emoji, groupID: group.id)
     }
 
     // MARK: - Groups (a shared record in the owner's zone; members get it in their shared DB)

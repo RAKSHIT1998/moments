@@ -31,7 +31,7 @@ actor DecentralizedBackend: SocialBackend {
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
-        struct Comment: Codable { var text: String; var contributionID: String?; var authorName: String }
+        struct Comment: Codable { var text: String; var contributionID: String?; var authorName: String; var media: String? = nil; var replyTo: String? = nil }
         struct Reaction: Codable { var kind: String?; var contributionID: String? }
         struct Now: Codable { var text: String; var media: String?; var expiresAt: Date; var coarsePlace: String?; var activity: String; var place: SocialPlace?; var authorName: String }
         struct Join: Codable { var name: String }
@@ -562,15 +562,39 @@ actor DecentralizedBackend: SocialBackend {
     func markActivityRead() async throws {}
     func conversations() async throws -> [Conversation] {
         var out: [Conversation] = []
-        for m in await momentsInvolving(myID) where m.templateID == "dm" { out.append(Conversation(id: m.id, participantIDs: m.memberIDs, participantNames: m.memberNames, lastMessage: "", updatedAt: m.createdAt)) }
-        return out
+        for m in await momentsInvolving(myID) where m.templateID == "dm" || m.templateID?.hasPrefix("dmg:") == true {
+            let last = (try? await messages(conversationID: m.id))?.last { !$0.isReaction }
+            let gid = m.templateID.flatMap { $0.hasPrefix("dmg:") ? String($0.dropFirst(4)) : nil }
+            out.append(Conversation(id: m.id, participantIDs: m.memberIDs, participantNames: m.memberNames, lastMessage: last.map { $0.text.isEmpty ? ($0.momentID != nil ? "Shared a Moment" : "Photo") : $0.text } ?? "", updatedAt: last?.createdAt ?? m.createdAt, title: gid != nil ? m.title : nil, emoji: nil, groupID: gid))
+        }
+        return out.sorted { $0.updatedAt > $1.updatedAt }
     }
     func messages(conversationID: String) async throws -> [DirectMessage] {
-        try await comments(momentID: conversationID).map { DirectMessage(id: $0.id, conversationID: conversationID, authorID: $0.authorID, authorName: $0.authorName, text: $0.text, media: nil, momentID: $0.contributionID, createdAt: $0.createdAt) }
+        let k = await childKey(conversationID)
+        var out: [DirectMessage] = []
+        for e in await store.forMoment(conversationID) where e.kind == .comment && !localBlocked.contains(e.author) {
+            guard let p = e.payload(Payloads.Comment.self, momentKey: k) else { continue }
+            var ref: MediaRef? = nil
+            if let b = p.media, let d = Data(base64Encoded: b) {
+                var local = mediaCache[e.id]
+                if local == nil { local = try? await media.store(d, extension: "jpg") }
+                if let local { mediaCache[e.id] = local; ref = MediaRef(kind: .photo, localRef: local, remoteID: e.id) }
+            }
+            out.append(DirectMessage(id: e.id, conversationID: conversationID, authorID: e.author, authorName: p.authorName, text: p.text, media: ref, momentID: p.contributionID, createdAt: e.createdAt, replyToID: p.replyTo))
+        }
+        return out
     }
     func send(_ message: DirectMessage, mediaData: Data?) async throws -> DirectMessage {
-        let c = try await addComment(MomentComment(id: "", momentID: message.conversationID, contributionID: message.momentID, authorID: myID, authorName: message.authorName, text: message.text, createdAt: .now))
-        var out = message; out.id = c.id; return out
+        guard ContentModeration.check(message.text) == .ok, let m = await build(message.conversationID), m.memberIDs.contains(myID) else { throw SocialError.notAllowed }
+        let b64 = mediaData.flatMap { MediaPipeline.thumbnail($0, side: 1280) ?? $0 }?.base64EncodedString()
+        let e = try await emit(.comment, tags: ["moment": message.conversationID], payload: Payloads.Comment(text: message.text, contributionID: message.momentID, authorName: message.authorName, media: b64, replyTo: message.replyToID), momentKey: await childKey(message.conversationID))
+        var out = message; out.id = e.id; out.authorID = myID; out.createdAt = e.createdAt; return out
+    }
+    func conversation(forGroup group: SocialGroup) async throws -> Conversation {
+        if let c = try await conversations().first(where: { $0.groupID == group.id }) { return c }
+        guard group.ownerID == myID else { throw SocialError.notFound }
+        let m = try await createMoment(MomentDraft(title: group.name, description: "", visibility: .group, templateID: "dmg:\(group.id)", initialMemberIDs: group.memberIDs.filter { $0 != myID }))
+        return Conversation(id: m.id, participantIDs: m.memberIDs, participantNames: m.memberNames, lastMessage: "", updatedAt: .now, title: group.name, emoji: group.emoji, groupID: group.id)
     }
     func conversation(with userID: String) async throws -> Conversation {
         if let c = try await conversations().first(where: { Set($0.participantIDs) == Set([myID, userID]) }) { return c }

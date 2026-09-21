@@ -193,7 +193,12 @@ struct SubscribeSheet: View {
                     Button("Done") { dismiss() }.buttonStyle(PrimaryButtonStyle())
                 } else {
                     Button {
-                        Task { if await env.social.subscribe(to: creatorID) { done = true; Haptics.saved() } }
+                        Task {
+                            if await env.social.subscribe(to: creatorID) {
+                                done = true; Haptics.saved()
+                                try? await Task.sleep(for: .seconds(1.2)); dismiss()   // the unlocked Moment is right behind this sheet
+                            }
+                        }
                     } label: {
                         if env.social.purchasing { ProgressView().tint(.white) } else { Text("Subscribe · \(env.social.price(for: plan.tier)) for 30 days") }
                     }

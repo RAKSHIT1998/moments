@@ -169,10 +169,12 @@ final class AppEnvironment {
 }
 
 enum RootTab: String, CaseIterable, Identifiable {
-    case home, discover, create, now, profile
+    case home, discover, create, chats, profile
     var id: String { rawValue }
-    var label: String { switch self { case .home: "Home"; case .discover: "Search"; case .create: "Create"; case .now: "Now"; case .profile: "Profile" } }
-    var symbol: String { switch self { case .home: "house"; case .discover: "magnifyingglass"; case .create: "plus.app"; case .now: "bolt.circle"; case .profile: "person.crop.circle" } }
+    var label: String { switch self { case .home: "Home"; case .discover: "Explore"; case .create: "Create"; case .chats: "Chats"; case .profile: "Profile" } }
+    var symbol: String { switch self { case .home: "house"; case .discover: "globe"; case .create: "plus.app"; case .chats: "bubble.left.and.bubble.right"; case .profile: "person.crop.circle" } }
+    /// NOW lives at the top of Home now; old deep links still land there.
+    static let now = RootTab.home
     static let inbox = RootTab.home
     /// Old deep links (`moment://search`, `vault`) still land somewhere sensible.
     static let search = RootTab.profile

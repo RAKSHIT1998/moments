@@ -174,3 +174,39 @@ final class DecentralizedCreatorTests: XCTestCase {
         do { _ = try await eve.contributions(momentID: m.id); XCTFail("locked") } catch {}
     }
 }
+
+final class DecentralizedMessagingTests: XCTestCase {
+    func testEncryptedChatWithPhotoReplyAndGroup() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-chat-\(UUID().uuidString)")
+        func phone(_ n: String) -> (DecentralizedBackend, EventStore) {
+            let store = EventStore(directory: dir.appending(path: n))
+            return (DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m-\(n)")), store: store, keys: MomentKeys(namespace: "test.\(n).\(UUID().uuidString)")), store)
+        }
+        let (alice, aStore) = phone("a"), (bob, bStore) = phone("b"), (eve, eStore) = phone("e")
+        _ = try await alice.updateProfile(displayName: "Alice", handle: "alice", bio: "", avatar: nil)
+        _ = try await bob.updateProfile(displayName: "Bob", handle: "bob", bio: "", avatar: nil)
+        func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
+        await sync(bStore, aStore)
+        let bobID = await bob.myID
+        let c = try await alice.conversation(with: bobID)
+        let url = try await alice.share(momentID: c.id, with: [bobID])   // the chat's key travels in the invite, never through a relay
+        await sync(aStore, bStore); await sync(aStore, eStore)
+        _ = try await bob.acceptInvite(url: url)
+        let photo = Data(repeating: 7, count: 2048)
+        _ = try await alice.send(DirectMessage(id: "", conversationID: c.id, authorID: "", authorName: "Alice", text: "look", media: nil, momentID: nil, createdAt: .now), mediaData: photo)
+        await sync(aStore, bStore); await sync(aStore, eStore)
+        let seen = try await bob.messages(conversationID: c.id)
+        XCTAssertEqual(seen.map(\.text), ["look"]); XCTAssertNotNil(seen.first?.media, "photo arrives inside the sealed message")
+        _ = try await bob.send(DirectMessage(id: "", conversationID: c.id, authorID: "", authorName: "Bob", text: "🔥", media: nil, momentID: nil, createdAt: .now, replyToID: seen[0].id), mediaData: nil)
+        await sync(bStore, aStore); await sync(bStore, eStore)
+        let back = try await alice.messages(conversationID: c.id)
+        XCTAssertEqual(back.last?.replyToID, seen[0].id); XCTAssertEqual(back.last?.isReaction, true)
+        // Eve has every byte and reads nothing.
+        let eveView = try? await eve.messages(conversationID: c.id)
+        XCTAssertTrue((eveView ?? []).isEmpty)
+        let raw = await eStore.forMoment(c.id).filter { $0.kind == .comment }
+        XCTAssertEqual(raw.count, 2); XCTAssertFalse(raw[0].content.contains("look"))
+        let convs = try await bob.conversations()
+        XCTAssertEqual(convs.first?.lastMessage, "look", "a reaction is not the preview")
+    }
+}

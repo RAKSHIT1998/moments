@@ -943,21 +943,44 @@ final class SocialService {
         do { let c = try await backend.conversation(with: userID); if !conversations.contains(where: { $0.id == c.id }) { conversations.insert(c, at: 0) }; return c } catch { lastError = error.localizedDescription; return nil }
     }
 
-    func send(conversationID: String, text: String, momentID: String? = nil, photo: Data? = nil) async -> Bool {
+    func send(conversationID: String, text: String, momentID: String? = nil, photo: Data? = nil, replyTo: String? = nil) async -> Bool {
         guard let me else { return false }
         if case .blocked(let why) = ContentModeration.check(text) { lastError = why; return false }
         var ref: MediaRef? = nil
         var data: Data? = nil
         if let photo, let p = MediaPipeline.preparePhoto(photo), let local = try? await media.store(p.data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: nil); data = p.data }
-        let m = DirectMessage(id: UUID().uuidString, conversationID: conversationID, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, momentID: momentID, createdAt: .now)
+        let m = DirectMessage(id: UUID().uuidString, conversationID: conversationID, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, momentID: momentID, createdAt: .now, replyToID: replyTo)
         do {
             let saved = try await backend.send(m, mediaData: data)
             messages[conversationID, default: []].append(saved)
-            if let i = conversations.firstIndex(where: { $0.id == conversationID }) { conversations[i].lastMessage = saved.text.isEmpty ? "Shared a Moment" : saved.text; conversations[i].updatedAt = .now }
-            analytics.track(.messageSent, category: momentID == nil ? "text" : "moment")
+            if !saved.isReaction, let i = conversations.firstIndex(where: { $0.id == conversationID }) {
+                var c = conversations.remove(at: i)
+                c.lastMessage = saved.text.isEmpty ? (momentID != nil ? "Shared a Moment" : "Photo") : saved.text; c.updatedAt = .now
+                conversations.insert(c, at: 0)
+            }
+            markRead(conversationID)
+            analytics.track(.messageSent, category: saved.isReaction ? "reaction" : (momentID == nil ? "text" : "moment"))
             return true
         } catch { lastError = error.localizedDescription; return false }
     }
+    /// One emoji, attached to a message. Sending the same one again removes nothing (it's a log); the UI shows the latest per person.
+    func react(conversationID: String, messageID: String, emoji: String) async { _ = await send(conversationID: conversationID, text: emoji, replyTo: messageID) }
+    func reactions(on message: DirectMessage) -> [DirectMessage] { (messages[message.conversationID] ?? []).filter { $0.isReaction && $0.replyToID == message.id } }
+    func message(_ id: String, in conversationID: String) -> DirectMessage? { messages[conversationID]?.first { $0.id == id } }
+
+    func groupConversation(_ group: SocialGroup) async -> Conversation? {
+        do { let c = try await backend.conversation(forGroup: group); if !conversations.contains(where: { $0.id == c.id }) { conversations.insert(c, at: 0) }; return c } catch { lastError = error.localizedDescription; return nil }
+    }
+
+    // Read state lives on the phone: nobody else needs to know when you opened a chat.
+    private var readAt: [String: Date] {
+        get { (UserDefaults.standard.dictionary(forKey: "chat.readAt") as? [String: Double] ?? [:]).mapValues { Date(timeIntervalSince1970: $0) } }
+        set { UserDefaults.standard.set(newValue.mapValues { $0.timeIntervalSince1970 }, forKey: "chat.readAt") }
+    }
+    func markRead(_ conversationID: String) { var r = readAt; r[conversationID] = .now; readAt = r; readTick += 1 }
+    private(set) var readTick = 0
+    func isUnread(_ c: Conversation) -> Bool { _ = readTick; return c.updatedAt > (readAt[c.id] ?? .distantPast) && !c.lastMessage.isEmpty }
+    var unreadChats: Int { conversations.filter { isUnread($0) }.count }
 
     // MARK: - Media
 

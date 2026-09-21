@@ -84,6 +84,8 @@ protocol SocialBackend: AnyObject, Sendable {
     func messages(conversationID: String) async throws -> [DirectMessage]
     func send(_ message: DirectMessage, mediaData: Data?) async throws -> DirectMessage
     func conversation(with userID: String) async throws -> Conversation
+    /// The chat that belongs to a group; created on first use, everyone in the group is in it.
+    func conversation(forGroup group: SocialGroup) async throws -> Conversation
 
     // Groups
     func groups() async throws -> [SocialGroup]

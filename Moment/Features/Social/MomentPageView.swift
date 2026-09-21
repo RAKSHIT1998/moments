@@ -45,7 +45,10 @@ struct MomentPageView: View {
                             meta(moment)
                             if !moment.description.isEmpty { Text(moment.description).font(MFont.body).foregroundStyle(MColor.textPrimary) }
                             if let candidate = mergeCandidate { mergeCard(moment, candidate) }
+                            if Rituals.isRitual(moment) { ritualCard(moment) }
                             if isMember { yourSide(moment) }
+                            sameSecond(moment)
+                            fillTheGap(moment)
                             perspectives(moment)
                             timeline(moment)
                             DisclosureGroup(isExpanded: $showDetails) {
@@ -166,6 +169,83 @@ struct MomentPageView: View {
             }
         }
     }
+
+    // MARK: Only a Moment made by everyone can do these
+
+    /// Two people, same instant, two phones. Nobody else has this.
+    @ViewBuilder private func sameSecond(_ m: SocialMoment) -> some View {
+        let pairs = TwinFrames.pairs(env.social.allContributions(m.id))
+        if !pairs.isEmpty {
+            VStack(alignment: .leading, spacing: MSpacing.m) {
+                HStack { Text("Same second").sectionLabel(); Spacer(); Text("\(pairs.count)").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: MSpacing.m) {
+                        ForEach(pairs) { p in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 3) {
+                                    SocialImage(ref: p.a.media).frame(width: 130, height: 170).clipped()
+                                    SocialImage(ref: p.b.media).frame(width: 130, height: 170).clipped()
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
+                                Text("\(first(p.a.authorName)) · \(first(p.b.authorName)) · \(p.secondsApart == 0 ? "same second" : "\(p.secondsApart)s apart")").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .accessibilityIdentifier("sameSecond")
+        }
+    }
+
+    /// The timeline knows what's missing. Ask the people who were there.
+    @ViewBuilder private func fillTheGap(_ m: SocialMoment) -> some View {
+        let gaps = TimelineGaps.find(env.social.allContributions(m.id))
+        if !gaps.isEmpty, !m.isLocked {
+            VStack(alignment: .leading, spacing: MSpacing.m) {
+                Text("Fill the gap").sectionLabel()
+                ForEach(gaps.prefix(3)) { g in
+                    HStack(spacing: MSpacing.m) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(g.label).font(MFont.headline)
+                            Text("\(g.minutes) minutes with nothing in the Moment.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                        }
+                        Spacer()
+                        if isMember {
+                            NavigationLink(value: SocialRoute.addSide(m.id)) { Text("Add") }.buttonStyle(GlassButtonStyle(filled: true))
+                        }
+                        if let who = g.witnesses.first(where: { $0 != env.social.myID }), let name = zip(m.memberIDs, m.memberNames).first(where: { $0.0 == who })?.1 {
+                            Button { Task { await ask(who, name: name, gap: g, moment: m) } } label: { Text("Ask \(first(name))") }.buttonStyle(GlassButtonStyle()).accessibilityIdentifier("askGap")
+                        }
+                    }
+                    .padding(MSpacing.m).glass(radius: 16)
+                }
+            }
+            .accessibilityIdentifier("fillTheGap")
+        }
+    }
+    private func ask(_ userID: String, name: String, gap: TimelineGaps.Gap, moment m: SocialMoment) async {
+        guard let c = await env.social.conversation(with: userID) else { return }
+        if await env.social.send(conversationID: c.id, text: TimelineGaps.question(for: gap, momentTitle: m.title), momentID: m.id) { env.toast("Asked \(first(name)).") }
+    }
+
+    /// Every Friday. Streaks, next one, who's usually there.
+    @ViewBuilder private func ritualCard(_ m: SocialMoment) -> some View {
+        if let r = Rituals.summary(of: m, in: Array(env.social.moments.values)) {
+            HStack(spacing: MSpacing.l) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Every \(r.weekdayName)").font(MFont.headline)
+                    Text(r.lastWasThisWeek ? "This week's is in. Next: \(r.next.formatted(.dateTime.weekday(.wide).day().month(.abbreviated)))" : "Next: \(r.next.formatted(.relative(presentation: .named)))").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                }
+                Spacer()
+                VStack(spacing: 0) { Text("\(r.streak)").font(MFont.title).monospacedDigit(); Text(r.streak == 1 ? "week" : "weeks").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+                VStack(spacing: 0) { Text("\(r.occurrences)").font(MFont.title).monospacedDigit(); Text("times").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+            }
+            .padding(MSpacing.l).glass(radius: 18, tint: MColor.accent)
+            .accessibilityIdentifier("ritualCard")
+        }
+    }
+    private func first(_ name: String) -> String { name.split(separator: " ").first.map(String.init) ?? name }
 
     /// The signature interaction: a quiet prompt, one button.
     private func yourSide(_ m: SocialMoment) -> some View {

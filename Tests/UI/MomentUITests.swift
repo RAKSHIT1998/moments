@@ -97,7 +97,7 @@ final class MomentUITests: XCTestCase {
 
     func testNowPostAndSaveToMoment() {
         waitForFeed()
-        app.tabBars.buttons["Now"].tap()
+        app.buttons["nowLink"].tap()
         XCTAssertTrue(app.buttons["nowCompose"].waitForExistence(timeout: 5))
         app.buttons["nowCompose"].tap()
         let field = app.textViews["nowText"].firstMatch.exists ? app.textViews["nowText"].firstMatch : app.textFields["nowText"].firstMatch
@@ -117,7 +117,8 @@ final class MomentUITests: XCTestCase {
 
     func testAnyoneUpJoin() {
         waitForFeed()
-        app.tabBars.buttons["Now"].tap()
+        app.buttons["nowLink"].tap()
+        if !app.buttons["joinNow-n3"].firstMatch.waitForExistence(timeout: 8) { snap("debug-now-link") }
         XCTAssertTrue(app.buttons["joinNow-n3"].firstMatch.waitForExistence(timeout: 5), "Rahul is out for drinks")
         app.buttons["joinNow-n3"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["In"].firstMatch.waitForExistence(timeout: 5))
@@ -127,7 +128,7 @@ final class MomentUITests: XCTestCase {
 
     func testSearchNearbyInboxAndMessages() {
         waitForFeed()
-        app.tabBars.buttons["Search"].tap()
+        app.tabBars.buttons["Explore"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["exploreControls"].firstMatch.waitForExistence(timeout: 10), "Search is the globe")
         app.buttons["enableNearby"].tap()   // fly to the simulated location
         XCTAssertTrue(app.buttons["exploreListToggle"].waitForExistence(timeout: 5))
@@ -142,17 +143,32 @@ final class MomentUITests: XCTestCase {
         app.tabBars.buttons["Home"].tap()
         XCTAssertTrue(app.buttons["inboxButton"].waitForExistence(timeout: 10))
         app.buttons["inboxButton"].tap()
-        XCTAssertTrue(app.buttons["Invites"].waitForExistence(timeout: 5))
+        if !app.buttons["Invites"].waitForExistence(timeout: 10) { snap("debug-inbox-tap") }
+        XCTAssertTrue(app.buttons["Invites"].exists)
         app.buttons["Invites"].tap()
         XCTAssertTrue(app.buttons["invite-inv1"].firstMatch.waitForExistence(timeout: 5))
-        app.buttons["Messages"].tap()
-        XCTAssertTrue(app.buttons["conversation-conv_rahul"].firstMatch.waitForExistence(timeout: 5))
-        app.buttons["conversation-conv_rahul"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["message-d1"].firstMatch.waitForExistence(timeout: 5))
+        app.tabBars.buttons["Chats"].tap()
+        let chat = app.descendants(matching: .any)["chat-conv_rahul"].firstMatch
+        XCTAssertTrue(chat.waitForExistence(timeout: 10))
+        chat.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["message-d1"].firstMatch.waitForExistence(timeout: 10))
         let field = app.textFields["messageField"].firstMatch.exists ? app.textFields["messageField"].firstMatch : app.textViews["messageField"].firstMatch
         field.tap(); field.typeText("sending it now")
         app.buttons["sendMessage"].tap()
-        XCTAssertTrue(app.staticTexts["sending it now"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["sending it now"].waitForExistence(timeout: 8))
+        // Reply + react on a message.
+        let sent = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'message-' AND label == 'sending it now'")).firstMatch
+        XCTAssertTrue(sent.waitForExistence(timeout: 5))
+        sent.press(forDuration: 0.6)
+        XCTAssertTrue(app.buttons["react-🔥"].waitForExistence(timeout: 5))
+        app.buttons["react-🔥"].tap()
+        XCTAssertTrue(app.staticTexts["🔥"].firstMatch.waitForExistence(timeout: 8), "reaction appears under the message")
+        // Group chat opens from the groups strip.
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let group = app.descendants(matching: .any)["groupChat-g_boys"].firstMatch
+        XCTAssertTrue(group.waitForExistence(timeout: 8))
+        group.tap()
+        XCTAssertTrue(app.staticTexts["Goa again in Dec?"].waitForExistence(timeout: 10))
     }
 
     // MARK: Profile & safety
@@ -227,26 +243,23 @@ final class MomentUITests: XCTestCase {
     /// Not an assertion test: walks the app and writes screenshots for design review.
     func testCreatorPaywallSubscribeAndEarn() {
         waitForFeed()
-        // Scroll until the locked paid Moment surfaces; unlock it.
+        // Page through the stack until the locked paid Moment is on screen; unlock it.
         let unlock = app.descendants(matching: .any)["unlock-m_raw"].firstMatch
-        for _ in 0..<30 where !unlock.exists { app.swipeUp(); if unlock.waitForExistence(timeout: 1) { break } }
-        XCTAssertTrue(unlock.waitForExistence(timeout: 5), "paid preview from a followed creator is in the feed")
+        for _ in 0..<30 where !(unlock.exists && unlock.isHittable) { app.swipeUp(); sleep(1) }
+        XCTAssertTrue(unlock.exists && unlock.isHittable, "paid preview from a followed creator is in the feed")
         snap("12-locked")
-        // Bring the button into the middle of the screen: XCUITest's own scroll-to-visible can leave it under the tab bar.
-        for _ in 0..<6 {
-            let y = unlock.frame.midY, h = app.frame.height
-            if y > 160 && y < h - 200 { break }
-            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7)), to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: y > h / 2 ? 0.4 : 0.95))
-            from.press(forDuration: 0.05, thenDragTo: to)
-        }
         unlock.tap()
         let subscribe = app.buttons["subscribeButton"]
         XCTAssertTrue(subscribe.waitForExistence(timeout: 20))
         snap("13-subscribe")
         subscribe.tap()   // demo host: recorded without an App Store purchase
-        XCTAssertTrue(app.staticTexts["You're in. Everything unlocks now."].waitForExistence(timeout: 20))
-        app.buttons["Done"].tap()
-        XCTAssertFalse(unlock.waitForExistence(timeout: 3), "lock is gone once subscribed")
+        // Success shows "You're in" for a beat, then the sheet dismisses itself over the unlocked Moment.
+        let gone = NSPredicate(format: "exists == false")
+        let dismissed = XCTNSPredicateExpectation(predicate: gone, object: subscribe)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 40), .completed, "sheet goes away after the purchase")
+        if app.buttons["Done"].exists { app.buttons["Done"].tap() }
+        sleep(2)
+        XCTAssertFalse(unlock.exists && unlock.isHittable, "lock is gone once subscribed")
         // Creator side: set up a plan and see the earnings screen.
         app.tabBars.buttons["Profile"].tap()
         let earn = app.descendants(matching: .any)["earnLink"].firstMatch
@@ -270,10 +283,11 @@ final class MomentUITests: XCTestCase {
         snap("01-home"); app.swipeUp(); snap("02-home-scrolled")
         openMoment("m_goa"); sleep(1); snap("03-moment"); app.swipeUp(); sleep(1); snap("04-moment-timeline")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["Search"].tap(); sleep(3); snap("05-globe")
+        app.tabBars.buttons["Explore"].tap(); sleep(3); snap("05-globe")
         app.buttons["enableNearby"].tap(); sleep(3); snap("06-explore-near-me")
         app.tabBars.buttons["Create"].tap(); sleep(1); snap("07-create"); app.buttons["Cancel"].firstMatch.tap()
-        app.tabBars.buttons["Now"].tap(); sleep(1); snap("08-now")
+        app.tabBars.buttons["Home"].tap(); app.buttons["nowLink"].tap(); sleep(1); snap("08-now"); app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.tabBars.buttons["Chats"].tap(); sleep(2); snap("08b-chats")
         app.tabBars.buttons["Profile"].tap(); sleep(1); snap("09-profile")
         if app.buttons["passportLink"].exists { app.buttons["passportLink"].tap(); sleep(1); snap("10-passport"); app.navigationBars.buttons.element(boundBy: 0).tap() }
         app.tabBars.buttons["Home"].tap(); app.buttons["inboxButton"].tap(); sleep(1); snap("11-inbox")

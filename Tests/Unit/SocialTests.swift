@@ -247,8 +247,8 @@ final class InMemoryBackendFlowTests: XCTestCase {
         let r6 = await env.social.send(conversationID: c.id, text: "this one", momentID: "m_goa")
         XCTAssertTrue(r6)
         await env.social.loadMessages(c.id)
-        XCTAssertEqual(env.social.messages[c.id]?.first?.momentID, "m_goa")
-        XCTAssertEqual(env.social.conversations.first?.id, c.id)
+        XCTAssertEqual(env.social.messages[c.id]?.last?.momentID, "m_goa")
+        XCTAssertEqual(env.social.conversations.first?.id, c.id, "the chat you just wrote in rises to the top")
     }
 
     func testProfileAndFriendship() async throws {
@@ -554,5 +554,86 @@ final class CreatorEconomyTests: XCTestCase {
         var bought = false
         try? await backend.acting(as: "u_sarah") { b in _ = try await b.subscribe(to: "me", tier: .t3, transactionID: nil, days: 30); bought = true }
         XCTAssertFalse(bought, "nobody can buy a plan that no longer exists")
+    }
+}
+
+final class MomentMechanicsTests: XCTestCase {
+    private func side(_ id: String, _ author: String, at: Date, kind: Contribution.Kind = .photo) -> Contribution {
+        Contribution(id: id, momentID: "m", authorID: author, authorName: author, kind: kind, media: kind == .text ? nil : MediaRef(kind: .photo, localRef: "x", remoteID: id), caption: "", createdAt: at, originalTimestamp: at, reactionCounts: [:], commentCount: 0, uploadState: .uploaded)
+    }
+
+    func testSameSecondPairsDifferentPeopleOnly() {
+        let t = Date(timeIntervalSince1970: 1_700_000_000)
+        let sides = [
+            side("a1", "alice", at: t), side("b1", "bob", at: t.addingTimeInterval(3)),      // pair, 3s
+            side("a2", "alice", at: t.addingTimeInterval(5)),                                // alice again: closer to b1 but b1 already used
+            side("a3", "alice", at: t.addingTimeInterval(300)), side("a4", "alice", at: t.addingTimeInterval(302)),   // same person → never a pair
+            side("c1", "cara", at: t.addingTimeInterval(600)), side("b2", "bob", at: t.addingTimeInterval(640)),      // 40s apart → outside window
+            side("t1", "bob", at: t.addingTimeInterval(3), kind: .text)                     // text never pairs
+        ]
+        let pairs = TwinFrames.pairs(sides, window: 20)
+        XCTAssertEqual(pairs.map { [$0.a.id, $0.b.id] }, [["b1", "a2"]], "closest pair wins; a1 is left out because b1 is taken")
+        XCTAssertEqual(pairs.first?.secondsApart, 2)
+    }
+
+    func testGapsFindMissingStretchesAndNameWitnesses() {
+        let t = Date(timeIntervalSince1970: 1_700_000_000)
+        let sides = [side("1", "alice", at: t), side("2", "bob", at: t.addingTimeInterval(20 * 60)), side("3", "cara", at: t.addingTimeInterval(120 * 60)), side("4", "alice", at: t.addingTimeInterval(125 * 60))]
+        let gaps = TimelineGaps.find(sides, minGap: 45 * 60)
+        XCTAssertEqual(gaps.count, 1)
+        XCTAssertEqual(gaps.first?.minutes, 100)
+        XCTAssertEqual(gaps.first?.witnesses, ["bob", "cara"])
+        XCTAssertTrue(TimelineGaps.question(for: gaps[0], momentTitle: "Goa '26").contains("Goa '26"))
+        XCTAssertTrue(TimelineGaps.find([sides[0]]).isEmpty, "one side is not a timeline")
+    }
+
+    func testRitualStreakAndNextDate() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        let friday = cal.date(from: DateComponents(year: 2026, month: 9, day: 18, hour: 18))!   // a Friday
+        func m(_ weeksAgo: Int) -> SocialMoment {
+            let d = cal.date(byAdding: .weekOfYear, value: -weeksAgo, to: friday)!
+            return SocialMoment(id: "r\(weeksAgo)", creatorID: "c", creatorName: "C", title: "Last light", description: "", coverRef: nil, createdAt: d, startAt: d, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .publicAll, memberIDs: ["c"], memberNames: ["C"], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: false, templateID: Rituals.templateID, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true)
+        }
+        let series = [m(0), m(1), m(2), m(4)]   // missed week 3 → streak is 3
+        let now = cal.date(byAdding: .day, value: 2, to: friday)!   // the Sunday after
+        let s = try! XCTUnwrap(Rituals.summary(of: series[0], in: series + [m(0)].map { var x = $0; x.id = "other"; x.title = "Different"; return x }, now: now, calendar: cal))
+        XCTAssertEqual(s.occurrences, 4)
+        XCTAssertEqual(s.streak, 3)
+        XCTAssertEqual(s.weekday, 6)
+        XCTAssertEqual(cal.component(.weekday, from: s.next), 6)
+        XCTAssertTrue(s.next > now)
+        XCTAssertNil(Rituals.summary(of: { var x = m(0); x.templateID = nil; return x }(), in: [], calendar: cal))
+    }
+}
+
+@MainActor
+final class MessagingTests: XCTestCase {
+    func testRepliesReactionsAndGroupChat() async throws {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try! StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        let conv = await env.social.conversation(with: "u_sarah")
+        let c = try XCTUnwrap(conv)
+        await env.social.loadMessages(c.id)
+        let target = try XCTUnwrap(env.social.messages[c.id]?.last)
+        let sent = await env.social.send(conversationID: c.id, text: "yes!", replyTo: target.id)
+        XCTAssertTrue(sent)
+        await env.social.react(conversationID: c.id, messageID: target.id, emoji: "🔥")
+        let reply = try XCTUnwrap(env.social.messages[c.id]?.first { $0.text == "yes!" })
+        XCTAssertEqual(reply.replyToID, target.id); XCTAssertFalse(reply.isReaction)
+        XCTAssertEqual(env.social.reactions(on: target).map(\.text), ["🔥"])
+        XCTAssertEqual(env.social.conversations.first { $0.id == c.id }?.lastMessage, "yes!", "reactions don't become the preview line")
+        // Group chat: one per group, everyone in it.
+        let group = try XCTUnwrap(env.social.groups.first { $0.id == "g_boys" })
+        let gcOpt = await env.social.groupConversation(group)
+        let gc = try XCTUnwrap(gcOpt)
+        XCTAssertEqual(Set(gc.participantIDs), Set(group.memberIDs)); XCTAssertEqual(gc.title, "The Goa crew"); XCTAssertTrue(gc.isGroup)
+        let againOpt = await env.social.groupConversation(group)
+        let again = try XCTUnwrap(againOpt)
+        XCTAssertEqual(again.id, gc.id)
+        // Unread is local: sending marks it read, a newer message from someone else makes it unread.
+        env.social.markRead(gc.id)
+        XCTAssertFalse(env.social.isUnread(env.social.conversations.first { $0.id == gc.id }!))
     }
 }

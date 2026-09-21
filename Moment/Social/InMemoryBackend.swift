@@ -357,7 +357,7 @@ actor InMemoryBackend: SocialBackend {
         var m = message
         if let mediaData { mediaBlobs[m.id] = mediaData; m.media = MediaRef(kind: .photo, localRef: message.media?.localRef, remoteID: m.id) }
         dms[message.conversationID, default: []].append(m)
-        convos[i].lastMessage = m.text.isEmpty ? (m.momentID != nil ? "Shared a Moment" : "Photo") : m.text; convos[i].updatedAt = .now
+        if !m.isReaction { convos[i].lastMessage = m.text.isEmpty ? (m.momentID != nil ? "Shared a Moment" : "Photo") : m.text; convos[i].updatedAt = .now }
         return m
     }
     func conversation(with userID: String) async throws -> Conversation {
@@ -365,6 +365,12 @@ actor InMemoryBackend: SocialBackend {
         if let c = convos.first(where: { Set($0.participantIDs) == Set([me.id, userID]) }) { return c }
         if safety.whoCanMessage == .nobody { throw SocialError.notAllowed }
         let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: [me.id, userID], participantNames: [me.displayName, u.displayName], lastMessage: "", updatedAt: .now)
+        convos.append(c); return c
+    }
+    func conversation(forGroup group: SocialGroup) async throws -> Conversation {
+        try gate()
+        if let c = convos.first(where: { $0.groupID == group.id }) { return c }
+        let c = Conversation(id: "cg_\(group.id)", participantIDs: group.memberIDs, participantNames: group.memberNames, lastMessage: "", updatedAt: .now, title: group.name, emoji: group.emoji, groupID: group.id)
         convos.append(c); return c
     }
 
@@ -498,6 +504,11 @@ actor InMemoryBackend: SocialBackend {
         ])
         add("m_run", creator: "u_dev", title: "Sunday long run", desc: "21k, no walking.", daysAgo: 1, members: ["u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.2, green: 0.6, blue: 0.5, alpha: 1), cover: "demo_314", contribs: [("u_dev", .photo, "Km 18", 0, "demo_182"), ("u_dev", .photo, "Done", 70, "demo_103")])
         add("m_sunset", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), cover: "demo_270", isLive: true, contribs: [("u_public", .photo, "6:41pm", 0, "demo_110"), ("u_public", .photo, "6:52pm", 11, "demo_173"), ("u_public", .photo, "7:03pm", 22, "demo_213")])
+        for (i, w) in [7, 14, 21].enumerated() {
+            add("m_sunset_\(w)", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: w, members: ["u_public", i == 0 ? "u_rahul" : "u_dev"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), cover: ["demo_213", "demo_110", "demo_173"][i], contribs: [("u_public", .photo, "Last light", 0, ["demo_213", "demo_110", "demo_173"][i])])
+            moments["m_sunset_\(w)"]!.templateID = Rituals.templateID
+        }
+        moments["m_sunset"]!.templateID = Rituals.templateID
         add("m_cafe", creator: "u_sarah", title: "Ramen night", desc: "The tonkotsu. That's the review.", daysAgo: 3, members: ["u_sarah", "u_dev"], place: "Lower Parel", vis: .publicAll, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), cover: "demo_312", contribs: [("u_sarah", .photo, "Tonkotsu", 0, "demo_312"), ("u_dev", .photo, "Gyoza", 15, "demo_292")])
         add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), cover: "demo_223", contribs: [("u_public", .photo, "Bar", 0, "demo_195"), ("u_rahul", .photo, "Cocktails", 40, "demo_113")])
         add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), cover: "demo_92", contribs: [(me.id, .photo, "Anjuna", 0, "demo_200"), ("u_rahul", .photo, "Same beach", 30, "demo_215")])
@@ -533,7 +544,21 @@ actor InMemoryBackend: SocialBackend {
             ActivityItem(id: "a3", kind: .follow, actorName: "Dev Patel", momentID: nil, momentTitle: nil, text: "Dev started following you", createdAt: .now.adding(days: -1), read: true)
         ]
         pendingInvites = [MomentInvite(id: "inv1", momentID: "m_bday", momentTitle: "Sarah's 30th", inviterID: "u_rahul", inviterName: "Rahul Mehta", shareURL: URL(string: "https://www.icloud.com/share/m_bday"), createdAt: .now.adding(days: -2), accepted: true)]
-        convos = [Conversation(id: "conv_rahul", participantIDs: [me.id, "u_rahul"], participantNames: [me.displayName, "Rahul Mehta"], lastMessage: "send me the thali one", updatedAt: .now.addingTimeInterval(-600))]
+        convos = [
+            Conversation(id: "conv_rahul", participantIDs: [me.id, "u_rahul"], participantNames: [me.displayName, "Rahul Mehta"], lastMessage: "send me the thali one", updatedAt: .now.addingTimeInterval(-600)),
+            Conversation(id: "conv_sarah", participantIDs: [me.id, "u_sarah"], participantNames: [me.displayName, "Sarah Kim"], lastMessage: "Friday? 🍜", updatedAt: .now.addingTimeInterval(-7200)),
+            Conversation(id: "cg_g_boys", participantIDs: [me.id, "u_rahul", "u_sarah"], participantNames: [me.displayName, "Rahul Mehta", "Sarah Kim"], lastMessage: "Goa again in Dec?", updatedAt: .now.addingTimeInterval(-3600), title: "The Goa crew", emoji: "🏖️", groupID: "g_boys")
+        ]
+        dms["conv_sarah"] = [
+            DirectMessage(id: "dm_s1", conversationID: "conv_sarah", authorID: "u_sarah", authorName: "Sarah Kim", text: "That ramen place has a 2 hour wait on weekends", media: nil, momentID: nil, createdAt: .now.addingTimeInterval(-7800)),
+            DirectMessage(id: "dm_s2", conversationID: "conv_sarah", authorID: me.id, authorName: me.displayName, text: "Worth it though", media: nil, momentID: nil, createdAt: .now.addingTimeInterval(-7500)),
+            DirectMessage(id: "dm_s3", conversationID: "conv_sarah", authorID: "u_sarah", authorName: "Sarah Kim", text: "Friday? 🍜", media: nil, momentID: nil, createdAt: .now.addingTimeInterval(-7200))
+        ]
+        dms["cg_g_boys"] = [
+            DirectMessage(id: "dm_g1", conversationID: "cg_g_boys", authorID: "u_rahul", authorName: "Rahul Mehta", text: "", media: nil, momentID: "m_goa", createdAt: .now.addingTimeInterval(-4000)),
+            DirectMessage(id: "dm_g2", conversationID: "cg_g_boys", authorID: "u_sarah", authorName: "Sarah Kim", text: "🔥", media: nil, momentID: nil, createdAt: .now.addingTimeInterval(-3900), replyToID: "dm_g1"),
+            DirectMessage(id: "dm_g3", conversationID: "cg_g_boys", authorID: "u_rahul", authorName: "Rahul Mehta", text: "Goa again in Dec?", media: nil, momentID: nil, createdAt: .now.addingTimeInterval(-3600))
+        ]
         dms["conv_rahul"] = [
             DirectMessage(id: "d1", conversationID: "conv_rahul", authorID: "u_rahul", authorName: "Rahul Mehta", text: "this one", media: nil, momentID: "m_goa", createdAt: .now.addingTimeInterval(-900)),
             DirectMessage(id: "d2", conversationID: "conv_rahul", authorID: "u_rahul", authorName: "Rahul Mehta", text: "send me the thali one", media: nil, momentID: nil, createdAt: .now.addingTimeInterval(-600))

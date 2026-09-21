@@ -51,7 +51,8 @@ struct RootView: View {
             Tab(value: .home) { SocialHomeView() } label: { Label { Text(RootTab.home.label) } icon: { Image(uiImage: MomentGlyph.home.image()) } }
             Tab(value: .discover) { DiscoverView() } label: { Label { Text(RootTab.discover.label) } icon: { Image(uiImage: MomentGlyph.nearby.image()) } }
             Tab(value: .create) { Color.clear } label: { Label { Text(RootTab.create.label) } icon: { Image(uiImage: MomentGlyph.create.image()) } }
-            Tab(value: .now) { NowView() } label: { Label { Text(RootTab.now.label) } icon: { Image(uiImage: MomentGlyph.now.image()) } }
+            Tab(value: .chats) { ChatsView() } label: { Label { Text(RootTab.chats.label) } icon: { Image(uiImage: MomentGlyph.reply.image()) } }
+                .badge(env.social.unreadChats)
             Tab(value: .profile) { NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() } } label: { Label { Text(RootTab.profile.label) } icon: { Image(uiImage: MomentGlyph.profile.image()) } }
         }
         .tint(MColor.textPrimary)

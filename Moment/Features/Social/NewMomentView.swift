@@ -18,6 +18,7 @@ struct NewMomentView: View {
     @State private var visibility: MomentVisibility = .group
     @State private var isLive = false
     @State private var isTeaser = false
+    @State private var isRitual = false
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var photos: [PhotoPick] = []
     @State private var videoURLs: [URL] = []
@@ -112,6 +113,14 @@ struct NewMomentView: View {
                     }
                 }
                 .tint(MColor.accent)
+                Toggle(isOn: $isRitual) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Ritual").font(MFont.headline)
+                        Text("It happens every week. Same title next time links them: streaks, next date, who's usually there.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    }
+                }
+                .tint(MColor.accent)
+                .accessibilityIdentifier("ritualToggle")
                 Button {
                     Task { await create() }
                 } label: {
@@ -233,6 +242,7 @@ struct NewMomentView: View {
         defer { creating = false }
         var input = initial ?? SocialService.NewMomentInput(title: title)
         input.title = title; input.description = description; input.visibility = visibility; input.isLive = isLive; input.isTeaser = isTeaser
+        if isRitual { input.templateID = Rituals.templateID }
         input.locationName = place.isBlank ? nil : place.trimmed
         input.place = venue
         input.photos = photos.map(\.data); input.videoURLs = videoURLs
