@@ -982,6 +982,26 @@ final class SocialService {
     func isUnread(_ c: Conversation) -> Bool { _ = readTick; return c.updatedAt > (readAt[c.id] ?? .distantPast) && !c.lastMessage.isEmpty }
     var unreadChats: Int { conversations.filter { isUnread($0) }.count }
 
+    // MARK: - Replay video
+
+    private(set) var exportingReplay = false
+    /// Renders the Moment as a vertical video ready for the share sheet. Everything in it is real: the sides in
+    /// order, who added them, when. The end card carries the invite link so whoever sees it can join.
+    func exportReplay(momentID: String) async -> URL? {
+        guard let m = moments[momentID] else { return nil }
+        exportingReplay = true; defer { exportingReplay = false }
+        let all = allContributions(momentID).filter { $0.uploadState == .uploaded }.sorted { ($0.originalTimestamp ?? $0.createdAt) < ($1.originalTimestamp ?? $1.createdAt) }
+        var beats: [ReplayExporter.Beat] = []
+        for c in all {
+            if c.kind == .text { beats.append(.init(image: nil, note: c.caption, author: c.authorName, time: c.originalTimestamp ?? c.createdAt)) }
+            else if c.kind == .photo, let img = await image(for: c.media) { beats.append(.init(image: img, note: nil, author: c.authorName, time: c.originalTimestamp ?? c.createdAt)) }
+        }
+        let link = (await shareLink(momentID: momentID))?.absoluteString ?? "moment://moment/\(momentID)"
+        let subtitle = "\(m.memberIDs.count) \(m.memberIDs.count == 1 ? "person" : "people") · \(m.dateLabel)" + (m.coarsePlace.map { " · \($0)" } ?? "")
+        do { let url = try await ReplayExporter.export(title: m.title, subtitle: subtitle, beats: beats, inviteLine: link); analytics.track(.replayExported); return url }
+        catch { lastError = error.localizedDescription; return nil }
+    }
+
     // MARK: - Media
 
     func image(for ref: MediaRef?) async -> UIImage? {

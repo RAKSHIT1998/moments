@@ -1,3 +1,5 @@
+import AVFoundation
+import UIKit
 import XCTest
 @testable import MOMENT
 
@@ -635,5 +637,31 @@ final class MessagingTests: XCTestCase {
         // Unread is local: sending marks it read, a newer message from someone else makes it unread.
         env.social.markRead(gc.id)
         XCTAssertFalse(env.social.isUnread(env.social.conversations.first { $0.id == gc.id }!))
+    }
+}
+
+final class ReplayExporterTests: XCTestCase {
+    func testExportsAVerticalVideoWithTitleBeatsAndEndCard() async throws {
+        let img = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 600)).image { ctx in UIColor.orange.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 400, height: 600)) }
+        let t = Date()
+        let beats = [ReplayExporter.Beat(image: img, note: nil, author: "Rahul", time: t), .init(image: nil, note: "we're waking up at 7", author: "Sarah", time: t.addingTimeInterval(600)), .init(image: img, note: nil, author: "You", time: t.addingTimeInterval(1200))]
+        let url = try await ReplayExporter.export(title: "Goa '26", subtitle: "3 people · Goa", beats: beats, inviteLine: "moment://join/abc", options: .init(secondsPerBeat: 1.0, fps: 24, maxSeconds: 60, size: CGSize(width: 540, height: 960)))
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration).seconds
+        XCTAssertEqual(duration, 2.2 + 3 * 1.0 + 2.6, accuracy: 0.2)
+        let tracks = try await asset.loadTracks(withMediaType: .video)
+        let track = try XCTUnwrap(tracks.first)
+        let size = try await track.load(.naturalSize)
+        XCTAssertEqual(size, CGSize(width: 540, height: 960))
+        XCTAssertGreaterThan((try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0, 10_000)
+    }
+
+    func testSixtySecondCapShortensBeatsBeforeDroppingThem() async throws {
+        let img = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 300)).image { ctx in UIColor.blue.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 200, height: 300)) }
+        let beats = (0..<30).map { ReplayExporter.Beat(image: img, note: nil, author: "P\($0)", time: Date().addingTimeInterval(Double($0) * 60)) }
+        let url = try await ReplayExporter.export(title: "Long night", subtitle: "", beats: beats, inviteLine: "x", options: .init(secondsPerBeat: 2.6, fps: 12, maxSeconds: 60, size: CGSize(width: 270, height: 480)))
+        let duration = try await AVURLAsset(url: url).load(.duration).seconds
+        XCTAssertLessThanOrEqual(duration, 60.5)
+        XCTAssertGreaterThan(duration, 50, "all 30 sides fit by shortening each beat, not by dropping them")
     }
 }

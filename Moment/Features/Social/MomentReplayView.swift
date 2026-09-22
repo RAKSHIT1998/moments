@@ -10,6 +10,8 @@ struct MomentReplayView: View {
     @State private var index = 0
     @State private var playing = true
     @State private var progress = 0.0
+    @State private var exported: [Any] = []
+    @State private var showShare = false
     private let secondsPerItem = 3.2
 
     private struct Beat: Identifiable { let id: String; let time: Date; let kind: Kind; enum Kind { case media(Contribution), note(Contribution), joined(String) } }
@@ -59,6 +61,14 @@ struct MomentReplayView: View {
                             Text(beat.time.formatted(date: .omitted, time: .shortened)).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundStyle(MColor.overlayLight).monospacedDigit().contentTransition(.numericText())
                         }
                         Spacer()
+                        Button {
+                            playing = false
+                            Task { if let url = await env.social.exportReplay(momentID: momentID) { exported = [url]; showShare = true } }
+                        } label: {
+                            Group { if env.social.exportingReplay { ProgressView().tint(MColor.overlayLight) } else { Image(systemName: "square.and.arrow.up") } }
+                                .font(.headline).foregroundStyle(MColor.overlayLight).frame(width: 36, height: 36).background(MColor.overlayDark.opacity(0.4), in: Circle())
+                        }
+                        .disabled(env.social.exportingReplay).accessibilityLabel("Share as video").accessibilityIdentifier("shareReplay")
                         Button { dismiss() } label: { Image(systemName: "xmark").font(.headline).foregroundStyle(MColor.overlayLight).frame(width: 36, height: 36).background(MColor.overlayDark.opacity(0.4), in: Circle()) }.accessibilityLabel("Close")
                     }
                     .padding(MSpacing.l)
@@ -88,6 +98,7 @@ struct MomentReplayView: View {
                 .padding(.vertical, 120)
             }
         }
+        .sheet(isPresented: $showShare) { ShareSheet(items: exported) }
         .task(id: index) {
             progress = 0
             while progress < 1 {

@@ -45,6 +45,7 @@ final class AnalyticsService {
         case creatorPlanCreated = "creator_plan_created"
         case creatorSubscribed = "creator_subscribed"
         case creatorTipped = "creator_tipped"
+        case replayExported = "replay_exported"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).
