@@ -25,7 +25,7 @@ actor DecentralizedBackend: SocialBackend {
         struct Profile: Codable { var displayName: String; var handle: String; var bio: String; var avatar: String?; var privateAccount: Bool; var momentID: String; var agreePK: String? }
         /// Subscribers-only Moment: a readable preview for everyone, the real thing sealed under the creator key.
         struct Locked: Codable { var preview: Moment; var sealed: String }
-        struct Plan: Codable { var title: String; var pitch: String; var tier: String; var perks: [String]; var payoutHint: String; var creatorName: String; var priceMinor: Int? = nil; var currency: String? = nil }
+        struct Plan: Codable { var title: String; var pitch: String; var tier: String; var perks: [String]; var payoutHint: String; var creatorName: String; var priceMinor: Int? = nil; var currency: String? = nil; var bundles: [CreatorPlan.Bundle]? = nil; var goalTitle: String? = nil; var goalAmountMinor: Int? = nil }
         struct Subscribe: Codable { var tier: String; var days: Int; var transactionID: String?; var name: String }
         struct Tip: Codable { var amount: String; var note: String; var transactionID: String?; var name: String }
         struct Dating: Codable { var profile: DatingProfile?; var photos: [String] }   // photos as base64 thumbnails; nil profile = withdrawn
@@ -39,7 +39,7 @@ actor DecentralizedBackend: SocialBackend {
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
-        struct Comment: Codable { var text: String; var contributionID: String?; var authorName: String; var media: String? = nil; var replyTo: String? = nil; var mediaKind: String? = nil; var duration: Double? = nil }
+        struct Comment: Codable { var text: String; var contributionID: String?; var authorName: String; var media: String? = nil; var replyTo: String? = nil; var mediaKind: String? = nil; var duration: Double? = nil; var ppvSet: String? = nil; var ppvPrice: Int? = nil; var ppvCurrency: String? = nil }
         struct Reaction: Codable { var kind: String?; var contributionID: String? }
         struct Now: Codable { var text: String; var media: String?; var expiresAt: Date; var coarsePlace: String?; var activity: String; var place: SocialPlace?; var authorName: String }
         struct Join: Codable { var name: String }
@@ -845,7 +845,7 @@ actor DecentralizedBackend: SocialBackend {
                 if local == nil { local = try? await media.store(d, extension: kind == .voice ? "m4a" : "jpg") }
                 if let local { mediaCache[e.id] = local; ref = MediaRef(kind: kind, localRef: local, remoteID: e.id, durationSeconds: p.duration) }
             }
-            out.append(DirectMessage(id: e.id, conversationID: conversationID, authorID: e.author, authorName: p.authorName, text: p.text, media: ref, momentID: p.contributionID, createdAt: e.createdAt, replyToID: p.replyTo))
+            out.append(DirectMessage(id: e.id, conversationID: conversationID, authorID: e.author, authorName: p.authorName, text: p.text, media: ref, momentID: p.contributionID, createdAt: e.createdAt, replyToID: p.replyTo, vaultSetID: p.ppvSet, priceMinor: p.ppvPrice ?? 0, currency: p.ppvCurrency ?? "INR"))
         }
         return out
     }
@@ -853,7 +853,7 @@ actor DecentralizedBackend: SocialBackend {
         guard ContentModeration.check(message.text) == .ok, let m = await build(message.conversationID), m.memberIDs.contains(myID) else { throw SocialError.notAllowed }
         let isVoice = message.media?.kind == .voice
         let b64 = mediaData.flatMap { isVoice ? $0 : (MediaPipeline.thumbnail($0, side: 1280) ?? $0) }?.base64EncodedString()
-        let e = try await emit(.comment, tags: ["moment": message.conversationID], payload: Payloads.Comment(text: message.text, contributionID: message.momentID, authorName: message.authorName, media: b64, replyTo: message.replyToID, mediaKind: message.media?.kind.rawValue, duration: message.media?.durationSeconds), momentKey: await childKey(message.conversationID))
+        let e = try await emit(.comment, tags: ["moment": message.conversationID], payload: Payloads.Comment(text: message.text, contributionID: message.momentID, authorName: message.authorName, media: message.isPayPerView ? nil : b64, replyTo: message.replyToID, mediaKind: message.media?.kind.rawValue, duration: message.media?.durationSeconds, ppvSet: message.vaultSetID, ppvPrice: message.priceMinor > 0 ? message.priceMinor : nil, ppvCurrency: message.currency), momentKey: await childKey(message.conversationID))
         var out = message; out.id = e.id; out.authorID = myID; out.createdAt = e.createdAt; return out
     }
     func conversation(forGroup group: SocialGroup) async throws -> Conversation {
@@ -913,11 +913,11 @@ actor DecentralizedBackend: SocialBackend {
     func creatorPlan(for userID: String) async throws -> CreatorPlan? {
         guard let e = await store.all(.plan).last(where: { $0.author == userID }), let p = e.payload(Payloads.Plan.self), p.tier != "none" else { return nil }
         let tier = CreatorPlan.Tier(rawValue: p.tier) ?? .t1
-        return CreatorPlan(creatorID: userID, creatorName: p.creatorName, title: p.title, pitch: p.pitch, priceMinor: p.priceMinor ?? Int(tier.referenceAmount * 100), currency: p.currency ?? "INR", perks: p.perks, payoutHint: p.payoutHint, createdAt: e.createdAt)
+        return CreatorPlan(creatorID: userID, creatorName: p.creatorName, title: p.title, pitch: p.pitch, priceMinor: p.priceMinor ?? Int(tier.referenceAmount * 100), currency: p.currency ?? "INR", perks: p.perks, payoutHint: p.payoutHint, createdAt: e.createdAt, bundles: p.bundles ?? [], goalTitle: p.goalTitle ?? "", goalAmountMinor: p.goalAmountMinor ?? 0)
     }
     func saveCreatorPlan(_ plan: CreatorPlan) async throws -> CreatorPlan {
         let me = try await currentUser()
-        try await emit(.plan, payload: Payloads.Plan(title: plan.title, pitch: plan.pitch, tier: plan.tier.rawValue, perks: plan.perks, payoutHint: plan.payoutHint, creatorName: me.displayName, priceMinor: plan.priceMinor, currency: plan.currency))
+        try await emit(.plan, payload: Payloads.Plan(title: plan.title, pitch: plan.pitch, tier: plan.tier.rawValue, perks: plan.perks, payoutHint: plan.payoutHint, creatorName: me.displayName, priceMinor: plan.priceMinor, currency: plan.currency, bundles: plan.bundles, goalTitle: plan.goalTitle, goalAmountMinor: plan.goalAmountMinor))
         _ = creatorKey()
         try? await Task.sleep(for: .milliseconds(20))
         return try await creatorPlan(for: myID) ?? plan

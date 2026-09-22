@@ -72,16 +72,6 @@
         }
       }
     },
-    "%@ · %@ / 30 days" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@ / 30 days"
-          }
-        }
-      }
-    },
     "%@ / 30 days" : {
 
     },
@@ -110,6 +100,16 @@
     },
     "%@ AGO TODAY" : {
 
+    },
+    "%@ asked for %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ asked for %2$@"
+          }
+        }
+      }
     },
     "%@ by %@" : {
       "localizations" : {
@@ -578,6 +578,12 @@
     "×%lld" : {
 
     },
+    "₹" : {
+
+    },
+    "0" : {
+
+    },
     "1 new Moment to review" : {
 
     },
@@ -585,6 +591,9 @@
 
     },
     "18+. You can leave any time; leaving removes your profile everywhere." : {
+
+    },
+    "499" : {
 
     },
     "A card for the people who weren't there — and the ones who were. The invite link goes with it." : {
@@ -618,6 +627,9 @@
 
     },
     "A one-off. They get %lld%% of what's left after the App Store." : {
+
+    },
+    "A photo, a call, a meeting — they name the price for that one thing." : {
 
     },
     "A reel appears when a night has three sides in it — or when someone adds a video. Add yours and the cut updates for everyone." : {
@@ -776,6 +788,9 @@
     "Anything they should know" : {
 
     },
+    "Anything to add" : {
+
+    },
     "Anything you want to remember" : {
 
     },
@@ -801,6 +816,12 @@
     "Ask %@" : {
 
     },
+    "Ask for a price" : {
+
+    },
+    "ASK FOR SOMETHING ELSE" : {
+
+    },
     "Ask me anything" : {
 
     },
@@ -808,6 +829,9 @@
 
     },
     "Ask your memory anything." : {
+
+    },
+    "Asked. You'll get a price in your chat." : {
 
     },
     "At the right time" : {
@@ -1435,6 +1459,9 @@
     "Here's exactly where they live and what leaves this iPhone." : {
 
     },
+    "Hidden while your screen is being recorded" : {
+
+    },
     "Hide from people I know" : {
 
     },
@@ -1919,6 +1946,9 @@
     "Name or @handle" : {
 
     },
+    "Name your price" : {
+
+    },
     "Near me" : {
 
     },
@@ -2033,6 +2063,9 @@
     "No stamps yet." : {
 
     },
+    "No thanks" : {
+
+    },
     "Nobody — remove person" : {
 
     },
@@ -2085,6 +2118,9 @@
 
     },
     "Nothing here yet." : {
+
+    },
+    "Nothing is charged now. They can decline, and so can you when you see the price." : {
 
     },
     "Nothing is charged until they accept. They can decline; you can cancel." : {
@@ -2150,8 +2186,25 @@
     "One alert per Moment that grew — who and how many, never the photos." : {
 
     },
-    "One payment through the App Store, no auto-renew. The creator gets the majority; MOMENT keeps no card details and never sees your name against a purchase." : {
-
+    "One payment through the App Store, no auto-renew. Apple charges %@ — the nearest product to %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One payment through the App Store, no auto-renew. Apple charges %1$@ — the nearest product to %2$@."
+          }
+        }
+      }
+    },
+    "One payment, 30 days, no auto-renew. %@ set this price and keeps %lld%% of it." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One payment, 30 days, no auto-renew. %1$@ set this price and keeps %2$lld%% of it."
+          }
+        }
+      }
     },
     "Only friends you follow back can join, even with the QR." : {
 
@@ -2219,6 +2272,9 @@
     "Owner" : {
 
     },
+    "Paid photo" : {
+
+    },
     "Pass" : {
 
     },
@@ -2235,6 +2291,9 @@
 
     },
     "Paused" : {
+
+    },
+    "Pay %@" : {
 
     },
     "Payment is charged to your Apple Account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period, and you can manage or cancel them in your Apple Account settings. Lifetime is a one-time purchase." : {
@@ -2367,9 +2426,6 @@
 
     },
     "Price (₹)" : {
-
-    },
-    "Prices are set by the App Store in each country. Apple takes its cut on every purchase." : {
 
     },
     "Print your QR for the counter: every scan lands people on this page." : {
@@ -2541,6 +2597,9 @@
     "Requested. They'll confirm." : {
 
     },
+    "Requests" : {
+
+    },
     "Reset what MOMENT learned from your feedback" : {
 
     },
@@ -2637,6 +2696,9 @@
     "Say something real (optional)" : {
 
     },
+    "Say what you want. They'll name a price for it — you pay only if you accept." : {
+
+    },
     "Say what you're up for and see who joins." : {
 
     },
@@ -2653,6 +2715,9 @@
 
     },
     "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
+
+    },
+    "Screenshots of this set come out blank, and every view carries your MOMENT ID. A photo taken with another phone can still be traced to you." : {
 
     },
     "Screenshots, promises, plans — on this iPhone only. %lld memories." : {
@@ -2722,6 +2787,9 @@
 
     },
     "Send like" : {
+
+    },
+    "Send price" : {
 
     },
     "Sent. They'll see it on their Earn page." : {
@@ -3281,6 +3349,9 @@
     "Waiting for the people who were there." : {
 
     },
+    "Waiting for them to accept %@" : {
+
+    },
     "Want me to tell you when one of these becomes urgent? At most %lld a day, never “come back to the app”. Details stay hidden unless you turn them on." : {
 
     },
@@ -3323,6 +3394,9 @@
     "What do they get?" : {
 
     },
+    "What do you have in mind?" : {
+
+    },
     "What do you remember?" : {
 
     },
@@ -3339,6 +3413,9 @@
 
     },
     "What MOMENT remembers" : {
+
+    },
+    "What photo?" : {
 
     },
     "What should I remember?" : {
@@ -3467,6 +3544,9 @@
     "You keep %lld%% on card checkout. The photos stay on your storage — buyers get a key." : {
 
     },
+    "You keep %lld%% on card checkout. They pay only if they accept." : {
+
+    },
     "You mentioned %@." : {
 
     },
@@ -3568,6 +3648,19 @@
     },
     "Your plan" : {
 
+    },
+    "Your price, charged on card checkout. MOMENT keeps %lld%%." : {
+
+    },
+    "Your price. Through the App Store the charge is the nearest product Apple sells (%@), and Apple takes %lld%% — card checkout charges exactly what you set." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your price. Through the App Store the charge is the nearest product Apple sells (%1$@), and Apple takes %2$lld%% — card checkout charges exactly what you set."
+          }
+        }
+      }
     },
     "Your profile is stored in your iCloud. Only people you share with see your Moments." : {
 

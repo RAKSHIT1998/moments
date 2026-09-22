@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 // MARK: - Earn (creator side)
 
@@ -8,11 +9,17 @@ struct CreatorEarnView: View {
     @State private var title = ""
     @State private var pitch = ""
     @State private var price = "499"
+    @State private var bundles: [Int: Int] = [:]
+    @State private var goalTitle = ""
+    @State private var goalAmount = ""
+    private func discount(_ months: Int) -> Int { bundles[months] ?? 0 }
+    private func setDiscount(_ months: Int, _ value: Int) { bundles[months] = value }
     @State private var perks: [String] = ["", "", ""]
     @State private var payoutHint = ""
     @State private var saving = false
     @State private var editing = false
     @State private var confirmRemove = false
+    @State private var showMass = false
 
     private var plan: CreatorPlan? { env.social.myPlan }
     private var priceMinor: Int { max(0, (Int(price.filter(\.isNumber)) ?? 0) * 100) }
@@ -31,13 +38,16 @@ struct CreatorEarnView: View {
         .background(LiquidBackdrop(tint: .orange))
         .navigationTitle("Earn")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await env.social.refreshCreator(); load() }
+        .task { await env.social.refreshCreator(); await env.social.refreshStorefront(); load() }
+        .sheet(isPresented: $showMass) { MassMessageSheet() }
         .modifier(SocialErrorAlert())
     }
 
     private func load() {
         guard let p = plan else { return }
         title = p.title; pitch = p.pitch; price = String(p.priceMinor / 100); payoutHint = p.payoutHint
+        bundles = Dictionary(uniqueKeysWithValues: p.bundles.map { ($0.months, $0.discountPercent) })
+        goalTitle = p.goalTitle; goalAmount = p.goalAmountMinor > 0 ? String(p.goalAmountMinor / 100) : ""
         perks = (p.perks + ["", "", ""]).prefix(3).map { $0 }
     }
 
@@ -66,6 +76,44 @@ struct CreatorEarnView: View {
                 ForEach(plan.perks, id: \.self) { Label($0, systemImage: "checkmark").font(MFont.subheadline) }
             }
             .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+
+            if !env.social.earningsBreakdown.isEmpty {
+                VStack(alignment: .leading, spacing: MSpacing.s) {
+                    Text("WHERE IT CAME FROM").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                    ForEach(env.social.earningsBreakdown, id: \.label) { row in
+                        HStack { Text(row.label).font(MFont.subheadline); Spacer(); Text(row.amount, format: .currency(code: "INR").precision(.fractionLength(0))).font(.subheadline.weight(.semibold)).monospacedDigit() }
+                    }
+                }
+                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+            }
+
+            if let progress = env.social.goalProgress(for: plan) {
+                VStack(alignment: .leading, spacing: MSpacing.s) {
+                    Text(plan.goalTitle.isEmpty ? "Your goal" : plan.goalTitle).font(MFont.headline)
+                    ProgressView(value: progress.fraction).tint(.orange)
+                    Text("\(progress.raised.formatted(.currency(code: "INR").precision(.fractionLength(0)))) of \((Double(plan.goalAmountMinor) / 100).formatted(.currency(code: "INR").precision(.fractionLength(0)))) this month").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                }
+                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass(tint: .orange)
+            }
+
+            Button { showMass = true } label: { Label("Message all subscribers", systemImage: "megaphone.fill").frame(maxWidth: .infinity) }
+                .buttonStyle(SecondaryButtonStyle()).accessibilityIdentifier("massMessage")
+
+            if !env.social.topSupporters.isEmpty {
+                VStack(alignment: .leading, spacing: MSpacing.m) {
+                    Text("TOP SUPPORTERS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                    ForEach(env.social.topSupporters, id: \.id) { s in
+                        HStack(spacing: MSpacing.m) {
+                            AvatarView(userID: s.id, name: s.name, size: 34)
+                            Text(s.name).font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text(s.amount, format: .currency(code: "INR").precision(.fractionLength(0))).font(.subheadline.weight(.semibold)).monospacedDigit()
+                        }
+                    }
+                    Text("This month, across subscriptions, sets, requests and tips.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+                }
+                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+            }
 
             VStack(alignment: .leading, spacing: MSpacing.m) {
                 Text("SUBSCRIBERS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
@@ -139,6 +187,34 @@ struct CreatorEarnView: View {
             }
 
             VStack(alignment: .leading, spacing: MSpacing.s) {
+                Text("BUNDLES").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                ForEach([3, 6, 12], id: \.self) { months in
+                    HStack(spacing: MSpacing.m) {
+                        Text("\(months) months").font(MFont.body).frame(width: 96, alignment: .leading)
+                        Stepper("\(discount(months))% off", value: Binding(get: { discount(months) }, set: { setDiscount(months, $0) }), in: 0...60, step: 5)
+                        if discount(months) > 0, priceMinor > 0 {
+                            Text((Double(CreatorPlan.Bundle(months: months, discountPercent: discount(months)).totalMinor(monthly: priceMinor)) / 100).formatted(.currency(code: "INR").precision(.fractionLength(0))))
+                                .font(.subheadline.weight(.semibold)).monospacedDigit()
+                        }
+                    }
+                    .padding(.horizontal, MSpacing.m).padding(.vertical, 8).glass(radius: 12)
+                    .accessibilityIdentifier("bundle-\(months)")
+                }
+                Text("People who commit for longer churn less. 0% means that length isn't offered.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+            }
+
+            VStack(alignment: .leading, spacing: MSpacing.s) {
+                Text("A GOAL (OPTIONAL)").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
+                TextField("What you're saving for", text: $goalTitle).padding(.horizontal, MSpacing.l).padding(.vertical, 10).glass(radius: 14).accessibilityIdentifier("goalTitle")
+                HStack(spacing: MSpacing.s) {
+                    Text("₹").foregroundStyle(MColor.textSecondary)
+                    TextField("Amount", text: $goalAmount).keyboardType(.numberPad).accessibilityIdentifier("goalAmount")
+                }
+                .padding(.horizontal, MSpacing.l).padding(.vertical, 10).glass(radius: 14)
+                Text("Shown on your profile with the real total tipped this month. Nothing is padded.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+            }
+
+            VStack(alignment: .leading, spacing: MSpacing.s) {
                 Text("PERKS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                 ForEach(0..<3, id: \.self) { i in TextField(["Full-res photos, same night", "Vote on the next spot", "Ask me anything"][i], text: $perks[i]).padding(.horizontal, MSpacing.l).padding(.vertical, 10).glass(radius: 14) }
             }
@@ -151,7 +227,11 @@ struct CreatorEarnView: View {
 
             Button {
                 saving = true
-                Task { if await env.social.savePlan(title: title, pitch: pitch, priceMinor: priceMinor, perks: perks, payoutHint: payoutHint) { editing = false }; saving = false }
+                Task {
+                    let bs = bundles.filter { $0.value > 0 }.map { CreatorPlan.Bundle(months: $0.key, discountPercent: $0.value) }.sorted { $0.months < $1.months }
+                    if await env.social.savePlan(title: title, pitch: pitch, priceMinor: priceMinor, perks: perks, payoutHint: payoutHint, bundles: bs, goalTitle: goalTitle, goalAmountMinor: (Int(goalAmount.filter(\.isNumber)) ?? 0) * 100) { editing = false }
+                    saving = false
+                }
             } label: { Text(plan == nil ? "Start selling" : "Save") }
                 .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(title.isBlank || pitch.isBlank || priceMinor == 0 || saving)
                 .accessibilityIdentifier("savePlan")
@@ -191,6 +271,29 @@ struct SubscribeSheet: View {
                     Label("You're in. Everything unlocks now.", systemImage: "checkmark.seal.fill").font(MFont.headline).frame(maxWidth: .infinity)
                     Button("Done") { dismiss() }.buttonStyle(PrimaryButtonStyle())
                 } else {
+                    if !plan.bundles.isEmpty {
+                        VStack(alignment: .leading, spacing: MSpacing.s) {
+                            Text("SAVE BY COMMITTING").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                            ForEach(plan.bundles) { b in
+                                Button {
+                                    Task { if await env.social.subscribe(to: creatorID, bundle: b) { done = true; Haptics.saved(); try? await Task.sleep(for: .seconds(1.2)); dismiss() } }
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(b.label).font(.subheadline.weight(.semibold))
+                                            Text("\((Double(b.perMonthMinor(monthly: plan.priceMinor)) / 100).formatted(.currency(code: plan.currency).precision(.fractionLength(0))))/month").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                                        }
+                                        Spacer()
+                                        Text("\(b.discountPercent)% off").font(MFont.caption).foregroundStyle(.orange)
+                                        Text(plan.bundleLabel(b)).font(.subheadline.weight(.bold))
+                                    }
+                                    .padding(MSpacing.m)
+                                }
+                                .buttonStyle(.plain).glass(radius: 14)
+                                .accessibilityIdentifier("bundle-\(b.months)")
+                            }
+                        }
+                    }
                     Button {
                         Task {
                             if await env.social.subscribe(to: creatorID) {
@@ -346,5 +449,55 @@ struct TipButton: View {
             }
         }
         .task { if env.social.plan(for: creatorID) == nil, !env.social.checkedPlans.contains(creatorID) { await env.social.loadCreatorPlan(creatorID) } }
+    }
+}
+
+/// One message to everyone who subscribes — optionally locked behind a price.
+struct MassMessageSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var item: PhotosPickerItem?
+    @State private var data: Data?
+    @State private var locked = false
+    @State private var price = "499"
+    @State private var sentTo: Int?
+
+    private var count: Int { env.social.activeSubscriberCount }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MSpacing.l) {
+            Text("Message \(count) \(count == 1 ? "subscriber" : "subscribers")").font(MFont.title)
+            TextField("What do you want to say?", text: $text, axis: .vertical).lineLimit(2...5).padding(MSpacing.m).glass(radius: 14).accessibilityIdentifier("massText")
+            PhotosPicker(selection: $item, matching: .images) {
+                HStack { Image(systemName: data == nil ? "photo.badge.plus" : "checkmark.circle.fill"); Text(data == nil ? "Attach a photo" : "Photo attached") }
+                    .font(MFont.subheadline).padding(MSpacing.m).frame(maxWidth: .infinity, alignment: .leading).glass(radius: 14)
+            }
+            if data != nil {
+                Toggle("Lock it behind a price", isOn: $locked).accessibilityIdentifier("massLock")
+                if locked {
+                    HStack(spacing: MSpacing.s) {
+                        Text("₹").foregroundStyle(MColor.textSecondary)
+                        TextField("499", text: $price).keyboardType(.numberPad).accessibilityIdentifier("massPrice")
+                    }
+                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10).glass(radius: 14)
+                }
+            }
+            Spacer(minLength: 0)
+            if let sentTo {
+                Label("Sent to \(sentTo).", systemImage: "checkmark.seal.fill").font(MFont.headline)
+                Button("Done") { dismiss() }.buttonStyle(PrimaryButtonStyle())
+            } else {
+                Button {
+                    Task { sentTo = await env.social.massMessage(text: text, photo: data, priceMinor: locked ? (Int(price.filter(\.isNumber)) ?? 0) * 100 : 0) }
+                } label: { if env.social.busy { ProgressView().tint(.white) } else { Text("Send to everyone").frame(maxWidth: .infinity) } }
+                .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled((text.isBlank && data == nil) || count == 0 || env.social.busy).accessibilityIdentifier("sendMass")
+                Text("Each person gets it in their own chat — nobody sees anyone else.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+            }
+        }
+        .padding(MSpacing.page).background(LiquidBackdrop(tint: .orange))
+        .onChange(of: item) { _, i in Task { if let i, let d = try? await i.loadTransferable(type: Data.self) { data = d } } }
+        .presentationDetents([.large]).presentationDragIndicator(.visible)
+        .modifier(SocialErrorAlert())
     }
 }

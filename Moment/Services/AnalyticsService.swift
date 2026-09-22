@@ -54,6 +54,9 @@ final class AnalyticsService {
         case bookingRequested = "booking_requested"
         case requestAsked = "request_asked"
         case captureAttempt = "capture_attempt"
+        case ppvSent = "ppv_sent"
+        case ppvUnlocked = "ppv_unlocked"
+        case massMessageSent = "mass_message_sent"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

@@ -1063,3 +1063,123 @@ final class PaidRequestTests: XCTestCase {
         XCTAssertEqual(waiting.first?.kind, .photo)
     }
 }
+
+final class BundleMathTests: XCTestCase {
+    func testBundlePricingAndPerMonth() {
+        let b = CreatorPlan.Bundle(months: 3, discountPercent: 20)
+        XCTAssertEqual(b.totalMinor(monthly: 50_000), 120_000, "₹500/mo for 3 months at 20% off = ₹1,200")
+        XCTAssertEqual(b.perMonthMinor(monthly: 50_000), 40_000)
+        XCTAssertEqual(CreatorPlan.Bundle(months: 12, discountPercent: 0).totalMinor(monthly: 50_000), 600_000)
+        XCTAssertEqual(CreatorPlan.Bundle(months: 6, discountPercent: 100).totalMinor(monthly: 50_000), 0)
+        let plan = CreatorPlan(creatorID: "c", creatorName: "C", title: "t", pitch: "", priceMinor: 50_000, currency: "INR", perks: [], payoutHint: "", createdAt: .now, bundles: [b])
+        XCTAssertEqual(plan.bundleLabel(b, locale: Locale(identifier: "en_IN")).filter(\.isNumber), "1200")
+    }
+}
+
+@MainActor
+final class RevenueFeatureTests: XCTestCase {
+    private func make() async throws -> (AppEnvironment, InMemoryBackend) {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        return (env, backend)
+    }
+    private func photo() -> Data {
+        UIGraphicsImageRenderer(size: CGSize(width: 60, height: 90)).image { c in UIColor.purple.setFill(); c.fill(CGRect(x: 0, y: 0, width: 60, height: 90)) }.jpegData(compressionQuality: 0.8)!
+    }
+
+    func testLockedMessageStaysShutUntilPaidAndIsHiddenFromTheShop() async throws {
+        let (env, backend) = try await make()
+        let convOpt = await env.social.conversation(with: "u_rahul")
+        let conv = try XCTUnwrap(convOpt)
+        let sentOpt = await env.social.sendPayPerView(conversationID: conv.id, to: "u_rahul", photo: photo(), priceMinor: 79900, caption: "Backstage")
+        let sent = try XCTUnwrap(sentOpt)
+        XCTAssertTrue(sent.isPayPerView); XCTAssertEqual(sent.priceMinor, 79900)
+        XCTAssertNil(sent.media, "the media never travels in the message — only the set it points at")
+        let setID = try XCTUnwrap(sent.vaultSetID)
+        // It's a hidden set: it never shows up in the shop.
+        XCTAssertFalse(env.social.sets(of: env.social.myID).contains { $0.id == setID && $0.visible })
+        // Rahul can't read the items until he pays.
+        var refused = false
+        try await backend.acting(as: "u_rahul") { b in
+            do { _ = try await b.vaultItems(setID: setID) } catch { refused = true }
+        }
+        XCTAssertTrue(refused)
+        var bought: VaultPurchase?
+        try await backend.acting(as: "u_rahul") { b in bought = try await b.buyVaultSet(id: setID, rail: .web, reference: "ch_1") }
+        XCTAssertEqual(bought?.amountMinor, 79900)
+        var items: [VaultItem] = []
+        try await backend.acting(as: "u_rahul") { b in items = try await b.vaultItems(setID: setID) }
+        XCTAssertEqual(items.count, 1)
+        // The chat preview says locked, not the caption.
+        XCTAssertEqual(env.social.conversations.first { $0.id == conv.id }?.lastMessage, "🔒 Locked")
+        // And it counts as a sale at the web take.
+        await env.social.refreshStorefront()
+        XCTAssertEqual(env.social.mySales.first { $0.setID == setID }?.amountMinor, 79900)
+        XCTAssertEqual(CreatorEconomics.creatorTake(79900, rail: .web), 719.1, accuracy: 0.01)
+    }
+
+    func testMassMessageReachesEverySubscriberInTheirOwnChat() async throws {
+        let (env, backend) = try await make()
+        _ = await env.social.savePlan(title: "Inside", pitch: "Everything", priceMinor: 39900, perks: [], payoutHint: "me@upi")
+        for fan in ["u_rahul", "u_sarah"] {
+            try await backend.acting(as: fan) { b in _ = try await b.subscribe(to: "me", tier: .t2, transactionID: nil, days: 30) }
+        }
+        await env.social.refreshCreator()
+        XCTAssertEqual(env.social.activeSubscriberCount, 2)
+        let reached = await env.social.massMessage(text: "New set tonight.")
+        XCTAssertEqual(reached, 2)
+        // Two separate chats, each with the message — nobody is in a group.
+        for fan in ["u_rahul", "u_sarah"] {
+            let c = try XCTUnwrap(env.social.conversations.first { $0.participantIDs.contains(fan) })
+            XCTAssertFalse(c.isGroup)
+            await env.social.loadMessages(c.id)
+            XCTAssertTrue((env.social.messages[c.id] ?? []).contains { $0.text == "New set tonight." })
+        }
+        // With no subscribers it refuses rather than pretending.
+        await env.social.leaveMeet()
+        let (fresh, _) = try await make()
+        let none = await fresh.social.massMessage(text: "hi")
+        XCTAssertEqual(none, 0)
+        XCTAssertNotNil(fresh.social.lastError)
+    }
+
+    func testGoalCountsOnlyRealTipsAndSupportersAreRanked() async throws {
+        let (env, backend) = try await make()
+        _ = await env.social.savePlan(title: "Inside", pitch: "Everything", priceMinor: 39900, perks: [], payoutHint: "me@upi", goalTitle: "New lens", goalAmountMinor: 100_000)
+        let plan = try XCTUnwrap(env.social.myPlan)
+        await env.social.refreshCreator()
+        let zero = try XCTUnwrap(env.social.goalProgress(for: plan))
+        XCTAssertEqual(zero.raised, 0); XCTAssertEqual(zero.fraction, 0)
+        // Two tips arrive.
+        try await backend.acting(as: "u_rahul") { b in _ = try await b.tip(creatorID: "me", momentID: nil, amount: .large, note: "for the lens", transactionID: nil) }
+        try await backend.acting(as: "u_dev") { b in _ = try await b.tip(creatorID: "me", momentID: nil, amount: .medium, note: "", transactionID: nil) }
+        await env.social.refreshCreator()
+        let p = try XCTUnwrap(env.social.goalProgress(for: plan))
+        XCTAssertEqual(p.raised, 499 + 99, accuracy: 0.01, "progress is the tips that actually arrived")
+        XCTAssertEqual(p.fraction, 598.0 / 1000.0, accuracy: 0.001)
+        // A goal of zero means no goal at all.
+        var noGoal = plan; noGoal.goalAmountMinor = 0
+        XCTAssertNil(env.social.goalProgress(for: noGoal))
+        // Supporters are ranked by what they actually spent.
+        await env.social.refreshStorefront()
+        let top = env.social.topSupporters
+        XCTAssertEqual(top.first?.name, "Rahul Mehta")
+        XCTAssertGreaterThan(try XCTUnwrap(top.first).amount, try XCTUnwrap(top.last).amount)
+    }
+
+    func testBundleSubscriptionLastsLongerThanAMonth() async throws {
+        let (env, backend) = try await make()
+        await env.social.loadCreatorPlan("u_public")
+        var plan = try XCTUnwrap(env.social.plan(for: "u_public"))
+        plan.bundles = [CreatorPlan.Bundle(months: 3, discountPercent: 20)]
+        try await backend.acting(as: "u_public") { b in _ = try await b.saveCreatorPlan(plan) }
+        await env.social.loadCreatorPlan("u_public")
+        let bundle = try XCTUnwrap(env.social.plan(for: "u_public")?.bundles.first)
+        let ok = await env.social.subscribe(to: "u_public", bundle: bundle)
+        XCTAssertTrue(ok)
+        let sub = try XCTUnwrap(env.social.subscription(to: "u_public"))
+        XCTAssertEqual(sub.expiresAt.timeIntervalSinceNow / 86400, 90, accuracy: 1.5, "three months, not one")
+    }
+}

@@ -197,8 +197,8 @@ final class SocialService {
     var activeSubscriberCount: Int { subscribers.filter(\.isActive).count }
 
     @discardableResult
-    func savePlan(title: String, pitch: String, priceMinor: Int, currency: String = "INR", perks: [String], payoutHint: String) async -> Bool {
-        let p = CreatorPlan(creatorID: myID, creatorName: displayName, title: title.trimmed, pitch: pitch.trimmed, priceMinor: priceMinor, currency: currency, perks: perks.map(\.trimmed).filter { !$0.isEmpty }, payoutHint: payoutHint.trimmed, createdAt: myPlan?.createdAt ?? .now)
+    func savePlan(title: String, pitch: String, priceMinor: Int, currency: String = "INR", perks: [String], payoutHint: String, bundles: [CreatorPlan.Bundle] = [], goalTitle: String = "", goalAmountMinor: Int = 0) async -> Bool {
+        let p = CreatorPlan(creatorID: myID, creatorName: displayName, title: title.trimmed, pitch: pitch.trimmed, priceMinor: priceMinor, currency: currency, perks: perks.map(\.trimmed).filter { !$0.isEmpty }, payoutHint: payoutHint.trimmed, createdAt: myPlan?.createdAt ?? .now, bundles: bundles, goalTitle: goalTitle.trimmed, goalAmountMinor: goalAmountMinor)
         do {
             let saved = try await backend.saveCreatorPlan(p)
             if myPlan == nil { analytics.track(.creatorPlanCreated) }
@@ -210,7 +210,7 @@ final class SocialService {
 
     /// Pays through the App Store (non-renewing 30-day product for the creator's tier), then records the subscription.
     /// Returns true when the person is now subscribed.
-    func subscribe(to creatorID: String) async -> Bool {
+    func subscribe(to creatorID: String, days: Int = 30, amountMinor: Int? = nil) async -> Bool {
         var cached = creatorPlans[creatorID]
         if cached == nil { cached = try? await backend.creatorPlan(for: creatorID) }
         guard let plan = cached else { lastError = "This person isn't selling anything yet."; return false }
@@ -230,7 +230,8 @@ final class SocialService {
             lastError = "Prices aren't available right now. Try again in a moment."; return false
         }
         do {
-            let s = try await backend.subscribe(to: creatorID, tier: plan.tier, transactionID: transactionID, days: 30)
+            let s = try await backend.subscribe(to: creatorID, tier: plan.tier, transactionID: transactionID, days: days)
+            _ = amountMinor
             mySubscriptions.removeAll { $0.creatorID == creatorID }; mySubscriptions.append(s)
             analytics.track(.creatorSubscribed, category: rail.rawValue)
             await refreshFeed()
@@ -1111,6 +1112,95 @@ final class SocialService {
 
     /// Where the money goes through. Web (card) keeps the platform fee at 10%; Apple's rail can't.
     var rail: PaymentRail { settings.webCheckoutEnabled ? .web : .appStore }
+
+    // MARK: - Pay-per-view messages, mass sends, bundles, goals
+
+    /// Sends a locked photo in a chat: the media becomes a hidden one-item set, the message carries its
+    /// price. Unlocking is the same purchase (and the same sealed-key handoff) as any set.
+    @discardableResult
+    func sendPayPerView(conversationID: String, to buyerID: String, photo: Data, priceMinor: Int, caption: String) async -> DirectMessage? {
+        guard let me, priceMinor > 0 else { return nil }
+        busy = true; defer { busy = false }
+        guard let ref = await storeLocalMedia(photo, kind: .photo) else { lastError = "Couldn't prepare that photo."; return nil }
+        let hidden = VaultSet(id: "", creatorID: myID, creatorName: displayName, title: caption.isBlank ? "Locked photo" : caption.trimmed, blurb: "", priceMinor: priceMinor, currency: "INR", cover: ref, itemCount: 1, isVideo: false, createdAt: .now, visible: false)
+        guard let saved = await saveSet(hidden, items: [VaultItem(id: "", setID: "", kind: .photo, media: ref, caption: caption.trimmed, index: 0)]) else { return nil }
+        var m = DirectMessage(id: UUID().uuidString, conversationID: conversationID, authorID: me.id, authorName: displayName, text: caption.trimmed, media: nil, momentID: nil, createdAt: .now)
+        m.vaultSetID = saved.id; m.priceMinor = priceMinor
+        do {
+            let sent = try await backend.send(m, mediaData: nil)
+            messages[conversationID, default: []].append(sent)
+            if let i = conversations.firstIndex(where: { $0.id == conversationID }) { var c = conversations.remove(at: i); c.lastMessage = "🔒 Locked"; c.updatedAt = .now; conversations.insert(c, at: 0) }
+            analytics.track(.ppvSent)
+            _ = buyerID
+            return sent
+        } catch { lastError = error.localizedDescription; return nil }
+    }
+
+    /// Buys what a locked message points at, then shows it in place.
+    func unlockMessage(_ m: DirectMessage) async -> Bool {
+        guard let setID = m.vaultSetID else { return false }
+        if setsByCreator[m.authorID] == nil { await loadStorefront(m.authorID) }
+        var set = sets(of: m.authorID).first { $0.id == setID }
+        if set == nil { set = VaultSet(id: setID, creatorID: m.authorID, creatorName: m.authorName, title: m.text, blurb: "", priceMinor: m.priceMinor, currency: m.currency, cover: nil, itemCount: 1, isVideo: false, createdAt: m.createdAt, visible: false) }
+        guard let set else { return false }
+        let ok = await buySet(set)
+        if ok { analytics.track(.ppvUnlocked) }
+        return ok
+    }
+
+    /// One message to every active subscriber, each in their own chat. Returns how many it reached.
+    @discardableResult
+    func massMessage(text: String, photo: Data? = nil, priceMinor: Int = 0) async -> Int {
+        let recipients = subscribers.filter(\.isActive).map(\.subscriberID)
+        guard !recipients.isEmpty else { lastError = "No active subscribers yet."; return 0 }
+        busy = true; defer { busy = false }
+        var sent = 0
+        for id in recipients {
+            guard let c = await conversation(with: id) else { continue }
+            if let photo, priceMinor > 0 {
+                if await sendPayPerView(conversationID: c.id, to: id, photo: photo, priceMinor: priceMinor, caption: text) != nil { sent += 1 }
+            } else if await send(conversationID: c.id, text: text, photo: photo) {
+                sent += 1
+            }
+        }
+        analytics.track(.massMessageSent, category: priceMinor > 0 ? "ppv" : "text")
+        return sent
+    }
+
+    /// Subscribes for several months at the creator's bundle price.
+    func subscribe(to creatorID: String, bundle: CreatorPlan.Bundle) async -> Bool {
+        guard let plan = creatorPlans[creatorID] else { return await subscribe(to: creatorID) }
+        return await subscribe(to: creatorID, days: 30 * bundle.months, amountMinor: bundle.totalMinor(monthly: plan.priceMinor))
+    }
+
+    /// What a creator's public goal is at, from real tips only.
+    func goalProgress(for plan: CreatorPlan) -> (raised: Double, fraction: Double)? {
+        guard plan.goalAmountMinor > 0 else { return nil }
+        let month = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .distantPast
+        let raised = tipsReceived.filter { $0.createdAt >= month }.reduce(0.0) { $0 + $1.amount.referenceAmount }
+        return (raised, min(1, raised / (Double(plan.goalAmountMinor) / 100)))
+    }
+
+    /// Who spends the most with me this month — sets, bookings, tips and subscriptions together.
+    var topSupporters: [(id: String, name: String, amount: Double)] {
+        var totals: [String: (String, Double)] = [:]
+        let month = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .distantPast
+        for s in mySales where s.createdAt >= month { totals[s.buyerID, default: (s.buyerName, 0)].1 += Double(s.amountMinor) / 100 }
+        for t in tipsReceived where t.createdAt >= month { totals[t.fromID, default: (t.fromName, 0)].1 += t.amount.referenceAmount }
+        for b in myBookings where b.creatorID == myID && b.status.isPaid && b.createdAt >= month { totals[b.buyerID, default: (b.buyerName, 0)].1 += Double(b.amountMinor) / 100 }
+        for sub in subscribers where sub.isActive { totals[sub.subscriberID, default: (sub.subscriberName, 0)].1 += sub.tier.referenceAmount }
+        return totals.map { ($0.key, $0.value.0, $0.value.1) }.sorted { $0.2 > $1.2 }.prefix(5).map { (id: $0.0, name: $0.1, amount: $0.2) }
+    }
+
+    /// Where this month's money came from, for the Studio breakdown.
+    var earningsBreakdown: [(label: String, amount: Double)] {
+        let month = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .distantPast
+        let subs = subscribers.filter(\.isActive).reduce(0.0) { $0 + CreatorEconomics.creatorTake(Int($1.tier.referenceAmount * 100), rail: rail) }
+        let ppv = mySales.filter { $0.createdAt >= month }.reduce(0.0) { $0 + CreatorEconomics.creatorTake($1.amountMinor, rail: $1.rail) }
+        let tips = tipsReceived.filter { $0.createdAt >= month }.reduce(0.0) { $0 + CreatorEconomics.creatorTake(Int($1.amount.referenceAmount * 100), rail: rail) }
+        let requests = myBookings.filter { $0.creatorID == myID && $0.status.isPaid && $0.createdAt >= month }.reduce(0.0) { $0 + CreatorEconomics.creatorTake($1.amountMinor, rail: $1.rail) }
+        return [("Subscriptions", subs), ("Sets & locked messages", ppv), ("Requests", requests), ("Tips", tips)].filter { $0.1 > 0 }
+    }
 
     /// Tell the creator when someone captured their paid content, and log it for them.
     func startScreenGuard() {

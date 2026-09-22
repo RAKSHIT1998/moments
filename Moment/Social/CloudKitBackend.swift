@@ -467,6 +467,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["title"] = plan.title; r["pitch"] = plan.pitch
         r["priceMinor"] = plan.priceMinor; r["currency"] = plan.currency
         r["perks"] = plan.perks; r["payoutHint"] = plan.payoutHint
+        r["bundles"] = try? JSONEncoder().encode(plan.bundles); r["goalTitle"] = plan.goalTitle; r["goalAmountMinor"] = plan.goalAmountMinor
         return Self.plan(from: try await save(r, in: publicDB))
     }
     func removeCreatorPlan() async throws {
@@ -521,7 +522,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         CreatorTip(id: r.recordID.recordName, fromID: r["fromID"] as? String ?? "", fromName: r["fromName"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", momentID: r["momentID"] as? String, amount: CreatorTip.Amount(rawValue: r["amount"] as? String ?? "") ?? .small, note: r["note"] as? String ?? "", createdAt: r.creationDate ?? .now, transactionID: r["transactionID"] as? String)
     }
     static func plan(from r: CKRecord) -> CreatorPlan {
-        CreatorPlan(creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", pitch: r["pitch"] as? String ?? "", priceMinor: r["priceMinor"] as? Int ?? 49900, currency: r["currency"] as? String ?? "INR", perks: r["perks"] as? [String] ?? [], payoutHint: r["payoutHint"] as? String ?? "", createdAt: r.creationDate ?? .now)
+        CreatorPlan(creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", pitch: r["pitch"] as? String ?? "", priceMinor: r["priceMinor"] as? Int ?? 49900, currency: r["currency"] as? String ?? "INR", perks: r["perks"] as? [String] ?? [], payoutHint: r["payoutHint"] as? String ?? "", createdAt: r.creationDate ?? .now, bundles: (r["bundles"] as? Data).flatMap { try? JSONDecoder().decode([CreatorPlan.Bundle].self, from: $0) } ?? [], goalTitle: r["goalTitle"] as? String ?? "", goalAmountMinor: r["goalAmountMinor"] as? Int ?? 0)
     }
     static func subscription(from r: CKRecord) -> CreatorSubscription {
         CreatorSubscription(id: r.recordID.recordName, subscriberID: r["subscriberID"] as? String ?? "", subscriberName: r["subscriberName"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", tier: CreatorPlan.Tier(rawValue: r["tier"] as? String ?? "") ?? .t1, startedAt: r["startedAt"] as? Date ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, transactionID: r["transactionID"] as? String)
@@ -798,7 +799,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
             var ref: MediaRef? = nil
             let kind = MediaRef.Kind(rawValue: r["mediaKind"] as? String ?? "") ?? .photo
             if let asset = r["media"] as? CKAsset, let url = asset.fileURL, let data = try? Data(contentsOf: url), let local = try? await media.store(data, extension: kind == .voice ? "m4a" : "jpg") { ref = MediaRef(kind: kind, localRef: local, remoteID: r.recordID.recordName, durationSeconds: r["mediaDuration"] as? Double) }
-            out.append(DirectMessage(id: r.recordID.recordName, conversationID: conversationID, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: ref, momentID: r["momentID"] as? String, createdAt: r.creationDate ?? .now, replyToID: r["replyToID"] as? String))
+            out.append(DirectMessage(id: r.recordID.recordName, conversationID: conversationID, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: ref, momentID: r["momentID"] as? String, createdAt: r.creationDate ?? .now, replyToID: r["replyToID"] as? String, vaultSetID: r["vaultSetID"] as? String, priceMinor: r["priceMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR"))
         }
         return out
     }
@@ -811,6 +812,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         r.parent = CKRecord.Reference(recordID: conv.recordID, action: .none)
         r["authorID"] = message.authorID; r["authorName"] = message.authorName; r["text"] = message.text; r["momentID"] = message.momentID; r["replyToID"] = message.replyToID
         r["mediaKind"] = message.media?.kind.rawValue; r["mediaDuration"] = message.media?.durationSeconds
+        r["vaultSetID"] = message.vaultSetID; r["priceMinor"] = message.priceMinor; r["currency"] = message.currency
         if let mediaData, let url = try? Self.tempFile(mediaData, ext: message.media?.kind == .voice ? "m4a" : "jpg") { r["media"] = CKAsset(fileURL: url) }
         let saved = try await save(r, in: db)
         if !message.isReaction { conv["lastMessage"] = message.text.isEmpty ? (message.momentID != nil ? "Shared a Moment" : "Photo") : message.text; _ = try? await save(conv, in: db) }

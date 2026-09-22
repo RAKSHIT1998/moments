@@ -152,6 +152,7 @@ struct ChatView: View {
     @State private var showMomentPicker = false
     @State private var replyTo: DirectMessage?
     @State private var reactTarget: DirectMessage?
+    @State private var showPPV = false
     @FocusState private var focused: Bool
 
     private var conversation: Conversation? { env.social.conversations.first { $0.id == conversationID } }
@@ -218,6 +219,7 @@ struct ChatView: View {
         }
         .task { await env.social.loadMessages(conversationID); env.social.markRead(conversationID) }
         .onChange(of: pickerItem) { _, item in Task { if let item, let d = try? await item.loadTransferable(type: Data.self) { _ = await env.social.send(conversationID: conversationID, text: "", photo: d, replyTo: replyTo?.id); replyTo = nil; pickerItem = nil } } }
+        .sheet(isPresented: $showPPV) { PayPerViewComposer(conversationID: conversationID, buyerID: otherID) }
         .sheet(isPresented: $showMomentPicker) { MomentPickerSheet { m in Task { _ = await env.social.send(conversationID: conversationID, text: m.title, momentID: m.id); showMomentPicker = false } } }
         .overlay { if let t = reactTarget { reactionPicker(for: t) } }
         .modifier(SocialErrorAlert())
@@ -244,7 +246,8 @@ struct ChatView: View {
                     .padding(8).glass(radius: 10)
                 }
                 if let momentID = m.momentID { momentCard(momentID) }
-                if let media = m.media, media.kind == .voice { VoiceNoteBubble(message: m, mine: mine) }
+                if m.isPayPerView { PayPerViewBubble(message: m, mine: mine) }
+                else if let media = m.media, media.kind == .voice { VoiceNoteBubble(message: m, mine: mine) }
                 else if let media = m.media { SocialImage(ref: media).frame(width: 230, height: 230).clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(.white.opacity(0.35), lineWidth: 0.5)) }
                 if !m.text.isEmpty, m.momentID == nil || m.text != env.social.moments[m.momentID ?? ""]?.title {
                     Text(m.text).font(MFont.body)
@@ -335,6 +338,10 @@ struct ChatView: View {
             HStack(spacing: MSpacing.s) {
                 Button { showMomentPicker = true } label: { Image(systemName: "rectangle.stack.badge.plus").font(.title3) }.frame(width: 36, height: 36).accessibilityLabel("Share a Moment")
                 PhotosPicker(selection: $pickerItem, matching: .images) { Image(systemName: "photo").font(.title3) }.frame(width: 36, height: 36)
+                if env.social.isCreator, conversation?.isGroup != true {
+                    Button { showPPV = true } label: { Image(systemName: "lock.fill").font(.title3).foregroundStyle(MColor.accent) }
+                        .frame(width: 36, height: 36).accessibilityLabel("Send a locked photo").accessibilityIdentifier("ppvButton")
+                }
                 TextField("Message", text: $text, axis: .vertical).lineLimit(1...5).focused($focused).textFieldStyle(.plain)
                     .padding(.horizontal, MSpacing.m).padding(.vertical, 9)
                     .glass(radius: 20)
@@ -389,5 +396,96 @@ struct TypingDots: View {
         }
         .onAppear { if !ProcessInfo.processInfo.arguments.contains("-uitest") { on = true } }
         .accessibilityHidden(true)
+    }
+}
+
+/// A locked photo in a chat. The price is on it; unlocking buys the hidden set behind it.
+struct PayPerViewBubble: View {
+    @Environment(AppEnvironment.self) private var env
+    let message: DirectMessage
+    var mine: Bool
+    @State private var unlocking = false
+    private var unlocked: Bool { message.vaultSetID.map { env.social.hasBought($0) } ?? false || mine }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if unlocked, let setID = message.vaultSetID {
+                NavigationLink(value: SocialRoute.vaultSet(setID)) {
+                    ZStack {
+                        SecureMediaView(ref: env.social.items(setID).first?.media ?? env.social.sets(of: message.authorID).first { $0.id == setID }?.cover, creatorID: message.authorID)
+                            .frame(width: 230, height: 300)
+                    }
+                }
+                .buttonStyle(.plain)
+                .task { await env.social.loadItems(setID) }
+            } else {
+                ZStack {
+                    Rectangle().fill(MColor.fill).frame(width: 230, height: 300)
+                    VStack(spacing: MSpacing.m) {
+                        Image(systemName: "lock.fill").font(.title).foregroundStyle(MColor.textSecondary)
+                        Button {
+                            unlocking = true
+                            Task { _ = await env.social.unlockMessage(message); unlocking = false }
+                        } label: {
+                            Group { if unlocking { ProgressView().tint(.white) } else { Text("Unlock · \((Double(message.priceMinor) / 100).formatted(.currency(code: message.currency).precision(.fractionLength(0))))") } }
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                .padding(.horizontal, 18).padding(.vertical, 10)
+                                .background(Capsule().fill(MColor.accent))
+                        }
+                        .buttonStyle(.plain).disabled(unlocking).accessibilityIdentifier("unlockMessage-\(message.id)")
+                    }
+                }
+            }
+            if !message.text.isEmpty {
+                Text(message.text).font(MFont.caption).foregroundStyle(mine ? .white : MColor.textPrimary)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+            }
+        }
+        .background(mine ? MColor.accent : MColor.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityIdentifier("ppv-\(message.id)")
+    }
+}
+
+/// Creator side: pick a photo, put a price on it, send it into this chat.
+struct PayPerViewComposer: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let conversationID: String
+    let buyerID: String
+    @State private var item: PhotosPickerItem?
+    @State private var data: Data?
+    @State private var price = "499"
+    @State private var caption = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MSpacing.l) {
+            Text("Send a locked photo").font(MFont.title)
+            PhotosPicker(selection: $item, matching: .images) {
+                ZStack {
+                    if let data, let img = UIImage(data: data) { Image(uiImage: img).resizable().scaledToFill() }
+                    else { VStack(spacing: 8) { Image(systemName: "photo.badge.plus").font(.largeTitle); Text("Choose a photo").font(MFont.subheadline) }.foregroundStyle(MColor.textSecondary) }
+                }
+                .frame(maxWidth: .infinity).frame(height: 240).clipShape(RoundedRectangle(cornerRadius: 16)).glass(radius: 16)
+            }
+            .accessibilityIdentifier("ppvPhoto")
+            HStack(spacing: MSpacing.s) {
+                Text("₹").font(MFont.hero).foregroundStyle(MColor.textSecondary)
+                TextField("499", text: $price).keyboardType(.numberPad).font(MFont.hero).accessibilityIdentifier("ppvPrice")
+            }
+            .padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.m).glass(radius: 16)
+            TextField("Say something with it", text: $caption).padding(MSpacing.m).glass(radius: 14)
+            Spacer(minLength: 0)
+            Button {
+                guard let data, let minor = Int(price.filter(\.isNumber)), minor > 0 else { return }
+                Task { if await env.social.sendPayPerView(conversationID: conversationID, to: buyerID, photo: data, priceMinor: minor * 100, caption: caption) != nil { dismiss() } }
+            } label: { if env.social.busy { ProgressView().tint(.white) } else { Text("Send locked").frame(maxWidth: .infinity) } }
+            .buttonStyle(PrimaryButtonStyle()).disabled(data == nil || env.social.busy).accessibilityIdentifier("sendPPV")
+            Text("They see a locked tile with the price. Screenshots of it come out blank on iPhone, and every view carries their MOMENT ID.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+        }
+        .padding(MSpacing.page).background(LiquidBackdrop())
+        .onChange(of: item) { _, i in Task { if let i, let d = try? await i.loadTransferable(type: Data.self) { data = d } } }
+        .presentationDetents([.large]).presentationDragIndicator(.visible)
+        .modifier(SocialErrorAlert())
     }
 }

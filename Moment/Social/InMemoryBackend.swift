@@ -367,8 +367,12 @@ actor InMemoryBackend: SocialBackend {
         guard !blocked.contains(other) else { throw SocialError.blocked }
         var m = message
         if let mediaData { mediaBlobs[m.id] = mediaData; m.media = MediaRef(kind: message.media?.kind ?? .photo, localRef: message.media?.localRef, remoteID: m.id, durationSeconds: message.media?.durationSeconds) }
+        if m.isPayPerView { m.media = nil }   // the locked media lives in the set, not in the message
         dms[message.conversationID, default: []].append(m)
-        if !m.isReaction { convos[i].lastMessage = m.text.isEmpty ? (m.momentID != nil ? "Shared a Moment" : (m.media?.kind == .voice ? "Voice note" : "Photo")) : m.text; convos[i].updatedAt = .now }
+        if !m.isReaction {
+            convos[i].lastMessage = m.isPayPerView ? "🔒 Locked" : (m.text.isEmpty ? (m.momentID != nil ? "Shared a Moment" : (m.media?.kind == .voice ? "Voice note" : "Photo")) : m.text)
+            convos[i].updatedAt = .now
+        }
         return m
     }
     func conversation(with userID: String) async throws -> Conversation {

@@ -281,6 +281,12 @@ struct DirectMessage: Codable, Sendable, Equatable, Identifiable, Hashable {
     var createdAt: Date
     /// Quote-reply to another message in the thread.
     var replyToID: String? = nil
+    /// Pay-per-view: a set (usually one photo, hidden from the shop) that this message unlocks.
+    /// The media itself never travels in the message — only the set id and its price.
+    var vaultSetID: String? = nil
+    var priceMinor: Int = 0
+    var currency: String = "INR"
+    var isPayPerView: Bool { vaultSetID != nil && priceMinor > 0 }
     /// A single-emoji message with `replyToID` set is a reaction: shown under the target, not as a bubble.
     var isReaction: Bool { replyToID != nil && text.count <= 2 && text.unicodeScalars.allSatisfy { $0.properties.isEmoji } && !text.isEmpty && media == nil && momentID == nil }
 }
@@ -434,8 +440,26 @@ struct CreatorPlan: Codable, Sendable, Equatable, Hashable, Identifiable {
     /// How the creator wants to be paid (UPI / PayPal / IBAN). Read only by the payouts process.
     var payoutHint: String
     var createdAt: Date
+    /// Longer commitments at a discount the creator sets. Empty means monthly only.
+    var bundles: [Bundle] = []
+    /// An optional, public tip goal: "₹40,000 for the new lens". Progress is real tips, never inflated.
+    var goalTitle: String = ""
+    var goalAmountMinor: Int = 0
     /// Only used when the purchase has to go through Apple.
     var tier: Tier { Tier.nearest(toMinor: priceMinor) }
+
+    /// N months for a percentage off the monthly price.
+    struct Bundle: Codable, Sendable, Equatable, Hashable, Identifiable {
+        var months: Int
+        var discountPercent: Int
+        var id: Int { months }
+        func totalMinor(monthly: Int) -> Int { Int((Double(monthly * months) * (1 - Double(discountPercent) / 100)).rounded()) }
+        func perMonthMinor(monthly: Int) -> Int { totalMinor(monthly: monthly) / max(1, months) }
+        var label: String { months == 1 ? "1 month" : "\(months) months" }
+    }
+    func bundleLabel(_ b: Bundle, locale: Locale = .current) -> String {
+        (Double(b.totalMinor(monthly: priceMinor)) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0)))
+    }
     func priceLabel(_ locale: Locale = .current) -> String { (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0))) }
 }
 

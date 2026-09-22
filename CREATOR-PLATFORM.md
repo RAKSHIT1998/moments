@@ -6,6 +6,22 @@ Creators sell three things: **sets** (photos/clips, free or priced), **time** (v
 
 A creator has **one subscription** and names its price (Studio → the ₹ field). 30 days at a time, no auto-renew. On card checkout the charge is exactly what they set. Apple only sells fixed price points, so on that rail the charge is the **nearest product** — the app says which, and never presents Apple's number as the creator's price (`CreatorPlan.Tier.nearest(toMinor:)` is only that mapping).
 
+## The revenue lines
+
+Every one of these is money through the same 10% rail, and each reuses the sealed-set machinery rather than adding a second way to hold paid media:
+
+| Line | How it works | Where |
+|---|---|---|
+| **Subscription** | One plan, the creator's price, 30 days | Profile, feed locks |
+| **Bundles** | 3/6/12 months at a discount they set; longer commitments churn less | Subscribe sheet |
+| **Sets** | Photos/clips, free or priced | Shop, feed |
+| **Locked messages (PPV)** | A photo sent into a chat with a price on it. It becomes a hidden one-item set; the message carries only the id and the price, so the media never travels unpaid | Chat → 🔒 |
+| **Mass message** | One send to every active subscriber, each in their own chat, optionally locked behind a price | Studio → Message all subscribers |
+| **Requests** | Fan asks, creator prices that one thing | Storefront → Ask |
+| **Tips & goals** | One-off tips; an optional public goal whose progress is the real total tipped this month, never padded | Post dock, Studio |
+
+Studio shows **where the month's money came from** and the **top five supporters** across all of it. Both are computed from records that exist, not projections.
+
 ## Asking for one thing
 
 Beyond the subscription and the sets, a fan can **ask** for a photo, a voice or video call, a meeting, or anything else. There is no fixed menu price: the creator sees the ask and **names a price for that one request**.
