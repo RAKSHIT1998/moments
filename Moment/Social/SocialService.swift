@@ -1014,6 +1014,70 @@ final class SocialService {
     func isUnread(_ c: Conversation) -> Bool { _ = readTick; return c.updatedAt > (readAt[c.id] ?? .distantPast) && !c.lastMessage.isEmpty }
     var unreadChats: Int { conversations.filter { isUnread($0) }.count }
 
+    // MARK: - Meet
+
+    private(set) var myDating: DatingProfile?
+    var pendingConversationID: String?
+    private(set) var meetCandidates: [MeetRanker.Candidate] = []
+    private(set) var likesReceived: [DatingLike] = []
+    private(set) var likesSent: [DatingLike] = []
+    private(set) var meetMatches: [MeetMatch] = []
+    private(set) var meetLoaded = false
+
+    /// People I follow or who follow me — used for "hide from people I know".
+    private var knownIDs: Set<String> { graph.following.union(graph.followers) }
+
+    func refreshMeet() async {
+        myDating = try? await backend.datingProfile(for: myID)
+        likesReceived = (try? await backend.likesReceived()) ?? []
+        likesSent = (try? await backend.likesSent()) ?? []
+        if let me = myDating {
+            let all = (try? await backend.datingCandidates()) ?? []
+            let passed = Set((try? await backend.passedUserIDs()) ?? [])
+            let liveNow = nowPosts + nearbyNow.filter { n in !nowPosts.contains { $0.id == n.id } }
+            meetCandidates = MeetRanker.rank(me: me, candidates: all, moments: Array(moments.values), nows: liveNow, known: knownIDs, passed: passed, liked: Set(likesSent.map(\.toID)), blocked: blocked)
+            var names = Dictionary(uniqueKeysWithValues: all.map { ($0.userID, $0.displayName) }); names[myID] = displayName
+            meetMatches = MeetRanker.matches(me: myID, sent: likesSent, received: likesReceived, names: names) { other in MeetRanker.overlaps(me: self.myID, other: other, moments: Array(self.moments.values), nows: liveNow) }
+        } else { meetCandidates = []; meetMatches = [] }
+        meetLoaded = true
+    }
+    func saveDating(_ p: DatingProfile) async -> Bool {
+        do { myDating = try await backend.saveDatingProfile(p); analytics.track(.meetOptedIn); await refreshMeet(); return true } catch { lastError = error.localizedDescription; return false }
+    }
+    func leaveMeet() async { try? await backend.removeDatingProfile(); myDating = nil; meetCandidates = []; meetMatches = [] }
+    /// Like → maybe match → the chat opens with the overlap as its first line.
+    @discardableResult
+    func like(_ c: MeetRanker.Candidate, note: String, prompt: String?) async -> MeetMatch? {
+        do {
+            let l = try await backend.like(userID: c.profile.userID, note: note, promptQuestion: prompt)
+            UserDefaults.standard.set(note, forKey: "meet.note.\(l.id)")
+            likesSent.append(l); meetCandidates.removeAll { $0.id == c.id }
+            analytics.track(.meetLiked)
+            let before = Set(meetMatches.map(\.id))
+            await refreshMeet()
+            if let m = meetMatches.first(where: { !before.contains($0.id) }) { analytics.track(.meetMatched); await openMatchChat(m); return meetMatches.first { $0.id == m.id } ?? m }
+            return nil
+        } catch { lastError = error.localizedDescription; return nil }
+    }
+    func pass(_ c: MeetRanker.Candidate) async { try? await backend.pass(userID: c.profile.userID); meetCandidates.removeAll { $0.id == c.id } }
+    /// The match's chat starts with the reason you're talking, sent by whoever opens it first.
+    func openMatchChat(_ m: MeetMatch) async {
+        guard let other = m.other(than: myID), let c = await conversation(with: other.id) else { return }
+        await loadMessages(c.id)
+        if (messages[c.id] ?? []).isEmpty, let o = m.overlaps.first {
+            _ = await send(conversationID: c.id, text: "It's a match. \(o.label).", momentID: o.momentID)
+        }
+        if let i = meetMatches.firstIndex(where: { $0.id == m.id }) { meetMatches[i].conversationID = c.id }
+    }
+    /// My own photos from my Moments — the only pool a Meet profile can draw from.
+    var myPhotosForMeet: [MediaRef] {
+        var sides: [Contribution] = []
+        for m in moments.values { sides.append(contentsOf: allContributions(m.id)) }
+        let mine = sides.filter { $0.authorID == myID && $0.kind == .photo && $0.media != nil }
+        let sorted = mine.sorted { $0.createdAt > $1.createdAt }
+        return sorted.compactMap { $0.media }
+    }
+
     // MARK: - Replay video
 
     private(set) var exportingReplay = false

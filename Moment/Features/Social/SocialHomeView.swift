@@ -60,6 +60,9 @@ enum SocialRoute: Hashable {
     case map
     case passport
     case earn
+    case meet
+    case meetSetup
+    case meetLikes
     case subscriptions
     case scan
     case inbox

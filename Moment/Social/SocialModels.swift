@@ -336,6 +336,73 @@ struct MomentCollection: Codable, Sendable, Equatable, Identifiable, Hashable {
     var createdAt: Date
 }
 
+// MARK: - Meet (dating through real overlap)
+
+/// Opt-in. You only appear to people you've actually crossed paths with — same Moment, same place, same ritual, out right now.
+struct DatingProfile: Codable, Sendable, Equatable, Hashable, Identifiable {
+    enum Gender: String, Codable, CaseIterable, Sendable { case woman, man, nonBinary
+        var label: String { switch self { case .woman: "Woman"; case .man: "Man"; case .nonBinary: "Non-binary" } }
+    }
+    enum Intent: String, Codable, CaseIterable, Sendable { case relationship, dates, friends, notSure
+        var label: String { switch self { case .relationship: "A relationship"; case .dates: "Dates"; case .friends: "New friends"; case .notSure: "Not sure yet" } }
+    }
+    struct Prompt: Codable, Sendable, Equatable, Hashable { var question: String; var answer: String }
+    var id: String { userID }
+    var userID: String
+    var displayName: String
+    var birthYear: Int
+    var gender: Gender
+    var seeking: [Gender]
+    var intent: Intent
+    var prompts: [Prompt]
+    /// Photos are the person's own sides from their Moments — nothing uploaded just for this.
+    var photos: [MediaRef]
+    var bio: String
+    /// Don't show me to people I follow or who follow me.
+    var hideFromKnown: Bool
+    /// Only show me to people with a real overlap (default). Off = anyone nearby who opted in.
+    var overlapOnly: Bool
+    var updatedAt: Date
+    var age: Int { Calendar.current.component(.year, from: .now) - birthYear }
+
+    static let promptBank = [
+        "The night I'd relive", "My go-to Friday", "Best thing I ate this month", "I'm weirdly good at", "The place I always end up",
+        "Two truths and a lie", "A ritual I never skip", "You should join me at", "The photo I'd frame", "My most unpopular opinion",
+        "I'll bring the", "Sunday, 6am"
+    ]
+}
+
+/// Why two people are being shown each other. Always true, always specific.
+struct MeetOverlap: Codable, Sendable, Equatable, Hashable, Identifiable {
+    enum Kind: String, Codable, Sendable { case sharedMoment, samePlace, sameRitual, nearbyNow }
+    var kind: Kind
+    var label: String
+    var momentID: String?
+    var id: String { kind.rawValue + "|" + label }
+    var weight: Double { switch kind { case .sharedMoment: 3; case .sameRitual: 2.5; case .samePlace: 1.5; case .nearbyNow: 1 } }
+}
+
+struct DatingLike: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var fromID: String
+    var fromName: String
+    var toID: String
+    /// A comment on one of their prompts or photos — the Hinge move.
+    var note: String
+    var promptQuestion: String?
+    var createdAt: Date
+}
+
+struct MeetMatch: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var userIDs: [String]
+    var names: [String]
+    var overlaps: [MeetOverlap]
+    var conversationID: String?
+    var createdAt: Date
+    func other(than me: String) -> (id: String, name: String)? { zip(userIDs, names).first { $0.0 != me }.map { ($0.0, $0.1) } }
+}
+
 // MARK: - Creator economy
 
 /// What a creator sells: one plan per creator, priced at a fixed tier (App Store products), 30 days at a time.

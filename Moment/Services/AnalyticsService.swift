@@ -46,6 +46,9 @@ final class AnalyticsService {
         case creatorSubscribed = "creator_subscribed"
         case creatorTipped = "creator_tipped"
         case replayExported = "replay_exported"
+        case meetOptedIn = "meet_opted_in"
+        case meetLiked = "meet_liked"
+        case meetMatched = "meet_matched"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

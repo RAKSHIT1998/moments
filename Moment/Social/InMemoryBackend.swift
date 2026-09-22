@@ -35,6 +35,9 @@ actor InMemoryBackend: SocialBackend {
     var subs: [CreatorSubscription] = []
     var tipsList: [CreatorTip] = []
     var seenByConversation: [String: [String: String]] = [:]
+    var datingProfiles: [String: DatingProfile] = [:]
+    var likes: [DatingLike] = []
+    var passes: [String: Set<String>] = [:]
     var typingHandler: (@Sendable (String, String) -> Void)?
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
@@ -369,6 +372,21 @@ actor InMemoryBackend: SocialBackend {
         let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: [me.id, userID], participantNames: [me.displayName, u.displayName], lastMessage: "", updatedAt: .now)
         convos.append(c); return c
     }
+    // MARK: Meet
+    func datingProfile(for userID: String) async throws -> DatingProfile? { try gate(); return datingProfiles[userID] }
+    func saveDatingProfile(_ p: DatingProfile) async throws -> DatingProfile { try gate(); var x = p; x.userID = me.id; x.displayName = me.displayName; x.updatedAt = .now; datingProfiles[me.id] = x; return x }
+    func removeDatingProfile() async throws { try gate(); datingProfiles[me.id] = nil }
+    func datingCandidates() async throws -> [DatingProfile] { try gate(); return datingProfiles.values.filter { $0.userID != me.id && !blocked.contains($0.userID) } }
+    func like(userID: String, note: String, promptQuestion: String?) async throws -> DatingLike {
+        try gate(); guard datingProfiles[userID] != nil, datingProfiles[me.id] != nil else { throw SocialError.notAllowed }
+        let l = DatingLike(id: "like_\(UUID().uuidString)", fromID: me.id, fromName: me.displayName, toID: userID, note: note, promptQuestion: promptQuestion, createdAt: .now)
+        likes.removeAll { $0.fromID == me.id && $0.toID == userID }; likes.append(l); return l
+    }
+    func pass(userID: String) async throws { try gate(); passes[me.id, default: []].insert(userID) }
+    func passedUserIDs() async throws -> [String] { try gate(); return Array(passes[me.id] ?? []) }
+    func likesReceived() async throws -> [DatingLike] { try gate(); return likes.filter { $0.toID == me.id && !blocked.contains($0.fromID) } }
+    func likesSent() async throws -> [DatingLike] { try gate(); return likes.filter { $0.fromID == me.id } }
+
     func markSeen(conversationID: String, lastMessageID: String) async throws { try gate(); seenByConversation[conversationID, default: [:]][me.id] = lastMessageID }
     func seen(conversationID: String) async throws -> [String: String] { try gate(); return seenByConversation[conversationID] ?? [:] }
     func setTyping(conversationID: String, typing: Bool) async {
@@ -531,6 +549,21 @@ actor InMemoryBackend: SocialBackend {
             CreatorSubscription(id: "sub_r1", subscriberID: "u_rahul", subscriberName: "Rahul Mehta", creatorID: "u_public", tier: .t2, startedAt: .now.adding(days: -20), expiresAt: .now.adding(days: 10), transactionID: nil),
             CreatorSubscription(id: "sub_d1", subscriberID: "u_dev", subscriberName: "Dev Patel", creatorID: "u_sarah", tier: .t1, startedAt: .now.adding(days: -5), expiresAt: .now.adding(days: 25), transactionID: nil)
         ]
+        addUser("u_mira", name: "Mira Shah", handle: "mira", bio: "Runs on chai.", avatar: "avatar_65")
+        addUser("u_kabir", name: "Kabir Rao", handle: "kabir", bio: "Sunsets, mostly.", avatar: "demo_173")
+        // Real overlap: Mira was at last Friday's ritual, Kabir at Bastian on Saturday.
+        moments["m_sunset_7"]!.memberIDs.append("u_mira"); moments["m_sunset_7"]!.memberNames.append("Mira Shah")
+        moments["m_bastian"]!.memberIDs.append("u_kabir"); moments["m_bastian"]!.memberNames.append("Kabir Rao")
+        add("m_mira_bastian", creator: "u_mira", title: "Bastian, Thursday", desc: "", daysAgo: 3, members: ["u_mira"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.3, blue: 0.5, alpha: 1), cover: "demo_56", contribs: [("u_mira", .photo, "Us", 0, "demo_56")])
+        add("m_kabir_bastian", creator: "u_kabir", title: "Bastian, again", desc: "", daysAgo: 4, members: ["u_kabir"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.3, green: 0.3, blue: 0.45, alpha: 1), cover: "demo_195", contribs: [("u_kabir", .photo, "Late", 0, "demo_195")])
+        func dp(_ id: String, _ name: String, _ year: Int, _ g: DatingProfile.Gender, _ seeking: [DatingProfile.Gender], _ intent: DatingProfile.Intent, _ prompts: [(String, String)], _ photos: [String], _ bio: String) {
+            datingProfiles[id] = DatingProfile(userID: id, displayName: name, birthYear: year, gender: g, seeking: seeking, intent: intent, prompts: prompts.map { DatingProfile.Prompt(question: $0.0, answer: $0.1) }, photos: photos.map { MediaRef(kind: .photo, localRef: nil, remoteID: $0) }, bio: bio, hideFromKnown: false, overlapOnly: true, updatedAt: .now.adding(days: -3))
+        }
+        dp("u_mira", "Mira Shah", 1998, .woman, [.man, .nonBinary], .dates, [("The place I always end up", "Versova, 6:40pm, every Friday. Bring nothing."), ("Best thing I ate this month", "The tonkotsu at Kokoro. 18 hours, apparently."), ("You should join me at", "Sunday 6am, Marine Drive. Sea's flat, city's asleep.")], ["c_m_sunset_7_0", "c_m_marine_1"], "Runs on chai.")
+        dp("u_kabir", "Kabir Rao", 1996, .man, [.woman], .relationship, [("The night I'd relive", "Bastian, that Saturday. Nobody wanted to leave."), ("A ritual I never skip", "Last light. Every Friday since March.")], ["c_m_kabir_bastian_0", "c_m_bastian_1"], "Sunsets, mostly.")
+        dp("u_anaya", "Anaya Rao", 1999, .woman, [.man], .notSure, [("My go-to Friday", "Coffee after the run, then whatever happens.")], ["c_m_marine_1"], "")
+        dp("u_dev", "Dev Patel", 1995, .man, [.woman, .man, .nonBinary], .friends, [("I'm weirdly good at", "Pacing. 21k, no walking.")], ["c_m_run_0", "c_m_run_1"], "Runs. Talks about running.")
+        likes = [DatingLike(id: "like_mira", fromID: "u_mira", fromName: "Mira Shah", toID: me.id, note: "You were at Versova last Friday too — the one with the birds?", promptQuestion: nil, createdAt: .now.addingTimeInterval(-3600))]
         tipsList = [CreatorTip(id: "tip_1", fromID: "u_dev", fromName: "Dev Patel", creatorID: "u_sarah", momentID: "m_cafe", amount: .medium, note: "that broth 🙏", createdAt: .now.adding(days: -2), transactionID: nil)]
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
@@ -547,6 +580,8 @@ actor InMemoryBackend: SocialBackend {
             NowPost(id: "n5", authorID: "u_public", authorName: "Sunset Society", text: "Setting up at Versova. 6:30 sharp.", media: story("n5", "demo_270"), createdAt: .now.addingTimeInterval(-900), expiresAt: .now.addingTimeInterval(6 * 3600), coarsePlace: "Versova", savedToMomentID: nil, activity: .beach, place: venues["Versova"], joinerIDs: ["u_rahul", "u_anaya"], joinerNames: ["Rahul Mehta", "Anaya Rao"]),
             NowPost(id: "n6", authorID: "u_sarah", authorName: "Sarah Kim", text: "Berries for breakfast. Living.", media: story("n6", "demo_102"), createdAt: .now.addingTimeInterval(-9000), expiresAt: .now.addingTimeInterval(14 * 3600), coarsePlace: "Bandra", savedToMomentID: nil)
         ]
+        settingsByUser["u_mira"] = { var x = SafetySettings(); x.allowDiscoverByLocation = true; return x }()
+        nows.append(NowPost(id: "n_mira", authorID: "u_mira", authorName: "Mira Shah", text: "Chai at Bastian's café side", media: nil, createdAt: .now.addingTimeInterval(-300), expiresAt: .now.addingTimeInterval(3 * 3600), coarsePlace: "Bandra", savedToMomentID: nil, activity: .coffee, place: venues["Bandra"]))
         groupsByID["g_boys"] = SocialGroup(id: "g_boys", ownerID: me.id, name: "The Goa crew", emoji: "🏖️", memberIDs: [me.id, "u_rahul", "u_sarah"], memberNames: [me.displayName, "Rahul Mehta", "Sarah Kim"], conversationID: nil, createdAt: .now.adding(days: -100))
         activityItems = [
             ActivityItem(id: "a1", kind: .contribution, actorName: "Rahul Mehta", momentID: "m_bday", momentTitle: "Sarah's 30th", text: "Rahul added 3 photos to Sarah's 30th", createdAt: .now.addingTimeInterval(-3600), read: false),

@@ -240,6 +240,41 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["nowCompose"].waitForExistence(timeout: 20))
     }
 
+    func testMeetOptInLikeAndMatch() {
+        waitForFeed()
+        app.tabBars.buttons["Explore"].tap()
+        let meet = app.descendants(matching: .any)["meetLink"].firstMatch
+        XCTAssertTrue(meet.waitForExistence(timeout: 10)); meet.tap()
+        XCTAssertTrue(app.buttons["meetSetup"].waitForExistence(timeout: 10))
+        snap("16-meet-intro")
+        app.buttons["meetSetup"].tap()
+        let photo = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'meetPhoto-'")).firstMatch
+        XCTAssertTrue(photo.waitForExistence(timeout: 15), "photos come from my own Moments")
+        photo.tap()
+        // I'm a man looking for women (defaults are woman→man): flip them.
+        let man = app.segmentedControls.buttons["Man"].firstMatch
+        XCTAssertTrue(man.waitForExistence(timeout: 5)); man.tap()
+        XCTAssertTrue(man.isSelected, "gender flipped to Man")
+        let prompt = app.descendants(matching: .any)["prompt-0"].firstMatch
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5)); prompt.tap(); prompt.typeText("Versova, every Friday.")
+        app.swipeUp(); app.swipeUp()
+        XCTAssertTrue(app.buttons["saveMeet"].waitForExistence(timeout: 5))
+        snap("17-meet-setup")
+        app.buttons["saveMeet"].tap()
+        let anyCard = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'meetCard-'")).firstMatch
+        XCTAssertTrue(anyCard.waitForExistence(timeout: 15), "the stack shows people who crossed my path")
+        let card = app.descendants(matching: .any)["meetCard-u_mira"].firstMatch
+        for _ in 0..<5 where !(card.exists && card.isHittable) { app.swipeUp(); sleep(1) }
+        XCTAssertTrue(card.exists && card.isHittable, "Mira crossed my path (Bastian this month, out for chai now)")
+        XCTAssertTrue(app.descendants(matching: .any)["overlap-u_mira"].firstMatch.exists)
+        snap("18-meet-card")
+        app.descendants(matching: .any)["like-u_mira"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["sendLike"].waitForExistence(timeout: 8))
+        app.buttons["sendLike"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["matchSheet"].firstMatch.waitForExistence(timeout: 15), "she'd already liked me")
+        snap("19-meet-match")
+    }
+
     /// Not an assertion test: walks the app and writes screenshots for design review.
     func testCreatorPaywallSubscribeAndEarn() {
         waitForFeed()

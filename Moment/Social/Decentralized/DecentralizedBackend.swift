@@ -28,6 +28,8 @@ actor DecentralizedBackend: SocialBackend {
         struct Plan: Codable { var title: String; var pitch: String; var tier: String; var perks: [String]; var payoutHint: String; var creatorName: String }
         struct Subscribe: Codable { var tier: String; var days: Int; var transactionID: String?; var name: String }
         struct Tip: Codable { var amount: String; var note: String; var transactionID: String?; var name: String }
+        struct Dating: Codable { var profile: DatingProfile?; var photos: [String] }   // photos as base64 thumbnails; nil profile = withdrawn
+        struct Like: Codable { var note: String; var prompt: String?; var name: String }
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
@@ -85,6 +87,67 @@ actor DecentralizedBackend: SocialBackend {
         guard e.kind == .seen, e.tags["typing"] == "1", let conv = e.tags["moment"], e.author != myID, abs(e.createdAt.timeIntervalSinceNow) < 30 else { return }
         typingHandler?(conv, e.author)
     }
+    // MARK: - Meet (profile is a public event for the opted-in; a like is sealed to the one person it's for)
+    func datingProfile(for userID: String) async throws -> DatingProfile? {
+        guard let e = await store.all(.dating).last(where: { $0.author == userID }), let d = e.payload(Payloads.Dating.self), var p = d.profile else { return nil }
+        var refs: [MediaRef] = []
+        for (i, b) in d.photos.enumerated() { if let data = Data(base64Encoded: b) {
+            let key = "\(e.id).\(i)"; var local = mediaCache[key]
+            if local == nil { local = try? await media.store(data, extension: "jpg") }
+            if let local { mediaCache[key] = local; refs.append(MediaRef(kind: .photo, localRef: local, remoteID: key)) }
+        } }
+        p.photos = refs; p.userID = userID; p.updatedAt = e.createdAt
+        return p
+    }
+    func saveDatingProfile(_ p: DatingProfile) async throws -> DatingProfile {
+        let me = try await currentUser()
+        var photos: [String] = []
+        for ref in p.photos.prefix(6) { if let local = ref.localRef, let d = try? await media.load(local), let t = MediaPipeline.thumbnail(d, side: 900) { photos.append(t.base64EncodedString()) } }
+        var stored = p; stored.userID = myID; stored.displayName = me.displayName; stored.photos = []
+        try await emit(.dating, tags: ["vis": "meet"], payload: Payloads.Dating(profile: stored, photos: photos))
+        return try await datingProfile(for: myID) ?? p
+    }
+    func removeDatingProfile() async throws { try await emit(.dating, tags: ["vis": "meet"], payload: Payloads.Dating(profile: nil, photos: [])) }
+    func datingCandidates() async throws -> [DatingProfile] {
+        for t in transports { (t as? RelayTransport)?.subscribe(id: "meet", .init(kinds: ["dating", "like"])) }
+        var latest: [String: SignedEvent] = [:]
+        for e in await store.all(.dating) where e.author != myID && !localBlocked.contains(e.author) { latest[e.author] = e }
+        var out: [DatingProfile] = []
+        for id in latest.keys { if let p = try await datingProfile(for: id) { out.append(p) } }
+        return out
+    }
+    func like(userID: String, note: String, promptQuestion: String?) async throws -> DatingLike {
+        let me = try await currentUser()
+        guard let their = await store.all(.profile).last(where: { $0.author == userID })?.payload(Payloads.Profile.self), let agree = their.agreePK else { throw SocialError.notFound }
+        let plain = try JSONEncoder.event.encode(Payloads.Like(note: note, prompt: promptQuestion, name: me.displayName))
+        let box = try SealedForPeer.seal(plain, from: agreement, to: agree)
+        let e = try await emit(.like, tags: ["to": userID], payload: ["box": box])
+        return DatingLike(id: e.id, fromID: myID, fromName: me.displayName, toID: userID, note: note, promptQuestion: promptQuestion, createdAt: e.createdAt)
+    }
+    private func openLike(_ e: SignedEvent) async -> DatingLike? {
+        guard let to = e.tags["to"] else { return nil }
+        if e.author == myID {
+            // My own: I can't open what I sealed for them, but I remember it locally.
+            let note = UserDefaults.standard.string(forKey: "meet.note.\(e.id)") ?? ""
+            return DatingLike(id: e.id, fromID: myID, fromName: "You", toID: to, note: note, promptQuestion: nil, createdAt: e.createdAt)
+        }
+        guard to == myID, let box = e.payload([String: String].self)?["box"], let sender = await store.all(.profile).last(where: { $0.author == e.author })?.payload(Payloads.Profile.self), let agree = sender.agreePK,
+              let raw = SealedForPeer.open(box, with: agreement, from: agree), let p = try? JSONDecoder.event.decode(Payloads.Like.self, from: raw) else { return nil }
+        return DatingLike(id: e.id, fromID: e.author, fromName: p.name, toID: myID, note: p.note, promptQuestion: p.prompt, createdAt: e.createdAt)
+    }
+    func pass(userID: String) async throws { var p = Set(UserDefaults.standard.stringArray(forKey: "meet.passed.\(myID.prefix(8))") ?? []); p.insert(userID); UserDefaults.standard.set(Array(p), forKey: "meet.passed.\(myID.prefix(8))") }
+    func passedUserIDs() async throws -> [String] { UserDefaults.standard.stringArray(forKey: "meet.passed.\(myID.prefix(8))") ?? [] }
+    func likesReceived() async throws -> [DatingLike] {
+        var out: [DatingLike] = []
+        for e in await store.all(.like) where e.tags["to"] == myID && !localBlocked.contains(e.author) { if let l = await openLike(e) { out.append(l) } }
+        return out
+    }
+    func likesSent() async throws -> [DatingLike] {
+        var out: [DatingLike] = []
+        for e in await store.all(.like) where e.author == myID { if let l = await openLike(e) { out.append(l) } }
+        return out
+    }
+
     func markSeen(conversationID: String, lastMessageID: String) async throws {
         // Don't spam the network: one event per conversation per last-message.
         if let last = await store.all(.seen).last(where: { $0.author == myID && $0.tags["moment"] == conversationID }), last.tags["last"] == lastMessageID { return }

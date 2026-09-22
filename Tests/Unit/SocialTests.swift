@@ -693,3 +693,92 @@ final class ReceiptsAndTypingTests: XCTestCase {
         XCTAssertEqual(env.social.conversations.first { $0.id == c.id }?.lastMessage, "Voice note")
     }
 }
+
+final class MeetRankerTests: XCTestCase {
+    private func profile(_ id: String, _ g: DatingProfile.Gender, _ seeking: [DatingProfile.Gender], year: Int = 1995, hide: Bool = false, overlapOnly: Bool = true) -> DatingProfile {
+        DatingProfile(userID: id, displayName: id, birthYear: year, gender: g, seeking: seeking, intent: .dates, prompts: [], photos: [], bio: "", hideFromKnown: hide, overlapOnly: overlapOnly, updatedAt: .now)
+    }
+    private func moment(_ id: String, members: [String], place: SocialPlace? = nil, daysAgo: Int = 1, ritual: Bool = false, creator: String? = nil, title: String = "M") -> SocialMoment {
+        let d = Date().addingTimeInterval(-Double(daysAgo) * 86400)
+        return SocialMoment(id: id, creatorID: creator ?? members[0], creatorName: "", title: title, description: "", coverRef: nil, createdAt: d, startAt: d, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .publicAll, memberIDs: members, memberNames: members, contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: false, templateID: ritual ? Rituals.templateID : nil, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, place: place)
+    }
+
+    func testOverlapKindsAndRanking() {
+        let cafe = SocialPlace(id: "cafe", name: "Kokoro", area: "", latitude: 19, longitude: 72)
+        let me = profile("me", .man, [.woman])
+        let a = profile("a", .woman, [.man]), b = profile("b", .woman, [.man]), c = profile("c", .woman, [.man]), d = profile("d", .woman, [.man])
+        let moments = [
+            moment("m1", members: ["me", "a"]),                                             // shared Moment with a
+            moment("m2", members: ["me"], place: cafe), moment("m3", members: ["b"], place: cafe),  // same venue with b
+            moment("r1", members: ["host", "me"], ritual: true, creator: "host", title: "Last light"), moment("r2", members: ["host", "c"], daysAgo: 8, ritual: true, creator: "host", title: "Last light")   // same ritual with c
+        ]
+        let nows = [NowPost(id: "n", authorID: "d", authorName: "D", text: "", media: nil, createdAt: .now, expiresAt: .now.addingTimeInterval(3600), coarsePlace: nil, savedToMomentID: nil, activity: .coffee)]
+        let ranked = MeetRanker.rank(me: me, candidates: [a, b, c, d], moments: moments, nows: nows, known: [], passed: [], liked: [], blocked: [])
+        XCTAssertEqual(ranked.map(\.id), ["a", "c", "b", "d"], "shared Moment > ritual > venue > out now")
+        XCTAssertEqual(ranked[0].overlaps.first?.kind, .sharedMoment)
+        XCTAssertEqual(ranked[1].overlaps.first?.label, "You both go to Last light")
+        XCTAssertEqual(ranked[3].overlaps.first?.kind, .nearbyNow)
+    }
+
+    func testPreferencesPrivacyAndAgeGates() {
+        let me = profile("me", .woman, [.man, .nonBinary])
+        let wrongWay = profile("x", .man, [.woman], year: 1990)              // fine
+        let notSeeking = profile("y", .woman, [.man])                        // I don't seek women
+        let notSeekingMe = profile("z", .man, [.man])                        // they don't seek women
+        let minor = profile("k", .man, [.woman], year: Calendar.current.component(.year, from: .now) - 17)
+        let hidden = profile("h", .man, [.woman], hide: true)
+        let stranger = profile("s", .man, [.woman], overlapOnly: false)
+        let shared = moment("m", members: ["me", "x", "y", "z", "k", "h"])
+        let ranked = MeetRanker.rank(me: me, candidates: [wrongWay, notSeeking, notSeekingMe, minor, hidden, stranger], moments: [shared], nows: [], known: ["h"], passed: [], liked: [], blocked: [])
+        XCTAssertEqual(ranked.map(\.id), ["x"], "gender prefs both ways, 18+, hide-from-known and overlap-only all apply")
+        var open = me; open.overlapOnly = false
+        let ranked2 = MeetRanker.rank(me: open, candidates: [stranger], moments: [], nows: [], known: [], passed: [], liked: [], blocked: [])
+        XCTAssertEqual(ranked2.map(\.id), ["s"], "with both sides open to it, no overlap is needed")
+    }
+
+    func testMutualLikesMatchDeterministically() {
+        let t = Date()
+        let sent = [DatingLike(id: "1", fromID: "me", fromName: "Me", toID: "a", note: "", promptQuestion: nil, createdAt: t), DatingLike(id: "2", fromID: "me", fromName: "Me", toID: "b", note: "", promptQuestion: nil, createdAt: t)]
+        let received = [DatingLike(id: "3", fromID: "a", fromName: "A", toID: "me", note: "hey", promptQuestion: nil, createdAt: t.addingTimeInterval(10))]
+        let m = MeetRanker.matches(me: "me", sent: sent, received: received, names: ["me": "Me", "a": "A"]) { _ in [] }
+        XCTAssertEqual(m.map(\.id), ["match_a_me"])
+        XCTAssertEqual(m.first?.names, ["A", "Me"])
+    }
+}
+
+@MainActor
+final class MeetFlowTests: XCTestCase {
+    func testOptInLikeMatchOpensChatWithTheOverlap() async throws {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try! StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        await env.social.refreshMeet()
+        XCTAssertNil(env.social.myDating); XCTAssertTrue(env.social.meetCandidates.isEmpty, "nothing until you opt in")
+        XCTAssertEqual(env.social.likesReceived.map(\.fromID), ["u_mira"], "likes wait for you even before you opt in")
+        for m in env.social.momentsImIn { _ = await env.social.loadMoment(m.id) }
+        let photo = try XCTUnwrap(env.social.myPhotosForMeet.first)
+        let ok = await env.social.saveDating(DatingProfile(userID: "", displayName: "", birthYear: 1997, gender: .man, seeking: [.woman], intent: .dates, prompts: [.init(question: "My go-to Friday", answer: "Versova.")], photos: [photo], bio: "", hideFromKnown: false, overlapOnly: true, updatedAt: .now))
+        XCTAssertTrue(ok)
+        // Mira (Friday ritual, likes me) ranks first; Anaya (Marine Drive run with me? no — she's at Marine 6am which I'm not in) may not appear; Dev is a man → filtered.
+        let ids = env.social.meetCandidates.map(\.id)
+        XCTAssertEqual(ids.first, "u_mira")
+        XCTAssertFalse(ids.contains("u_dev"))
+        let mira = try XCTUnwrap(env.social.meetCandidates.first)
+        XCTAssertTrue(mira.overlaps.contains { $0.kind == .samePlace }, mira.overlaps.map(\.label).description)
+        // "Out right now" needs the nearby NOW feed (people you don't follow); load it and re-rank.
+        await env.social.refreshNearby(latitude: 19.06, longitude: 72.83)
+        await env.social.refreshMeet()
+        XCTAssertTrue(env.social.meetCandidates.first?.overlaps.contains { $0.kind == .nearbyNow } == true)
+        let match = await env.social.like(mira, note: "The one with the birds.", prompt: "The place I always end up")
+        XCTAssertNotNil(match, "she already liked me → match")
+        let cid = try XCTUnwrap(match?.conversationID)
+        let first = try XCTUnwrap(env.social.messages[cid]?.first)
+        XCTAssertTrue(first.text.hasPrefix("It's a match."), first.text)
+        XCTAssertFalse(env.social.meetCandidates.contains { $0.id == "u_mira" })
+        // Pass hides for good.
+        if let next = env.social.meetCandidates.first { await env.social.pass(next); await env.social.refreshMeet(); XCTAssertFalse(env.social.meetCandidates.contains { $0.id == next.id }) }
+        await env.social.leaveMeet()
+        XCTAssertNil(env.social.myDating)
+    }
+}

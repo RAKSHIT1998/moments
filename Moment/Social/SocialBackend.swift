@@ -118,6 +118,17 @@ protocol SocialBackend: AnyObject, Sendable {
     func mySubscriptions() async throws -> [CreatorSubscription]
     /// People subscribed to me.
     func subscribers() async throws -> [CreatorSubscription]
+    // Meet
+    func datingProfile(for userID: String) async throws -> DatingProfile?
+    func saveDatingProfile(_ p: DatingProfile) async throws -> DatingProfile
+    func removeDatingProfile() async throws
+    /// Everyone opted in that I'm allowed to see (not me, not blocked). Overlap ranking happens on the phone.
+    func datingCandidates() async throws -> [DatingProfile]
+    func like(userID: String, note: String, promptQuestion: String?) async throws -> DatingLike
+    func pass(userID: String) async throws
+    func passedUserIDs() async throws -> [String]
+    func likesReceived() async throws -> [DatingLike]
+    func likesSent() async throws -> [DatingLike]
     func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip
     /// Tips I've received.
     func tips() async throws -> [CreatorTip]

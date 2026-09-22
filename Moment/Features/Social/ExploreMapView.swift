@@ -64,6 +64,11 @@ struct ExploreMapView: View {
                     HStack {
                         Text(summary).font(MFont.caption).foregroundStyle(MColor.textSecondary).padding(.horizontal, 10).padding(.vertical, 6).background(.regularMaterial, in: Capsule())
                         Spacer()
+                        NavigationLink(value: SocialRoute.meet) {
+                            HStack(spacing: 5) { Image(systemName: "heart.fill"); Text("Meet") }.font(MFont.caption.weight(.semibold)).foregroundStyle(.white).padding(.horizontal, 10).padding(.vertical, 6)
+                                .background(Capsule().fill(LinearGradient(colors: [.pink, .pink.opacity(0.75)], startPoint: .top, endPoint: .bottom)))
+                        }
+                        .accessibilityIdentifier("meetLink")
                         Button { showList.toggle() } label: { Label(showList ? "Map" : "List", systemImage: showList ? "map" : "list.bullet").font(MFont.caption.weight(.medium)).padding(.horizontal, 10).padding(.vertical, 6).background(.regularMaterial, in: Capsule()) }
                             .accessibilityIdentifier("exploreListToggle")
                     }

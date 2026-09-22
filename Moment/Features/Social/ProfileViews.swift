@@ -125,6 +125,17 @@ struct SocialProfileView: View {
                     .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
                 }
                 .buttonStyle(.plain).glass(radius: 12, tint: .orange).accessibilityIdentifier("earnLink")
+                NavigationLink(value: SocialRoute.meet) {
+                    HStack(spacing: MSpacing.s) {
+                        Image(systemName: "heart.fill").foregroundStyle(.pink)
+                        Text(env.social.myDating == nil ? "Meet people you've crossed paths with" : "Meet · \(env.social.likesReceived.count) \(env.social.likesReceived.count == 1 ? "like" : "likes")")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                    }
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
+                }
+                .buttonStyle(.plain).glass(radius: 12, tint: .pink).accessibilityIdentifier("meetProfileLink")
             }
         }
         .accessibilityElement(children: .contain)
