@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MOMENT</title>
+<meta name="description" content="One Moment. Everyone's story. The web client of the decentralised MOMENT network.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0b0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="../logo.png">
+<link rel="apple-touch-icon" href="../logo.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js" integrity="sha512-/zZ39+w4lQuknmLPKiAujyf/E8ypDzmpP8m2DIWK8W2UahC+hLc9MOB0TLBHy7mDBi3s1EcCd+SjtNvC6b58aQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  :root { --bg:#0b0b0f; --fg:#f5f5f7; --muted:#9a9aa3; --glass:rgba(255,255,255,.08); --rim:rgba(255,255,255,.18); --amber:#ff9e3d; --pink:#ff4d7a; --blue:#3a8bff; }
+  :root[data-theme="light"], @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#fafafa; --fg:#111; --muted:#666; --glass:rgba(0,0,0,.05); --rim:rgba(0,0,0,.08); } }
+  * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 -apple-system,system-ui,Inter,sans-serif; padding-bottom:84px }
+  header { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; padding:14px 16px; backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 70%,transparent); border-bottom:1px solid var(--rim) }
+  header b { font-weight:900; letter-spacing:.14em } header .sp { flex:1 } .pill { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--rim); color:var(--fg); font-size:14px; text-decoration:none; cursor:pointer }
+  .pill.on { background:var(--blue); color:#fff; border-color:transparent }
+  main { max-width:720px; margin:0 auto; padding:16px }
+  .card { position:relative; border-radius:22px; overflow:hidden; background:var(--glass); border:1px solid var(--rim); margin:0 0 14px; }
+  .card img.cover { display:block; width:100%; aspect-ratio:4/5; object-fit:cover } .card .body { padding:14px 16px }
+  .card h2 { margin:0 0 4px; font-size:24px } .muted { color:var(--muted); font-size:14px }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap } .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:6px }
+  .grid img { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:12px } .side { position:relative } .side span { position:absolute; left:6px; bottom:6px; font-size:11px; font-weight:600; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.7) }
+  .lock { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; backdrop-filter:blur(20px); background:rgba(0,0,0,.25); color:#fff }
+  nav.tabs { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:space-around; padding:10px 8px calc(10px + env(safe-area-inset-bottom)); backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 75%,transparent); border-top:1px solid var(--rim) }
+  nav.tabs a { color:var(--muted); text-decoration:none; font-size:12px; text-align:center } nav.tabs a.on { color:var(--fg); font-weight:600 }
+  input, textarea, select { width:100%; padding:12px 14px; border-radius:14px; border:1px solid var(--rim); background:var(--glass); color:var(--fg); font:inherit } label { display:block; margin:12px 0 6px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em }
+  button.primary { width:100%; padding:14px; border-radius:14px; border:0; background:var(--blue); color:#fff; font:600 16px inherit; cursor:pointer } button.primary.amber { background:var(--amber) }
+  .banner { padding:12px 14px; border-radius:14px; background:var(--glass); border:1px solid var(--rim); margin-bottom:14px; font-size:14px }
+  .live { color:#ff5a5a; font-weight:700 } code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px }
+  .hidden { display:none }
+</style>
+</head>
+<body>
+<header>
+  <img src="../logo.png" alt="" width="26" height="26"><b>MOMENT</b><span class="sp"></span>
+  <span id="relayStatus" class="pill muted">no relay</span>
+  <a class="pill" href="#/settings" id="idPill">…</a>
+</header>
+<main id="view"></main>
+<nav class="tabs">
+  <a href="#/tonight" data-tab="tonight">Tonight</a>
+  <a href="#/now" data-tab="now">NOW</a>
+  <a href="#/new" data-tab="new">Create</a>
+  <a href="#/settings" data-tab="settings">You</a>
+</nav>
+<script type="module" src="app.js"></script>
+</body>
+</html>

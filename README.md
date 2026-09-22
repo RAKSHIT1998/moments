@@ -64,6 +64,10 @@ Creators sell access to **subscribers-only Moments** from their profile (Profile
 
 **Money**: Apple pays MOMENT's developer account (after its ~30% cut); MOMENT pays creators `CreatorEconomics.creatorShare` (80%) of the net once a month to the payout handle they entered (UPI / PayPal / IBAN, stored in the plan record and read only by the payout process). The app's *Earn* screen shows an estimate computed from active subscriptions with exactly that formula. There is no wallet, no token, and no fee hidden in the app; fraud checks on transaction ids happen at payout time, not on‑device.
 
+## Web client & Android
+
+`web/app` is **MOMENT Web**: a PWA that speaks the same protocol — Ed25519 identity in the browser (tweetnacl), signed events with the app's canonical form, AES‑GCM opening of invite‑linked Moments, 0.1° geo cells, relay subscriptions. Tonight (public Moments + NOW near you), NOW posting, public Moment creation, "I was there", add a side. Install to home screen on Android; wrap as a TWA for Play. Interop is tested in the scratch harness (relay verifies web‑signed events; CryptoKit boxes open in the web code). See `LAUNCH.md` for the Android path.
+
 ## Requirements
 
 - Xcode 16.2 (iOS 18.2 SDK), Swift 6 toolchain, Swift 5 language mode

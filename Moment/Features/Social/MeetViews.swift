@@ -6,12 +6,24 @@ struct MeetView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var noteFor: MeetRanker.Candidate?
     @State private var matched: MeetMatch?
+    /// Crossed paths (default) or Tonight: only people who are out right now, nearest first.
+    @State private var tonight = false
+    private var shown: [MeetRanker.Candidate] {
+        tonight ? env.social.meetCandidates.filter { $0.overlaps.contains { $0.kind == .nearbyNow } } : env.social.meetCandidates
+    }
 
     var body: some View {
         Group {
             if env.social.myDating == nil { intro }
-            else if env.social.meetCandidates.isEmpty { empty }
+            else if shown.isEmpty { empty }
             else { stack }
+        }
+        .safeAreaInset(edge: .top) {
+            if env.social.myDating != nil {
+                Picker("Mode", selection: $tonight) { Text("Crossed paths").tag(false); Text("Tonight").tag(true) }
+                    .pickerStyle(.segmented).padding(.horizontal, MSpacing.page).padding(.vertical, 6).background(.ultraThinMaterial)
+                    .accessibilityIdentifier("meetMode")
+            }
         }
         .background(LiquidBackdrop(tint: .pink))
         .navigationTitle("Meet")
@@ -28,7 +40,10 @@ struct MeetView: View {
                 }
             }
         }
-        .task { await env.social.refreshMeet() }
+        .task {
+            if let loc = env.location.current { await env.social.refreshNearby(latitude: loc.latitude, longitude: loc.longitude) }
+            await env.social.refreshMeet()
+        }
         .sheet(item: $noteFor) { c in LikeNoteSheet(candidate: c) { note, prompt in noteFor = nil; Task { if let m = await env.social.like(c, note: note, prompt: prompt) { matched = m } } } }
         .sheet(item: $matched) { m in MatchSheet(match: m) }
         .modifier(SocialErrorAlert())
@@ -58,8 +73,8 @@ struct MeetView: View {
     private var empty: some View {
         VStack(spacing: MSpacing.m) {
             Spacer()
-            Text(env.social.meetLoaded ? "Nobody new who's crossed your path." : "Looking…").font(MFont.title)
-            Text("Go to a ritual, join a NOW, add your side to a night — the overlap is what shows people to you.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary).multilineTextAlignment(.center)
+            Text(env.social.meetLoaded ? (tonight ? "Nobody's out near you right now." : "Nobody new who's crossed your path.") : "Looking…").font(MFont.title)
+            Text(tonight ? "Post a NOW yourself — people who are out tonight see each other here first." : "Go to a ritual, join a NOW, add your side to a night — the overlap is what shows people to you.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary).multilineTextAlignment(.center)
             NavigationLink(value: SocialRoute.now) { Text("See who's out now") }.buttonStyle(GlassButtonStyle())
             Spacer()
         }
@@ -69,7 +84,7 @@ struct MeetView: View {
     private var stack: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 0) {
-                ForEach(env.social.meetCandidates) { c in
+                ForEach(shown) { c in
                     MeetCard(candidate: c, onLike: { noteFor = c }, onPass: { Task { await env.social.pass(c) } })
                         .containerRelativeFrame(.vertical)
                 }

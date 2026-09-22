@@ -62,6 +62,16 @@
         }
       }
     },
+    "%@ · %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
     "%@ · %@ / 30 days" : {
       "localizations" : {
         "en" : {
@@ -112,6 +122,9 @@
 
     },
     "%@ is coming together." : {
+
+    },
+    "%@ is typing" : {
 
     },
     "%@ joined" : {
@@ -348,6 +361,9 @@
     "%lld items" : {
 
     },
+    "%lld minutes with nothing in the Moment." : {
+
+    },
     "%lld Moment%@ remembered for you this month." : {
       "localizations" : {
         "en" : {
@@ -397,6 +413,16 @@
     "%lld open" : {
 
     },
+    "%lld people · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld people · %2$@"
+          }
+        }
+      }
+    },
     "%lld people · %lld Moments" : {
       "localizations" : {
         "en" : {
@@ -406,6 +432,9 @@
           }
         }
       }
+    },
+    "%lld people are typing" : {
+
     },
     "%lld places, %lld Moments" : {
       "localizations" : {
@@ -436,6 +465,9 @@
     "%lld uploads need a retry" : {
 
     },
+    "%lld/6 chosen" : {
+
+    },
     "%lld× · %@" : {
       "localizations" : {
         "en" : {
@@ -455,6 +487,9 @@
     "+%lld more" : {
 
     },
+    "+%lld more in common" : {
+
+    },
     "×%lld" : {
 
     },
@@ -462,6 +497,9 @@
 
     },
     "12 words, separated by spaces" : {
+
+    },
+    "18+. You can leave any time; leaving removes your profile everywhere." : {
 
     },
     "A card for the people who weren't there — and the ones who were. The invite link goes with it." : {
@@ -479,6 +517,9 @@
     "A line about you" : {
 
     },
+    "A line about you (optional)" : {
+
+    },
     "A minute now, then it's just Moments. Skip anything — you can do it later from Settings." : {
 
     },
@@ -492,6 +533,9 @@
 
     },
     "About" : {
+
+    },
+    "ABOUT" : {
 
     },
     "About MOMENT" : {
@@ -531,6 +575,9 @@
 
     },
     "Add a place to a Moment and it shows up here." : {
+
+    },
+    "Add a side to a Moment first — Meet only uses photos you've actually posted." : {
 
     },
     "Add a venue to a Moment and it shows up here, on the map and on your passport." : {
@@ -644,6 +691,9 @@
     "Around you" : {
 
     },
+    "Ask %@" : {
+
+    },
     "Ask me anything" : {
 
     },
@@ -698,6 +748,9 @@
     "Blocked people (%lld)" : {
 
     },
+    "Born" : {
+
+    },
     "Business" : {
 
     },
@@ -735,6 +788,9 @@
 
     },
     "Chat" : {
+
+    },
+    "Chats" : {
 
     },
     "Choose photos" : {
@@ -857,6 +913,12 @@
     "Creators" : {
 
     },
+    "Crossed paths" : {
+
+    },
+    "Crossed paths = same Moment, same venue this month, same ritual, or out right now nearby. Hiding from people you know keeps you out of the stacks of anyone you follow or who follows you." : {
+
+    },
     "Current subscribers keep what they already have until it expires. New Moments can't be sold until you set up a plan again." : {
 
     },
@@ -950,6 +1012,9 @@
     "Edit" : {
 
     },
+    "Edit Meet profile" : {
+
+    },
     "Edit Moment" : {
 
     },
@@ -979,6 +1044,9 @@
       }
     },
     "Event" : {
+
+    },
+    "Every %@" : {
 
     },
     "Every Moment lands here with its source, in the order it happened." : {
@@ -1051,6 +1119,9 @@
 
     },
     "Fictional people and Moments on an in-process backend. Turning it off deletes them and returns to iCloud." : {
+
+    },
+    "Fill the gap" : {
 
     },
     "Find your people" : {
@@ -1148,6 +1219,9 @@
     "Given" : {
 
     },
+    "Go to a ritual, join a NOW, add your side to a night — the overlap is what shows people to you." : {
+
+    },
     "Goa '26, Sarah's 30th, Sunday run…" : {
 
     },
@@ -1205,6 +1279,12 @@
     "Here's exactly where they live and what leaves this iPhone." : {
 
     },
+    "Hide from people I know" : {
+
+    },
+    "Hold to record a voice note" : {
+
+    },
     "Home" : {
 
     },
@@ -1236,6 +1316,9 @@
 
     },
     "I was there" : {
+
+    },
+    "I'm a" : {
 
     },
     "I'm here now" : {
@@ -1304,7 +1387,13 @@
     "It happened" : {
 
     },
+    "It happens every week. Same title next time links them: streaks, next date, who's usually there." : {
+
+    },
     "It lands in your Inbox, already understood." : {
+
+    },
+    "It's a match." : {
 
     },
     "Join" : {
@@ -1343,10 +1432,19 @@
     "Lasts %lld hours" : {
 
     },
+    "Later" : {
+
+    },
     "Leave" : {
 
     },
     "Leave group" : {
+
+    },
+    "Leave Meet" : {
+
+    },
+    "Leave Meet?" : {
 
     },
     "Leave Moment" : {
@@ -1365,6 +1463,15 @@
 
     },
     "Like" : {
+
+    },
+    "Like %@" : {
+
+    },
+    "Likes" : {
+
+    },
+    "Likes you" : {
 
     },
     "Link per person" : {
@@ -1410,6 +1517,12 @@
 
     },
     "Look around first" : {
+
+    },
+    "Looking for" : {
+
+    },
+    "Looking…" : {
 
     },
     "Made by %@" : {
@@ -1463,7 +1576,32 @@
     "Mark important" : {
 
     },
+    "Matches" : {
+
+    },
     "Media" : {
+
+    },
+    "Meet" : {
+
+    },
+    "Meet · %lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Meet · %1$lld %2$@"
+          }
+        }
+      }
+    },
+    "Meet people you've\nactually crossed paths with." : {
+
+    },
+    "Meet people you've crossed paths with" : {
+
+    },
+    "Meet profile" : {
 
     },
     "Memories" : {
@@ -1499,6 +1637,9 @@
     "Message" : {
 
     },
+    "Message a friend, or open your group's chat. Every chat is encrypted between the people in it — no server reads it." : {
+
+    },
     "Message me" : {
 
     },
@@ -1506,6 +1647,9 @@
 
     },
     "Minimise" : {
+
+    },
+    "Mode" : {
 
     },
     "Model: %@. Stored only in this device's Keychain." : {
@@ -1640,6 +1784,9 @@
     "New group" : {
 
     },
+    "New message" : {
+
+    },
     "New Moment" : {
 
     },
@@ -1650,6 +1797,9 @@
 
     },
     "Next" : {
+
+    },
+    "Next: %@" : {
 
     },
     "No categories. Just give it to me." : {
@@ -1718,7 +1868,19 @@
     "Nobody — remove person" : {
 
     },
+    "Nobody new who's crossed your path." : {
+
+    },
+    "Nobody yet." : {
+
+    },
+    "Nobody yet. Likes are sealed to you — nobody else, not even relays, can read them." : {
+
+    },
     "Nobody yet. Share a subscribers-only Moment — the locked preview does the selling." : {
+
+    },
+    "Nobody's out near you right now." : {
 
     },
     "Nobody's out yet" : {
@@ -1823,7 +1985,13 @@
     "Only NOW posts where you picked a venue. Your phone's location is never stored or shared — the venue is." : {
 
     },
+    "Only people I've crossed paths with" : {
+
+    },
     "Only the people you invite can see a Moment set to \"People in it\". You can change this any time." : {
+
+    },
+    "Only they can see this. If they like you back, you match and a chat opens." : {
 
     },
     "Open" : {
@@ -1871,6 +2039,9 @@
     "Owner" : {
 
     },
+    "Pass" : {
+
+    },
     "Passport" : {
 
     },
@@ -1913,6 +2084,9 @@
     "PEOPLE YOU WERE THERE WITH" : {
 
     },
+    "People, groups, messages" : {
+
+    },
     "People, places, the plans you made and the ones that happened. Yours to keep or share." : {
 
     },
@@ -1938,6 +2112,9 @@
 
     },
     "PHOTOS & VIDEO" : {
+
+    },
+    "Photos from your Moments" : {
 
     },
     "Pick 5–10 photos from a trip or a night out. MOMENT turns them into your first Moment — on your iPhone, in seconds." : {
@@ -1976,7 +2153,13 @@
     "Play" : {
 
     },
+    "Play voice note" : {
+
+    },
     "Post" : {
+
+    },
+    "Post a NOW yourself — people who are out tonight see each other here first." : {
 
     },
     "Post a photo to NOW" : {
@@ -2027,6 +2210,9 @@
     "Promises" : {
 
     },
+    "Prompts" : {
+
+    },
     "Question" : {
 
     },
@@ -2068,6 +2254,9 @@
 
     },
     "Relays are open servers anyone can run — a friend, a café, you. They store signed events and can't read private Moments. Add several; the app dedupes. Run your own with the `relay/` folder in the source." : {
+
+    },
+    "Release to cancel" : {
 
     },
     "Remember more. Forget less." : {
@@ -2130,7 +2319,13 @@
     "Replay" : {
 
     },
+    "Reply" : {
+
+    },
     "Reply to a Moment or message a friend. Conversations stay between you." : {
+
+    },
+    "Replying to %@" : {
 
     },
     "Report" : {
@@ -2166,10 +2361,16 @@
     "Right now" : {
 
     },
+    "Ritual" : {
+
+    },
     "Run setup again" : {
 
     },
     "Same event?" : {
+
+    },
+    "Same second" : {
 
     },
     "Same template, your memories." : {
@@ -2217,10 +2418,16 @@
     "Saving…" : {
 
     },
+    "Say hi to %@" : {
+
+    },
     "Say something" : {
 
     },
     "Say something (optional)" : {
+
+    },
+    "Say something real (optional)" : {
 
     },
     "Say what you're up for and see who joins." : {
@@ -2277,6 +2484,15 @@
     "See what's happening around you" : {
 
     },
+    "See who's out now" : {
+
+    },
+    "Seen" : {
+
+    },
+    "Seen by %@" : {
+
+    },
     "Sell what you make" : {
 
     },
@@ -2295,6 +2511,9 @@
     "Send it back to %@" : {
 
     },
+    "Send like" : {
+
+    },
     "Sent. They'll see it on their Earn page." : {
 
     },
@@ -2305,6 +2524,9 @@
 
     },
     "Set reminder" : {
+
+    },
+    "Set up Meet" : {
 
     },
     "SET UP ONCE" : {
@@ -2382,6 +2604,9 @@
     "Show Gift Ideas" : {
 
     },
+    "Show me" : {
+
+    },
     "Show my NOW to people nearby" : {
 
     },
@@ -2434,6 +2659,9 @@
 
     },
     "Skip for now — I'll do it in Settings" : {
+
+    },
+    "Slide left to cancel" : {
 
     },
     "Something went wrong" : {
@@ -2560,6 +2788,9 @@
     "The story" : {
 
     },
+    "Their photo" : {
+
+    },
     "They get an invite and can add their side. You can also share a link after." : {
 
     },
@@ -2593,6 +2824,9 @@
     "This was useful" : {
 
     },
+    "This week's is in. Next: %@" : {
+
+    },
     "Throw something at me — a screenshot, a voice note, a thought. I'll bring it back when it matters." : {
 
     },
@@ -2608,6 +2842,9 @@
     "Timeline" : {
 
     },
+    "times" : {
+
+    },
     "Tip" : {
 
     },
@@ -2615,6 +2852,9 @@
 
     },
     "Title" : {
+
+    },
+    "Tonight" : {
 
     },
     "Transcribed on this iPhone" : {
@@ -2645,6 +2885,9 @@
 
     },
     "Turn on location for MOMENT in Settings to see nearby places and Moments. Your location is only used on your phone to ask what's close." : {
+
+    },
+    "Turn on Meet" : {
 
     },
     "Type" : {
@@ -2755,6 +2998,9 @@
     "Voice note" : {
 
     },
+    "Voice note, %lld seconds" : {
+
+    },
     "Vote on the next spot" : {
 
     },
@@ -2768,6 +3014,12 @@
 
     },
     "wants" : {
+
+    },
+    "week" : {
+
+    },
+    "weeks" : {
 
     },
     "Welcome line (shown on the page)" : {
@@ -2905,6 +3157,9 @@
     "wss://relay.example.org" : {
 
     },
+    "You" : {
+
+    },
     "You + %@" : {
 
     },
@@ -2935,6 +3190,9 @@
     "You're on MOMENT Pro." : {
 
     },
+    "Your answer" : {
+
+    },
     "Your API key" : {
 
     },
@@ -2954,6 +3212,9 @@
 
     },
     "Your loop" : {
+
+    },
+    "Your Meet profile is removed everywhere. Matches keep their chats." : {
 
     },
     "Your memories are always yours: viewing, exporting and deleting never require a subscription." : {

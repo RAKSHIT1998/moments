@@ -1,0 +1,2 @@
+{ "name": "MOMENT", "short_name": "MOMENT", "start_url": "./#/tonight", "display": "standalone", "background_color": "#0b0b0f", "theme_color": "#0b0b0f",
+  "description": "One Moment. Everyone's story.", "icons": [{ "src": "../logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }] }
