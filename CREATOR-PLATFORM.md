@@ -2,6 +2,22 @@
 
 Creators sell three things: **sets** (photos/clips, free or priced), **time** (video call, voice call, custom), and **subscriptions + tips** (already in the app). Creators set every price and can withdraw anything at any time.
 
+## One subscription, your price
+
+A creator has **one subscription** and names its price (Studio → the ₹ field). 30 days at a time, no auto-renew. On card checkout the charge is exactly what they set. Apple only sells fixed price points, so on that rail the charge is the **nearest product** — the app says which, and never presents Apple's number as the creator's price (`CreatorPlan.Tier.nearest(toMinor:)` is only that mapping).
+
+## Asking for one thing
+
+Beyond the subscription and the sets, a fan can **ask** for a photo, a voice or video call, a meeting, or anything else. There is no fixed menu price: the creator sees the ask and **names a price for that one request**.
+
+    fan asks  →  asked        (no price, nothing charged, lands in the creator's chat)
+    creator   →  quoted       (a price for this one thing)
+    fan       →  requested    (accepts the price)  |  declined (walks away)
+    creator   →  accepted     (confirmed; a room id exists for calls and deliveries)
+                 done / refunded / declined
+
+Money is only ever counted on `accepted` and `done` (`Booking.Status.isPaid`), so a price on the table is never revenue. Creators can still publish a fixed menu (`BookingOffer`) for the things they always sell at the same price — both paths end in the same request.
+
 ## The 10%
 
 MOMENT keeps **10%** of what a creator charges — but only on its own rail.
@@ -14,6 +30,20 @@ MOMENT keeps **10%** of what a creator charges — but only on its own rail.
 This is why the web app matters: **a 10% take rate is arithmetically impossible through Apple IAP**, because Apple takes 30% before anyone else. `CreatorEconomics.creatorTake(_:rail:)` computes both and the Studio screen always names which rail it's quoting. Never show one number for the other.
 
 Since the 2025 US injunction, a US‑storefront iOS app may link out to external checkout without Apple's commission; `SettingsStore.webCheckoutEnabled` + `checkoutBaseURL` drive that path, and it is **off by default** because it is not allowed everywhere.
+
+## Screen capture: what is actually enforced
+
+The honest split, implemented in `SecureMedia.swift`:
+
+| | iOS app | Android (PWA today) | Web |
+|---|---|---|---|
+| Screenshot of paid media | **comes out blank** (rendered in UIKit's secure entry layer) | possible with `FLAG_SECURE` in a native app; **not** in the PWA | no |
+| Screen recording / mirroring | **content is hidden while capture is live** (`UIScreen.isCaptured`) | same as above | no |
+| Creator is told | **yes** — a screenshot or recording during paid content sends them a message | no | no |
+| Camera pointed at the screen | **impossible to stop anywhere** | — | — |
+| Traceability | every paid view is tiled with the **viewer's MOMENT ID** | — | — |
+
+So: "no screenshots" is enforced on iOS and deterred everywhere else by watermark plus notification. Any product that claims more than that is lying. The UI says exactly this under a paid set rather than promising the impossible.
 
 ## How paid content stays the creator's
 

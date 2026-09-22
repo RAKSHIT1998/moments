@@ -406,27 +406,37 @@ struct MeetMatch: Codable, Sendable, Equatable, Hashable, Identifiable {
 // MARK: - Creator economy
 
 /// What a creator sells: one plan per creator, priced at a fixed tier (App Store products), 30 days at a time.
+/// One subscription per creator, at the price they choose. 30 days at a time, no auto-renew.
 struct CreatorPlan: Codable, Sendable, Equatable, Hashable, Identifiable {
+    /// Apple sells fixed price points, so a card-rail price has to be mapped to the nearest product.
+    /// This is only that mapping — it is never what the creator "picked".
     enum Tier: String, Codable, CaseIterable, Sendable {
         case t1, t2, t3
-        /// Non-renewing subscription products; 30 days of access to one creator.
         var productID: String { "creator.30d.\(rawValue)" }
-        /// Shown until StoreKit returns the localized price.
         var fallbackPrice: String { switch self { case .t1: "₹199"; case .t2: "₹499"; case .t3: "₹999" } }
         var label: String { switch self { case .t1: "Starter"; case .t2: "Standard"; case .t3: "Premium" } }
-        /// Reference amounts (INR) used for the creator's earnings estimate.
         var referenceAmount: Double { switch self { case .t1: 199; case .t2: 499; case .t3: 999 } }
+        /// The closest App Store product to a price the creator set.
+        static func nearest(toMinor minor: Int) -> Tier {
+            let amount = Double(minor) / 100
+            return allCases.min { abs($0.referenceAmount - amount) < abs($1.referenceAmount - amount) } ?? .t1
+        }
     }
     var id: String { creatorID }
     var creatorID: String
     var creatorName: String
     var title: String
     var pitch: String
-    var tier: Tier
+    /// What the creator charges for 30 days, in minor units of `currency`. This is the real price.
+    var priceMinor: Int
+    var currency: String
     var perks: [String]
     /// How the creator wants to be paid (UPI / PayPal / IBAN). Read only by the payouts process.
     var payoutHint: String
     var createdAt: Date
+    /// Only used when the purchase has to go through Apple.
+    var tier: Tier { Tier.nearest(toMinor: priceMinor) }
+    func priceLabel(_ locale: Locale = .current) -> String { (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0))) }
 }
 
 struct CreatorSubscription: Codable, Sendable, Equatable, Hashable, Identifiable {
@@ -519,9 +529,15 @@ enum PaymentRail: String, Codable, Sendable, CaseIterable {
 
 /// Paid time: a call, a shoot, a custom. The creator sets the length, price and when they're available.
 struct BookingOffer: Codable, Sendable, Equatable, Hashable, Identifiable {
-    enum Kind: String, Codable, CaseIterable, Sendable { case videoCall, voiceCall, custom
-        var label: String { switch self { case .videoCall: "Video call"; case .voiceCall: "Voice call"; case .custom: "Custom request" } }
-        var symbol: String { switch self { case .videoCall: "video.fill"; case .voiceCall: "phone.fill"; case .custom: "sparkles" } }
+    enum Kind: String, Codable, CaseIterable, Sendable { case photo, videoCall, voiceCall, meet, custom
+        var label: String {
+            switch self { case .photo: "A photo"; case .videoCall: "Video call"; case .voiceCall: "Voice call"; case .meet: "Meet in person"; case .custom: "Something else" }
+        }
+        var symbol: String {
+            switch self { case .photo: "camera.fill"; case .videoCall: "video.fill"; case .voiceCall: "phone.fill"; case .meet: "figure.2"; case .custom: "sparkles" }
+        }
+        /// Only calls need a length; a photo or a custom doesn't.
+        var hasDuration: Bool { self == .videoCall || self == .voiceCall || self == .meet }
     }
     var id: String
     var creatorID: String
@@ -535,9 +551,23 @@ struct BookingOffer: Codable, Sendable, Equatable, Hashable, Identifiable {
     func priceLabel(_ locale: Locale = .current) -> String { (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0))) }
 }
 
+/// A request and its price. Two ways in: the fan takes something off the creator's menu (an offer, price
+/// already set), or asks for something and the creator names a price for that one thing.
 struct Booking: Codable, Sendable, Equatable, Hashable, Identifiable {
-    enum Status: String, Codable, Sendable { case requested, accepted, declined, done, refunded
-        var label: String { switch self { case .requested: "Waiting on them"; case .accepted: "Confirmed"; case .declined: "Declined"; case .done: "Done"; case .refunded: "Refunded" } }
+    enum Status: String, Codable, Sendable {
+        case asked          // fan asked, no price yet
+        case quoted         // creator named a price for this request
+        case requested      // fan is committed at a known price, waiting on the creator
+        case accepted       // creator confirmed; a room exists for calls
+        case declined, done, refunded
+        var label: String {
+            switch self {
+            case .asked: "Waiting for a price"; case .quoted: "Price offered"; case .requested: "Waiting on them"
+            case .accepted: "Confirmed"; case .declined: "Declined"; case .done: "Done"; case .refunded: "Refunded"
+            }
+        }
+        /// Money only ever moves on these.
+        var isPaid: Bool { self == .accepted || self == .done }
     }
     var id: String
     var offerID: String
@@ -547,6 +577,7 @@ struct Booking: Codable, Sendable, Equatable, Hashable, Identifiable {
     var buyerName: String
     var kind: BookingOffer.Kind
     var minutes: Int
+    /// 0 until the creator quotes.
     var amountMinor: Int
     var currency: String
     var startsAt: Date

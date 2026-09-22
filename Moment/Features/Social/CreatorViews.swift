@@ -7,7 +7,7 @@ struct CreatorEarnView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var title = ""
     @State private var pitch = ""
-    @State private var tier: CreatorPlan.Tier = .t2
+    @State private var price = "499"
     @State private var perks: [String] = ["", "", ""]
     @State private var payoutHint = ""
     @State private var saving = false
@@ -15,6 +15,9 @@ struct CreatorEarnView: View {
     @State private var confirmRemove = false
 
     private var plan: CreatorPlan? { env.social.myPlan }
+    private var priceMinor: Int { max(0, (Int(price.filter(\.isNumber)) ?? 0) * 100) }
+    /// Used only to show which App Store product this price would map to.
+    private var draftPlan: CreatorPlan { CreatorPlan(creatorID: "", creatorName: "", title: "", pitch: "", priceMinor: priceMinor, currency: "INR", perks: [], payoutHint: "", createdAt: .now) }
 
     var body: some View {
         ScrollView {
@@ -34,7 +37,7 @@ struct CreatorEarnView: View {
 
     private func load() {
         guard let p = plan else { return }
-        title = p.title; pitch = p.pitch; tier = p.tier; payoutHint = p.payoutHint
+        title = p.title; pitch = p.pitch; price = String(p.priceMinor / 100); payoutHint = p.payoutHint
         perks = (p.perks + ["", "", ""]).prefix(3).map { $0 }
     }
 
@@ -45,7 +48,7 @@ struct CreatorEarnView: View {
                 Text("THIS MONTH").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                 Text(env.social.earningsEstimate, format: .currency(code: "INR").precision(.fractionLength(0))).font(MFont.hero).monospacedDigit()
                     .accessibilityIdentifier("earningsEstimate")
-                Text("\(env.social.activeSubscriberCount) active \(env.social.activeSubscriberCount == 1 ? "subscriber" : "subscribers") · \(env.social.price(for: plan.tier)) each · \(env.social.tipsReceived.count) \(env.social.tipsReceived.count == 1 ? "tip" : "tips")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                Text("\(env.social.activeSubscriberCount) active \(env.social.activeSubscriberCount == 1 ? "subscriber" : "subscribers") · \(plan.priceLabel()) each · \(env.social.tipsReceived.count) \(env.social.tipsReceived.count == 1 ? "tip" : "tips")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                 Text("Estimate after App Store fees (\(Int(CreatorEconomics.appStoreShare * 100))%) and MOMENT's share; you keep \(Int(CreatorEconomics.creatorShare * 100))% of the net. Paid out monthly to the details below.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
             }
             .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass(tint: .orange)
@@ -54,7 +57,7 @@ struct CreatorEarnView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(plan.title).font(MFont.headline)
-                        Text("\(plan.tier.label) · \(env.social.price(for: plan.tier)) / 30 days").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                        Text("\(plan.priceLabel()) / 30 days").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     }
                     Spacer()
                     Button("Edit") { editing = true }.buttonStyle(GlassButtonStyle()).accessibilityIdentifier("editPlan")
@@ -125,18 +128,14 @@ struct CreatorEarnView: View {
             VStack(alignment: .leading, spacing: MSpacing.s) {
                 Text("PRICE · 30 DAYS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                 HStack(spacing: MSpacing.s) {
-                    ForEach(CreatorPlan.Tier.allCases, id: \.self) { t in
-                        Button { tier = t } label: {
-                            VStack(spacing: 2) { Text(env.social.price(for: t)).font(.headline.weight(.semibold)); Text(t.label).font(MFont.caption) }
-                                .frame(maxWidth: .infinity).padding(.vertical, 10)
-                        }
-                        .buttonStyle(.plain).foregroundStyle(tier == t ? Color.white : MColor.textPrimary)
-                        .background { if tier == t { RoundedRectangle(cornerRadius: 14, style: .continuous).fill(MColor.accent) } }
-                        .glass(radius: 14)
-                        .accessibilityIdentifier("tier-\(t.rawValue)")
-                    }
+                    Text("₹").font(MFont.hero).foregroundStyle(MColor.textSecondary)
+                    TextField("499", text: $price).keyboardType(.numberPad).font(MFont.hero).accessibilityIdentifier("planPrice")
                 }
-                Text("Prices are set by the App Store in each country. Apple takes its cut on every purchase.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+                .padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.m).glass(radius: 16)
+                Text(env.social.rail == .web
+                     ? "Your price, charged on card checkout. MOMENT keeps \(Int(CreatorEconomics.platformFee * 100))%."
+                     : "Your price. Through the App Store the charge is the nearest product Apple sells (\(env.social.appStorePrice(for: draftPlan))), and Apple takes \(Int(CreatorEconomics.appStoreShare * 100))% — card checkout charges exactly what you set.")
+                    .font(MFont.footnote).foregroundStyle(MColor.textTertiary)
             }
 
             VStack(alignment: .leading, spacing: MSpacing.s) {
@@ -152,9 +151,9 @@ struct CreatorEarnView: View {
 
             Button {
                 saving = true
-                Task { if await env.social.savePlan(title: title, pitch: pitch, tier: tier, perks: perks, payoutHint: payoutHint) { editing = false }; saving = false }
+                Task { if await env.social.savePlan(title: title, pitch: pitch, priceMinor: priceMinor, perks: perks, payoutHint: payoutHint) { editing = false }; saving = false }
             } label: { Text(plan == nil ? "Start selling" : "Save") }
-                .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(title.isBlank || pitch.isBlank || saving)
+                .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(title.isBlank || pitch.isBlank || priceMinor == 0 || saving)
                 .accessibilityIdentifier("savePlan")
             if editing { Button("Cancel") { editing = false; load() }.frame(maxWidth: .infinity) }
         }
@@ -200,11 +199,14 @@ struct SubscribeSheet: View {
                             }
                         }
                     } label: {
-                        if env.social.purchasing { ProgressView().tint(.white) } else { Text("Subscribe · \(env.social.price(for: plan.tier)) for 30 days") }
+                        if env.social.purchasing { ProgressView().tint(.white) } else { Text("Subscribe · \(plan.priceLabel()) for 30 days") }
                     }
                     .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(env.social.purchasing)
                     .accessibilityIdentifier("subscribeButton")
-                    Text("One payment through the App Store, no auto-renew. The creator gets the majority; MOMENT keeps no card details and never sees your name against a purchase.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+                    Text(env.social.rail == .web
+                         ? "One payment, 30 days, no auto-renew. \(plan.creatorName) set this price and keeps \(Int((1 - CreatorEconomics.platformFee) * 100))% of it."
+                         : "One payment through the App Store, no auto-renew. Apple charges \(env.social.appStorePrice(for: plan)) — the nearest product to \(plan.priceLabel()).")
+                        .font(MFont.footnote).foregroundStyle(MColor.textTertiary)
                 }
             } else {
                 ProgressView().frame(maxWidth: .infinity)
@@ -232,7 +234,7 @@ struct LockedOverlay: View {
                 Text("For subscribers").font(MFont.headline)
                 Text("\(moment.mediaCount) \(moment.mediaCount == 1 ? "photo" : "photos") · \(moment.creatorName)").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                 Button { onSubscribe() } label: {
-                    Text(env.social.plan(for: moment.creatorID).map { "Unlock · \(env.social.price(for: $0.tier))" } ?? "Subscribe")
+                    Text(env.social.plan(for: moment.creatorID).map { "Unlock · \($0.priceLabel())" } ?? "Subscribe")
                 }
                 .buttonStyle(GlassButtonStyle(tint: .orange, filled: true))
                 .accessibilityIdentifier("unlock-\(moment.id)")
@@ -262,7 +264,7 @@ struct MySubscriptionsView: View {
                             Text(s.isActive ? "Active until \(s.expiresAt.formatted(date: .abbreviated, time: .omitted))" : "Expired \(s.expiresAt.formatted(.relative(presentation: .named)))").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                         }
                         Spacer()
-                        Text(env.social.price(for: s.tier)).font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                        Text(env.social.plan(for: s.creatorID)?.priceLabel() ?? "").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                     }
                 }
                 .task { if env.social.plan(for: s.creatorID) == nil { await env.social.loadCreatorPlan(s.creatorID) } }

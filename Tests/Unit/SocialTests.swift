@@ -535,7 +535,7 @@ final class CreatorEconomyTests: XCTestCase {
     func testCreatorPlanSubscribersAndEarnings() async throws {
         let (env, backend) = await makeSocial()
         XCTAssertNil(env.social.myPlan)
-        let saved = await env.social.savePlan(title: "Behind the lens", pitch: "Every frame.", tier: .t3, perks: ["RAW files", "", "Monthly call"], payoutHint: "rakshit@upi")
+        let saved = await env.social.savePlan(title: "Behind the lens", pitch: "Every frame.", priceMinor: 99900, perks: ["RAW files", "", "Monthly call"], payoutHint: "rakshit@upi")
         XCTAssertTrue(saved)
         XCTAssertEqual(env.social.myPlan?.perks, ["RAW files", "Monthly call"])
         // Rahul subscribes to me.
@@ -913,7 +913,7 @@ final class StorefrontFlowTests: XCTestCase {
         // Rahul books it; I accept, which mints the room.
         let backend2 = try XCTUnwrap(env.social.backend as? InMemoryBackend)
         var booked: Booking?
-        try await backend2.acting(as: "u_rahul") { b in booked = try await b.requestBooking(offerID: offer.id, creatorID: env.social.myID, startsAt: .now.addingTimeInterval(7200), note: "About the sunset shoot", rail: .web, reference: nil) }
+        try await backend2.acting(as: "u_rahul") { b in booked = try await b.requestBooking(offerID: offer.id, creatorID: env.social.myID, kind: .videoCall, startsAt: .now.addingTimeInterval(7200), note: "About the sunset shoot", rail: .web, reference: nil) }
         let request = try XCTUnwrap(booked)
         XCTAssertEqual(request.status, .requested); XCTAssertTrue(request.roomID.isEmpty)
         await env.social.refreshStorefront()
@@ -939,7 +939,7 @@ final class CreatorFeedTests: XCTestCase {
     }
 
     func testGatesSayExactlyWhatOpensEachPost() {
-        let plan = CreatorPlan(creatorID: "c", creatorName: "C", title: "Inside", pitch: "", tier: .t2, perks: [], payoutHint: "", createdAt: .now)
+        let plan = CreatorPlan(creatorID: "c", creatorName: "C", title: "Inside", pitch: "", priceMinor: 49900, currency: "INR", perks: [], payoutHint: "", createdAt: .now)
         let posts = CreatorFeedBuilder.build(
             sets: [set("free", "c", price: 0), set("paid", "c", price: 49900), set("bought", "c", price: 19900), set("mine", "me", price: 9900), set("hidden", "c", price: 100, visible: false)],
             moments: [paidMoment("locked", "c", locked: true), paidMoment("subbed", "d", locked: true)],
@@ -982,5 +982,84 @@ final class CreatorFeedTests: XCTestCase {
         _ = await env.social.buySet(set)
         await env.social.refreshCreatorFeed()
         XCTAssertFalse(try XCTUnwrap(env.social.creatorFeed.first { $0.id == paid.id }).isLocked)
+    }
+}
+
+final class CreatorPricingTests: XCTestCase {
+    func testCreatorSetsTheirOwnPriceAndAppleGetsTheNearestProduct() {
+        func plan(_ minor: Int) -> CreatorPlan { CreatorPlan(creatorID: "c", creatorName: "C", title: "t", pitch: "", priceMinor: minor, currency: "INR", perks: [], payoutHint: "", createdAt: .now) }
+        XCTAssertEqual(plan(35000).priceLabel(Locale(identifier: "en_IN")).filter(\.isNumber), "350", "the price is whatever they typed")
+        // Apple only sells fixed points, so 350 maps to the nearest product — never presented as their price.
+        XCTAssertEqual(plan(35000).tier, .t2)
+        XCTAssertEqual(plan(15000).tier, .t1)
+        XCTAssertEqual(plan(90000).tier, .t3)
+        XCTAssertEqual(CreatorPlan.Tier.nearest(toMinor: 100), .t1)
+    }
+}
+
+@MainActor
+final class PaidRequestTests: XCTestCase {
+    private func make() async throws -> (AppEnvironment, InMemoryBackend) {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        return (env, backend)
+    }
+
+    func testAskThenQuoteThenPayThenConfirm() async throws {
+        let (env, backend) = try await make()
+        // Fan asks for a photo. No price yet, and nothing is charged.
+        let askedOpt = await env.social.ask("u_sarah", kind: .photo, note: "The tonkotsu close-up, uncropped")
+        let asked = try XCTUnwrap(askedOpt)
+        XCTAssertEqual(asked.status, .asked); XCTAssertEqual(asked.amountMinor, 0)
+        XCTAssertFalse(asked.status.isPaid)
+        // It lands in the creator's chat, so they don't need a dashboard.
+        let conv = try XCTUnwrap(env.social.conversations.first { $0.participantIDs.contains("u_sarah") })
+        XCTAssertTrue((env.social.messages[conv.id] ?? []).contains { $0.text.contains("Asked for: A photo") })
+        // The fan can't price their own ask.
+        var refused = false
+        do { _ = try await backend.quoteBooking(id: asked.id, amountMinor: 1, currency: "INR", note: "") } catch { refused = true }
+        XCTAssertTrue(refused)
+        // Sarah names a price.
+        var quoted: Booking?
+        try await backend.acting(as: "u_sarah") { b in quoted = try await b.quoteBooking(id: asked.id, amountMinor: 79900, currency: "INR", note: "Shot tonight.") }
+        XCTAssertEqual(quoted?.status, .quoted); XCTAssertEqual(quoted?.amountMinor, 79900)
+        XCTAssertFalse(try XCTUnwrap(quoted).status.isPaid, "a price on the table isn't money moved")
+        // Fan accepts the price; creator confirms; only then does it count as earned.
+        await env.social.refreshStorefront()
+        let committedOpt = await env.social.acceptQuote(try XCTUnwrap(quoted))
+        let committed = try XCTUnwrap(committedOpt)
+        XCTAssertEqual(committed.status, .requested)
+        var confirmed: Booking?
+        try await backend.acting(as: "u_sarah") { b in confirmed = try await b.setBookingStatus(id: asked.id, status: .accepted) }
+        XCTAssertEqual(confirmed?.status, .accepted)
+        XCTAssertTrue(try XCTUnwrap(confirmed).status.isPaid)
+        XCTAssertFalse(try XCTUnwrap(confirmed).roomID.isEmpty, "even a photo request gets a room to deliver in")
+        XCTAssertEqual(CreatorEconomics.creatorTake(79900, rail: .web), 719.1, accuracy: 0.01)
+    }
+
+    func testFanCanWalkAwayFromAPriceAndCreatorCanDecline() async throws {
+        let (env, backend) = try await make()
+        let aOpt = await env.social.ask("u_sarah", kind: .videoCall, note: "15 min")
+        let a = try XCTUnwrap(aOpt)
+        try await backend.acting(as: "u_sarah") { b in _ = try await b.quoteBooking(id: a.id, amountMinor: 500000, currency: "INR", note: "") }
+        await env.social.refreshStorefront()
+        let declinedOpt = await env.social.setBooking(a.id, .declined)
+        XCTAssertEqual(try XCTUnwrap(declinedOpt).status, .declined)
+        // And the creator's own decline path on a fresh ask.
+        let b2Opt = await env.social.ask("u_sarah", kind: .meet, note: "coffee?")
+        let b2 = try XCTUnwrap(b2Opt)
+        var creatorDeclined: Booking?
+        try await backend.acting(as: "u_sarah") { b in creatorDeclined = try await b.setBookingStatus(id: b2.id, status: .declined) }
+        XCTAssertEqual(creatorDeclined?.status, .declined)
+    }
+
+    func testDemoCreatorSeesAWaitingAsk() async throws {
+        let (env, _) = try await make()
+        await env.social.refreshStorefront()
+        let waiting = env.social.myBookings.filter { $0.creatorID == env.social.myID && $0.status == .asked }
+        XCTAssertEqual(waiting.map(\.buyerName), ["Dev Patel"])
+        XCTAssertEqual(waiting.first?.kind, .photo)
     }
 }

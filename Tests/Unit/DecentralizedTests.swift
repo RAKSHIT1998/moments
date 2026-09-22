@@ -135,7 +135,7 @@ final class DecentralizedCreatorTests: XCTestCase {
         func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
 
         // Alice sells; makes a paid Moment.
-        _ = try await alice.saveCreatorPlan(CreatorPlan(creatorID: "", creatorName: "", title: "Raw frames", pitch: "All of them", tier: .t2, perks: [], payoutHint: "alice@upi", createdAt: .now))
+        _ = try await alice.saveCreatorPlan(CreatorPlan(creatorID: "", creatorName: "", title: "Raw frames", pitch: "All of them", priceMinor: 49900, currency: "INR", perks: [], payoutHint: "alice@upi", createdAt: .now))
         let m = try await alice.createMoment(MomentDraft(title: "Friday raw", description: "the whole set", visibility: .subscribers))
         let root = await aStore.get([m.id]).first!
         let aliceID = await alice.myID, bobID = await bob.myID
@@ -337,7 +337,7 @@ final class DecentralizedStorefrontTests: XCTestCase {
         let offer = try await creator.saveBookingOffer(BookingOffer(id: "", creatorID: "", creatorName: "", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "Camera on.", active: true))
         await sync(cStore, fStore)
         let creatorID = await creator.myID
-        let b = try await fan.requestBooking(offerID: offer.id, creatorID: creatorID, startsAt: .now.addingTimeInterval(3600), note: "hi", rail: .web, reference: nil)
+        let b = try await fan.requestBooking(offerID: offer.id, creatorID: creatorID, kind: .videoCall, startsAt: .now.addingTimeInterval(3600), note: "hi", rail: .web, reference: nil)
         await sync(fStore, cStore)
         // The fan can't accept their own booking.
         var blocked = false
@@ -346,8 +346,8 @@ final class DecentralizedStorefrontTests: XCTestCase {
         let accepted = try await creator.setBookingStatus(id: b.id, status: .accepted)
         XCTAssertEqual(accepted.status, .accepted); XCTAssertFalse(accepted.roomID.isEmpty)
         await sync(cStore, fStore)
-        let fanView = try await fan.myBookings()
-        XCTAssertEqual(fanView.first?.status, .accepted)
+        let fanView: [Booking] = try await fan.myBookings()
+        XCTAssertEqual(fanView.first?.status, Booking.Status.accepted)
         XCTAssertEqual(fanView.first?.roomID, accepted.roomID, "both sides land on the same room")
     }
 }

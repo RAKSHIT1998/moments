@@ -142,7 +142,10 @@ protocol SocialBackend: AnyObject, Sendable {
     func bookingOffers(creatorID: String) async throws -> [BookingOffer]
     func saveBookingOffer(_ offer: BookingOffer) async throws -> BookingOffer
     func deleteBookingOffer(id: String) async throws
-    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking
+    /// Off the menu (offerID set, price known) or a free-form ask (offerID empty, price 0 until quoted).
+    func requestBooking(offerID: String, creatorID: String, kind: BookingOffer.Kind, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking
+    /// The creator names a price for one request.
+    func quoteBooking(id: String, amountMinor: Int, currency: String, note: String) async throws -> Booking
     func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking
     func myBookings() async throws -> [Booking]
     func creatorLinks(for userID: String) async throws -> CreatorLinks

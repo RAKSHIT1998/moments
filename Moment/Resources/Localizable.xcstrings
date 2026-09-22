@@ -82,6 +82,9 @@
         }
       }
     },
+    "%@ / 30 days" : {
+
+    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -1253,6 +1256,9 @@
     "Failed" : {
 
     },
+    "Feed" : {
+
+    },
     "Fictional friends (Rahul, Sarah, Dev…), a Goa trip, a birthday, a live sunset, NOW posts, a group and private memories — so every screen has something in it. Nothing is uploaded; switch it off in Settings." : {
 
     },
@@ -1278,6 +1284,9 @@
 
     },
     "Follow" : {
+
+    },
+    "Follow a creator, or post a set of your own — free sets are how people find you." : {
 
     },
     "Follow to see the Moments you're not in." : {
@@ -2183,6 +2192,9 @@
     "Open Settings" : {
 
     },
+    "Open Studio" : {
+
+    },
     "Open the map" : {
 
     },
@@ -2936,6 +2948,12 @@
     "Subscribe" : {
 
     },
+    "SUBSCRIBE" : {
+
+    },
+    "Subscribe · %@" : {
+
+    },
     "Subscribe · %@ / 30 days" : {
 
     },
@@ -2945,6 +2963,9 @@
     "Subscribed" : {
 
     },
+    "SUBSCRIBED" : {
+
+    },
     "Subscribers" : {
 
     },
@@ -2952,6 +2973,9 @@
 
     },
     "Subscribers pay for 30 days at a time and see every Moment you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt." : {
+
+    },
+    "SUBSCRIPTION" : {
 
     },
     "Subscription · %@ / 30 days" : {
@@ -3161,10 +3185,16 @@
     "Unlike" : {
 
     },
+    "Unlock" : {
+
+    },
     "Unlock — free" : {
 
     },
     "Unlock · %@" : {
+
+    },
+    "Unlock for %@" : {
 
     },
     "Unlock with %@" : {

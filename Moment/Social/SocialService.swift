@@ -124,6 +124,7 @@ final class SocialService {
             if let ck = backend as? CloudKitBackend { Task { await ck.ensureSubscriptions() } }
             if let mesh = backend as? DecentralizedBackend { await mesh.startObserving { [weak self] in Task { @MainActor in self?.scheduleMeshRefresh() } } }
             await startTypingObserver()
+            startScreenGuard()
             if let identity, me?.publicKey != identity.publicKeyBase64 {
                 try? await backend.publishIdentity(publicKey: identity.publicKeyBase64, momentID: identity.momentID)
                 me = try? await backend.currentUser()
@@ -167,8 +168,11 @@ final class SocialService {
     func plan(for userID: String) -> CreatorPlan? { creatorPlans[userID] }
     func isSubscribed(to userID: String) -> Bool { mySubscriptions.contains { $0.creatorID == userID && $0.isActive } }
     func subscription(to userID: String) -> CreatorSubscription? { mySubscriptions.first { $0.creatorID == userID && $0.isActive } }
-    /// Localized price from the App Store, else the reference amount.
-    func price(for tier: CreatorPlan.Tier) -> String { creatorProducts[tier.productID]?.displayPrice ?? tier.fallbackPrice }
+    /// What a creator charges: their own price. (On Apple's rail the charge is the nearest product,
+    /// which `subscribe(to:)` makes explicit before paying.)
+    func price(for plan: CreatorPlan) -> String { plan.priceLabel() }
+    /// Localized price of the App Store product a plan maps to — only shown when that's what will be charged.
+    func appStorePrice(for plan: CreatorPlan) -> String { creatorProducts[plan.tier.productID]?.displayPrice ?? plan.tier.fallbackPrice }
     var earningsEstimate: Double { CreatorEconomics.creatorEstimate(subscribers, tips: tipsReceived) }
     func price(for amount: CreatorTip.Amount) -> String { creatorProducts[amount.productID]?.displayPrice ?? amount.fallbackPrice }
 
@@ -193,8 +197,8 @@ final class SocialService {
     var activeSubscriberCount: Int { subscribers.filter(\.isActive).count }
 
     @discardableResult
-    func savePlan(title: String, pitch: String, tier: CreatorPlan.Tier, perks: [String], payoutHint: String) async -> Bool {
-        let p = CreatorPlan(creatorID: myID, creatorName: displayName, title: title.trimmed, pitch: pitch.trimmed, tier: tier, perks: perks.map(\.trimmed).filter { !$0.isEmpty }, payoutHint: payoutHint.trimmed, createdAt: myPlan?.createdAt ?? .now)
+    func savePlan(title: String, pitch: String, priceMinor: Int, currency: String = "INR", perks: [String], payoutHint: String) async -> Bool {
+        let p = CreatorPlan(creatorID: myID, creatorName: displayName, title: title.trimmed, pitch: pitch.trimmed, priceMinor: priceMinor, currency: currency, perks: perks.map(\.trimmed).filter { !$0.isEmpty }, payoutHint: payoutHint.trimmed, createdAt: myPlan?.createdAt ?? .now)
         do {
             let saved = try await backend.saveCreatorPlan(p)
             if myPlan == nil { analytics.track(.creatorPlanCreated) }
@@ -228,7 +232,7 @@ final class SocialService {
         do {
             let s = try await backend.subscribe(to: creatorID, tier: plan.tier, transactionID: transactionID, days: 30)
             mySubscriptions.removeAll { $0.creatorID == creatorID }; mySubscriptions.append(s)
-            analytics.track(.creatorSubscribed, category: plan.tier.rawValue)
+            analytics.track(.creatorSubscribed, category: rail.rawValue)
             await refreshFeed()
             return true
         } catch { lastError = error.localizedDescription; return false }
@@ -1108,6 +1112,21 @@ final class SocialService {
     /// Where the money goes through. Web (card) keeps the platform fee at 10%; Apple's rail can't.
     var rail: PaymentRail { settings.webCheckoutEnabled ? .web : .appStore }
 
+    /// Tell the creator when someone captured their paid content, and log it for them.
+    func startScreenGuard() {
+        ScreenGuard.shared.onCapture = { [weak self] creatorID, kind in
+            Task { @MainActor in
+                guard let self, creatorID != self.myID, !creatorID.isEmpty else { return }
+                self.analytics.track(.captureAttempt, category: kind)
+                if let c = await self.conversation(with: creatorID) {
+                    _ = await self.send(conversationID: c.id, text: kind == "screenshot"
+                                        ? "(MOMENT) I took a screenshot of your paid content."
+                                        : "(MOMENT) My screen was being recorded while your paid content was open.")
+                }
+            }
+        }
+    }
+
     func refreshStorefront() async {
         mySets = (try? await backend.vaultSets(creatorID: myID)) ?? []
         setsByCreator[myID] = mySets
@@ -1157,10 +1176,40 @@ final class SocialService {
         do { let o = try await backend.saveBookingOffer(offer); await refreshStorefront(); return o } catch { lastError = error.localizedDescription; return nil }
     }
     func deleteOffer(_ id: String) async { try? await backend.deleteBookingOffer(id: id); await refreshStorefront() }
+    /// Ask a creator for something they don't have a price on yet. They answer with a price.
+    func ask(_ creatorID: String, kind: BookingOffer.Kind, note: String, startsAt: Date = .now.addingTimeInterval(86400)) async -> Booking? {
+        busy = true; defer { busy = false }
+        do {
+            let b = try await backend.requestBooking(offerID: "", creatorID: creatorID, kind: kind, startsAt: startsAt, note: note, rail: rail, reference: nil)
+            myBookings = (try? await backend.myBookings()) ?? []
+            analytics.track(.requestAsked, category: kind.rawValue)
+            if let c = await conversation(with: creatorID) {
+                _ = await send(conversationID: c.id, text: "Asked for: \(kind.label).\(note.isBlank ? "" : " “\(note.trimmed)”") — name your price.")
+            }
+            return b
+        } catch { lastError = error.localizedDescription; return nil }
+    }
+    /// The creator names a price for that one request.
+    @discardableResult
+    func quote(_ booking: Booking, amountMinor: Int, note: String = "") async -> Booking? {
+        do {
+            let b = try await backend.quoteBooking(id: booking.id, amountMinor: amountMinor, currency: booking.currency, note: note)
+            myBookings = (try? await backend.myBookings()) ?? []
+            if let c = await conversation(with: b.buyerID) {
+                let price = (Double(amountMinor) / 100).formatted(.currency(code: b.currency).precision(.fractionLength(0)))
+                _ = await send(conversationID: c.id, text: "\(b.kind.label): \(price).\(note.isBlank ? "" : " \(note.trimmed)")")
+            }
+            return b
+        } catch { lastError = error.localizedDescription; return nil }
+    }
+    /// The fan accepts the quoted price (money moves when the creator then confirms).
+    @discardableResult
+    func acceptQuote(_ booking: Booking) async -> Booking? { await setBooking(booking.id, .requested) }
+
     func requestBooking(_ offer: BookingOffer, startsAt: Date, note: String, reference: String? = nil) async -> Booking? {
         busy = true; defer { busy = false }
         do {
-            let b = try await backend.requestBooking(offerID: offer.id, creatorID: offer.creatorID, startsAt: startsAt, note: note, rail: rail, reference: reference)
+            let b = try await backend.requestBooking(offerID: offer.id, creatorID: offer.creatorID, kind: offer.kind, startsAt: startsAt, note: note, rail: rail, reference: reference)
             myBookings = (try? await backend.myBookings()) ?? []
             analytics.track(.bookingRequested, category: offer.kind.rawValue)
             // The request lands in the creator's chat so nothing depends on them opening a dashboard.

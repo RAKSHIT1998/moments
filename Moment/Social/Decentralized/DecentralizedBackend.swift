@@ -25,7 +25,7 @@ actor DecentralizedBackend: SocialBackend {
         struct Profile: Codable { var displayName: String; var handle: String; var bio: String; var avatar: String?; var privateAccount: Bool; var momentID: String; var agreePK: String? }
         /// Subscribers-only Moment: a readable preview for everyone, the real thing sealed under the creator key.
         struct Locked: Codable { var preview: Moment; var sealed: String }
-        struct Plan: Codable { var title: String; var pitch: String; var tier: String; var perks: [String]; var payoutHint: String; var creatorName: String }
+        struct Plan: Codable { var title: String; var pitch: String; var tier: String; var perks: [String]; var payoutHint: String; var creatorName: String; var priceMinor: Int? = nil; var currency: String? = nil }
         struct Subscribe: Codable { var tier: String; var days: Int; var transactionID: String?; var name: String }
         struct Tip: Codable { var amount: String; var note: String; var transactionID: String?; var name: String }
         struct Dating: Codable { var profile: DatingProfile?; var photos: [String] }   // photos as base64 thumbnails; nil profile = withdrawn
@@ -276,16 +276,29 @@ actor DecentralizedBackend: SocialBackend {
         return x
     }
     func deleteBookingOffer(id: String) async throws { try await emit(.offer, tags: ["offer": id], payload: Payloads.Offer(offer: nil)) }
-    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
-        guard let o = try await bookingOffers(creatorID: creatorID).first(where: { $0.id == offerID }), creatorID != myID else { throw SocialError.notAllowed }
+    func requestBooking(offerID: String, creatorID: String, kind: BookingOffer.Kind, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
+        guard creatorID != myID else { throw SocialError.notAllowed }
+        let offer = try await bookingOffers(creatorID: creatorID).first { $0.id == offerID }
+        if !offerID.isEmpty && offer == nil { throw SocialError.notFound }
         let me = try await currentUser()
-        let b = Booking(id: "bk_" + UUID().uuidString, offerID: offerID, creatorID: creatorID, creatorName: o.creatorName, buyerID: myID, buyerName: me.displayName, kind: o.kind, minutes: o.minutes, amountMinor: o.priceMinor, currency: o.currency, startsAt: startsAt, status: .requested, note: note, rail: rail, reference: reference, roomID: "", createdAt: .now)
+        var theirName = offer?.creatorName
+        if theirName == nil { theirName = (try? await user(id: creatorID))?.displayName }
+        let b = Booking(id: "bk_" + UUID().uuidString, offerID: offerID, creatorID: creatorID, creatorName: theirName ?? "Creator", buyerID: myID, buyerName: me.displayName, kind: offer?.kind ?? kind, minutes: offer?.minutes ?? 0, amountMinor: offer?.priceMinor ?? 0, currency: offer?.currency ?? "INR", startsAt: startsAt, status: offer == nil ? .asked : .requested, note: note, rail: rail, reference: reference, roomID: "", createdAt: .now)
         try await emit(.booking, tags: ["booking": b.id, "to": creatorID], payload: Payloads.BookingBody(booking: b))
+        return b
+    }
+    func quoteBooking(id: String, amountMinor: Int, currency: String, note: String) async throws -> Booking {
+        guard var b = try await myBookings().first(where: { $0.id == id }), b.creatorID == myID, b.status == .asked else { throw SocialError.notAllowed }
+        b.amountMinor = amountMinor; b.currency = currency; b.status = .quoted
+        if !note.isBlank { b.note = b.note.isBlank ? note : b.note + "\n— " + note }
+        try await emit(.booking, tags: ["booking": b.id, "to": b.buyerID], payload: Payloads.BookingBody(booking: b))
         return b
     }
     func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking {
         guard var b = try await myBookings().first(where: { $0.id == id }) else { throw SocialError.notFound }
-        guard b.creatorID == myID || (b.buyerID == myID && (status == .done || status == .refunded)) else { throw SocialError.notAllowed }
+        let buyerMay: Set<Booking.Status> = [.requested, .declined, .done, .refunded]
+        guard b.creatorID == myID || (b.buyerID == myID && buyerMay.contains(status)) else { throw SocialError.notAllowed }
+        if status == .requested { guard b.status == .quoted, b.buyerID == myID else { throw SocialError.notAllowed } }
         b.status = status
         if status == .accepted, b.roomID.isEmpty { b.roomID = "room_" + UUID().uuidString.prefix(12) }
         try await emit(.booking, tags: ["booking": b.id, "to": b.creatorID == myID ? b.buyerID : b.creatorID], payload: Payloads.BookingBody(booking: b))
@@ -298,7 +311,8 @@ actor DecentralizedBackend: SocialBackend {
             // Only the two of them can move it, and only the creator can accept/decline.
             let mover = e.author
             guard mover == b.buyerID || mover == b.creatorID else { continue }
-            if (b.status == .accepted || b.status == .declined) && mover != b.creatorID { continue }
+            if (b.status == .accepted || b.status == .quoted) && mover != b.creatorID { continue }
+            if b.status == .requested && b.amountMinor > 0 && mover != b.buyerID && mover != b.creatorID { continue }
             if (latest[b.id]?.0 ?? .distantPast) <= e.createdAt { latest[b.id] = (e.createdAt, b) }
         }
         return latest.values.map(\.1).sorted { $0.startsAt > $1.startsAt }
@@ -898,17 +912,18 @@ actor DecentralizedBackend: SocialBackend {
 
     func creatorPlan(for userID: String) async throws -> CreatorPlan? {
         guard let e = await store.all(.plan).last(where: { $0.author == userID }), let p = e.payload(Payloads.Plan.self), p.tier != "none" else { return nil }
-        return CreatorPlan(creatorID: userID, creatorName: p.creatorName, title: p.title, pitch: p.pitch, tier: CreatorPlan.Tier(rawValue: p.tier) ?? .t1, perks: p.perks, payoutHint: p.payoutHint, createdAt: e.createdAt)
+        let tier = CreatorPlan.Tier(rawValue: p.tier) ?? .t1
+        return CreatorPlan(creatorID: userID, creatorName: p.creatorName, title: p.title, pitch: p.pitch, priceMinor: p.priceMinor ?? Int(tier.referenceAmount * 100), currency: p.currency ?? "INR", perks: p.perks, payoutHint: p.payoutHint, createdAt: e.createdAt)
     }
     func saveCreatorPlan(_ plan: CreatorPlan) async throws -> CreatorPlan {
         let me = try await currentUser()
-        try await emit(.plan, payload: Payloads.Plan(title: plan.title, pitch: plan.pitch, tier: plan.tier.rawValue, perks: plan.perks, payoutHint: plan.payoutHint, creatorName: me.displayName))
+        try await emit(.plan, payload: Payloads.Plan(title: plan.title, pitch: plan.pitch, tier: plan.tier.rawValue, perks: plan.perks, payoutHint: plan.payoutHint, creatorName: me.displayName, priceMinor: plan.priceMinor, currency: plan.currency))
         _ = creatorKey()
         try? await Task.sleep(for: .milliseconds(20))
         return try await creatorPlan(for: myID) ?? plan
     }
     func removeCreatorPlan() async throws {
-        try await emit(.plan, payload: Payloads.Plan(title: "", pitch: "", tier: "none", perks: [], payoutHint: "", creatorName: ""))
+        try await emit(.plan, payload: Payloads.Plan(title: "", pitch: "", tier: "none", perks: [], payoutHint: "", creatorName: "", priceMinor: 0, currency: "INR"))
         keys.save(MomentKeys.new(), for: "creator.\(myID)")   // rotate: nothing new is readable with old grants
     }
     func subscribe(to creatorID: String, tier: CreatorPlan.Tier, transactionID: String?, days: Int) async throws -> CreatorSubscription {

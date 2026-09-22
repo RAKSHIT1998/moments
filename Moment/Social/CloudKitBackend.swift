@@ -464,7 +464,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let me = try await currentUser()
         let id = CKRecord.ID(recordName: "plan_\(me.id)")
         let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "CreatorPlan", recordID: id)
-        r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["title"] = plan.title; r["pitch"] = plan.pitch; r["tier"] = plan.tier.rawValue
+        r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["title"] = plan.title; r["pitch"] = plan.pitch
+        r["priceMinor"] = plan.priceMinor; r["currency"] = plan.currency
         r["perks"] = plan.perks; r["payoutHint"] = plan.payoutHint
         return Self.plan(from: try await save(r, in: publicDB))
     }
@@ -520,7 +521,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         CreatorTip(id: r.recordID.recordName, fromID: r["fromID"] as? String ?? "", fromName: r["fromName"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", momentID: r["momentID"] as? String, amount: CreatorTip.Amount(rawValue: r["amount"] as? String ?? "") ?? .small, note: r["note"] as? String ?? "", createdAt: r.creationDate ?? .now, transactionID: r["transactionID"] as? String)
     }
     static func plan(from r: CKRecord) -> CreatorPlan {
-        CreatorPlan(creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", pitch: r["pitch"] as? String ?? "", tier: CreatorPlan.Tier(rawValue: r["tier"] as? String ?? "") ?? .t1, perks: r["perks"] as? [String] ?? [], payoutHint: r["payoutHint"] as? String ?? "", createdAt: r.creationDate ?? .now)
+        CreatorPlan(creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", pitch: r["pitch"] as? String ?? "", priceMinor: r["priceMinor"] as? Int ?? 49900, currency: r["currency"] as? String ?? "INR", perks: r["perks"] as? [String] ?? [], payoutHint: r["payoutHint"] as? String ?? "", createdAt: r.creationDate ?? .now)
     }
     static func subscription(from r: CKRecord) -> CreatorSubscription {
         CreatorSubscription(id: r.recordID.recordName, subscriberID: r["subscriberID"] as? String ?? "", subscriberName: r["subscriberName"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", tier: CreatorPlan.Tier(rawValue: r["tier"] as? String ?? "") ?? .t1, startedAt: r["startedAt"] as? Date ?? .now, expiresAt: r["expiresAt"] as? Date ?? .now, transactionID: r["transactionID"] as? String)
@@ -919,20 +920,32 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         return Self.offer(from: try await save(r, in: publicDB))
     }
     func deleteBookingOffer(id: String) async throws { _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: id)) }
-    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
+    func requestBooking(offerID: String, creatorID: String, kind: BookingOffer.Kind, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
         let me = try await currentUser()
-        guard let o = try await bookingOffers(creatorID: creatorID).first(where: { $0.id == offerID }) else { throw SocialError.notFound }
+        let o = try await bookingOffers(creatorID: creatorID).first { $0.id == offerID }
+        if !offerID.isEmpty && o == nil { throw SocialError.notFound }
         let r = CKRecord(recordType: "Booking", recordID: CKRecord.ID(recordName: "bk_\(UUID().uuidString)"))
-        r["offerID"] = offerID; r["creatorID"] = creatorID; r["creatorName"] = o.creatorName; r["buyerID"] = me.id; r["buyerName"] = me.displayName
-        r["kind"] = o.kind.rawValue; r["minutes"] = o.minutes; r["amountMinor"] = o.priceMinor; r["currency"] = o.currency
-        r["startsAt"] = startsAt; r["status"] = Booking.Status.requested.rawValue; r["note"] = note; r["rail"] = rail.rawValue; r["reference"] = reference; r["roomID"] = ""
+        var theirName = o?.creatorName
+        if theirName == nil { theirName = (try? await user(id: creatorID))?.displayName }
+        r["offerID"] = offerID; r["creatorID"] = creatorID; r["creatorName"] = theirName ?? "Creator"; r["buyerID"] = me.id; r["buyerName"] = me.displayName
+        r["kind"] = (o?.kind ?? kind).rawValue; r["minutes"] = o?.minutes ?? 0; r["amountMinor"] = o?.priceMinor ?? 0; r["currency"] = o?.currency ?? "INR"
+        r["startsAt"] = startsAt; r["status"] = (o == nil ? Booking.Status.asked : .requested).rawValue; r["note"] = note; r["rail"] = rail.rawValue; r["reference"] = reference; r["roomID"] = ""
+        return Self.booking(from: try await save(r, in: publicDB))
+    }
+    func quoteBooking(id: String, amountMinor: Int, currency: String, note: String) async throws -> Booking {
+        let me = try await currentUser()
+        let r = try await publicDB.record(for: CKRecord.ID(recordName: id))
+        guard r["creatorID"] as? String == me.id, (r["status"] as? String) == Booking.Status.asked.rawValue else { throw SocialError.notAllowed }
+        r["amountMinor"] = amountMinor; r["currency"] = currency; r["status"] = Booking.Status.quoted.rawValue
+        if !note.isBlank { r["note"] = ((r["note"] as? String).map { $0.isEmpty ? note : $0 + "\n— " + note }) }
         return Self.booking(from: try await save(r, in: publicDB))
     }
     func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking {
         let me = try await currentUser()
         let r = try await publicDB.record(for: CKRecord.ID(recordName: id))
         let creator = r["creatorID"] as? String, buyer = r["buyerID"] as? String
-        guard creator == me.id || (buyer == me.id && (status == .done || status == .refunded)) else { throw SocialError.notAllowed }
+        let buyerMay: Set<Booking.Status> = [.requested, .declined, .done, .refunded]
+        guard creator == me.id || (buyer == me.id && buyerMay.contains(status)) else { throw SocialError.notAllowed }
         r["status"] = status.rawValue
         if status == .accepted, (r["roomID"] as? String ?? "").isEmpty { r["roomID"] = "room_\(UUID().uuidString.prefix(12))" }
         return Self.booking(from: try await save(r, in: publicDB))

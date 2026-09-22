@@ -10,6 +10,7 @@ struct StorefrontView: View {
     var creatorName: String
     @State private var buying: VaultSet?
     @State private var booking: BookingOffer?
+    @State private var asking = false
 
     private var sets: [VaultSet] { env.social.sets(of: creatorID) }
     private var offers: [BookingOffer] { env.social.offers(of: creatorID).filter(\.active) }
@@ -22,7 +23,7 @@ struct StorefrontView: View {
                     NavigationLink(value: SocialRoute.profile(creatorID)) {
                         HStack(spacing: MSpacing.m) {
                             Image(systemName: "crown.fill").foregroundStyle(.orange)
-                            VStack(alignment: .leading, spacing: 2) { Text(plan.title).font(MFont.headline); Text("Subscription · \(env.social.price(for: plan.tier)) / 30 days").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
+                            VStack(alignment: .leading, spacing: 2) { Text(plan.title).font(MFont.headline); Text("Subscription · \(plan.priceLabel()) / 30 days").font(MFont.caption).foregroundStyle(MColor.textSecondary) }
                             Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
                         }
                         .padding(MSpacing.l)
@@ -54,6 +55,21 @@ struct StorefrontView: View {
                         .accessibilityIdentifier("offer-\(o.id)")
                     }
                 }
+                VStack(alignment: .leading, spacing: MSpacing.s) {
+                    Text("ASK FOR SOMETHING ELSE").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                    Button { asking = true } label: {
+                        HStack(spacing: MSpacing.m) {
+                            Image(systemName: "hand.raised.fill").font(.title3).foregroundStyle(MColor.accent).frame(width: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Ask \(creatorName.split(separator: " ").first.map(String.init) ?? creatorName)").font(MFont.headline).foregroundStyle(MColor.textPrimary)
+                                Text("A photo, a call, a meeting — they name the price for that one thing.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                            }
+                            Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                        }
+                        .padding(MSpacing.l)
+                    }
+                    .buttonStyle(.plain).glass(radius: 16).accessibilityIdentifier("askCreator")
+                }
                 if !links.all.isEmpty {
                     Text("ELSEWHERE").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
                     FlowRow(links.all.map { ($0.label, $0.handle, $0.url) })
@@ -70,6 +86,7 @@ struct StorefrontView: View {
         .task { await env.social.loadStorefront(creatorID) }
         .sheet(item: $buying) { s in BuySetSheet(set: s) }
         .sheet(item: $booking) { o in BookSheet(offer: o) }
+        .sheet(isPresented: $asking) { AskSheet(creatorID: creatorID, creatorName: creatorName) }
         .modifier(SocialErrorAlert())
     }
 }
@@ -138,10 +155,15 @@ struct VaultSetView: View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 6)], spacing: 6) {
                 ForEach(env.social.items(setID)) { item in
-                    SocialImage(ref: item.media).aspectRatio(3/4, contentMode: .fill).clipShape(RoundedRectangle(cornerRadius: 12))
+                    SecureMediaView(ref: item.media, creatorID: set?.creatorID ?? "")
+                        .aspectRatio(3/4, contentMode: .fill).clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
             .padding(MSpacing.m)
+            if let s = set, !s.isFree {
+                Label("Screenshots of this set come out blank, and every view carries your MOMENT ID. A photo taken with another phone can still be traced to you.", systemImage: "eye.slash")
+                    .font(MFont.footnote).foregroundStyle(MColor.textTertiary).padding(.horizontal, MSpacing.page)
+            }
             if env.social.items(setID).isEmpty { Text("Nothing here yet.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary).padding(MSpacing.xl) }
             if let s = set, !s.blurb.isEmpty { Text(s.blurb).font(MFont.subheadline).foregroundStyle(MColor.textSecondary).padding(MSpacing.page) }
         }
@@ -459,6 +481,7 @@ struct LinksSheet: View {
 /// Both sides of bookings: what you've asked for, and what people have asked of you.
 struct BookingsView: View {
     @Environment(AppEnvironment.self) private var env
+    @State private var quoting: Booking?
     var body: some View {
         List {
             let mine = env.social.myBookings.filter { $0.creatorID == env.social.myID }
@@ -470,7 +493,11 @@ struct BookingsView: View {
                             HStack { Text(b.buyerName).font(.subheadline.weight(.semibold)); Spacer(); Text(b.status.label).font(MFont.caption).foregroundStyle(MColor.textSecondary) }
                             Text("\(b.kind.label)\(b.minutes > 0 ? " · \(b.minutes) min" : "") · \((Double(b.amountMinor) / 100).formatted(.currency(code: b.currency).precision(.fractionLength(0)))) · \(b.startsAt.formatted(date: .abbreviated, time: .shortened))").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                             if !b.note.isEmpty { Text("“\(b.note)”").font(MFont.caption) }
-                            if b.status == .requested {
+                            if b.status == .asked {
+                                Button("Name your price") { quoting = b }.buttonStyle(GlassButtonStyle(filled: true)).accessibilityIdentifier("quote-\(b.id)")
+                            } else if b.status == .quoted {
+                                Text("Waiting for them to accept \((Double(b.amountMinor) / 100).formatted(.currency(code: b.currency).precision(.fractionLength(0))))").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                            } else if b.status == .requested {
                                 HStack(spacing: MSpacing.s) {
                                     Button("Accept") { Task { await env.social.setBooking(b.id, .accepted) } }.buttonStyle(GlassButtonStyle(filled: true)).accessibilityIdentifier("accept-\(b.id)")
                                     Button("Decline") { Task { await env.social.setBooking(b.id, .declined) } }.buttonStyle(GlassButtonStyle())
@@ -489,15 +516,101 @@ struct BookingsView: View {
             Section("You booked") {
                 if theirs.isEmpty { Text("Nothing yet.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
                 ForEach(theirs) { b in
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         HStack { Text(b.creatorName).font(.subheadline.weight(.semibold)); Spacer(); Text(b.status.label).font(MFont.caption).foregroundStyle(b.status == .accepted ? MColor.success : MColor.textSecondary) }
-                        Text("\(b.kind.label) · \(b.startsAt.formatted(date: .abbreviated, time: .shortened))").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                        Text("\(b.kind.label)\(b.kind.hasDuration ? " · \(b.startsAt.formatted(date: .abbreviated, time: .shortened))" : "")").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                        if b.status == .quoted {
+                            HStack(spacing: MSpacing.s) {
+                                Button("Pay \((Double(b.amountMinor) / 100).formatted(.currency(code: b.currency).precision(.fractionLength(0))))") { Task { await env.social.acceptQuote(b) } }
+                                    .buttonStyle(GlassButtonStyle(filled: true)).accessibilityIdentifier("payQuote-\(b.id)")
+                                Button("No thanks") { Task { await env.social.setBooking(b.id, .declined) } }.buttonStyle(GlassButtonStyle())
+                            }
+                        }
                     }
                 }
             }
         }
         .scrollContentBackground(.hidden).background(LiquidBackdrop(tint: .orange))
-        .navigationTitle("Bookings")
+        .navigationTitle("Requests")
+        .sheet(item: $quoting) { b in QuoteSheet(booking: b) }
         .task { await env.social.refreshStorefront() }
+    }
+}
+
+/// Ask for something that isn't on the menu. No price yet — the creator answers with one.
+struct AskSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let creatorID: String
+    let creatorName: String
+    @State private var kind: BookingOffer.Kind = .photo
+    @State private var note = ""
+    @State private var when = Date().addingTimeInterval(86400)
+    @State private var sent = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MSpacing.l) {
+            Text("Ask \(creatorName.split(separator: " ").first.map(String.init) ?? creatorName)").font(MFont.title)
+            Text("Say what you want. They'll name a price for it — you pay only if you accept.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: MSpacing.s) {
+                    ForEach(BookingOffer.Kind.allCases, id: \.self) { k in
+                        Button { kind = k } label: { Label(k.label, systemImage: k.symbol) }
+                            .buttonStyle(ChipButtonStyle(prominent: kind == k))
+                            .accessibilityIdentifier("ask-\(k.rawValue)")
+                    }
+                }
+            }
+            TextField(kind == .photo ? "What photo?" : "What do you have in mind?", text: $note, axis: .vertical)
+                .lineLimit(2...5).padding(MSpacing.m).glass(radius: 14).accessibilityIdentifier("askNote")
+            if kind.hasDuration { DatePicker("When", selection: $when, in: Date()...).datePickerStyle(.compact) }
+            Spacer(minLength: 0)
+            if sent {
+                Label("Asked. You'll get a price in your chat.", systemImage: "checkmark.seal.fill").font(MFont.headline)
+                Button("Done") { dismiss() }.buttonStyle(PrimaryButtonStyle())
+            } else {
+                Button { Task { if await env.social.ask(creatorID, kind: kind, note: note, startsAt: when) != nil { sent = true; Haptics.saved() } } } label: {
+                    if env.social.busy { ProgressView().tint(.white) } else { Text("Ask for a price") }
+                }
+                .buttonStyle(PrimaryButtonStyle()).disabled(note.isBlank || env.social.busy).accessibilityIdentifier("sendAsk")
+                Text("Nothing is charged now. They can decline, and so can you when you see the price.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+            }
+        }
+        .padding(MSpacing.page).background(LiquidBackdrop(tint: .orange))
+        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+        .modifier(SocialErrorAlert())
+    }
+}
+
+/// The creator's answer: a price for that one request.
+struct QuoteSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let booking: Booking
+    @State private var price = ""
+    @State private var note = ""
+    var body: some View {
+        VStack(alignment: .leading, spacing: MSpacing.l) {
+            Text("Name your price").font(MFont.title)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(booking.buyerName) asked for \(booking.kind.label.lowercased())").font(MFont.headline)
+                if !booking.note.isEmpty { Text("“\(booking.note)”").font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
+            }
+            .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass(radius: 14)
+            HStack(spacing: MSpacing.s) {
+                Text("₹").font(MFont.hero).foregroundStyle(MColor.textSecondary)
+                TextField("0", text: $price).keyboardType(.numberPad).font(MFont.hero).accessibilityIdentifier("quotePrice")
+            }
+            .padding(.horizontal, MSpacing.l).padding(.vertical, MSpacing.m).glass(radius: 16)
+            TextField("Anything to add", text: $note, axis: .vertical).lineLimit(1...3).padding(MSpacing.m).glass(radius: 14)
+            Spacer(minLength: 0)
+            Button { Task { if await env.social.quote(booking, amountMinor: (Int(price.filter(\.isNumber)) ?? 0) * 100, note: note) != nil { dismiss() } } } label: { Text("Send price").frame(maxWidth: .infinity) }
+                .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled((Int(price.filter(\.isNumber)) ?? 0) == 0).accessibilityIdentifier("sendQuote")
+            Button("Decline", role: .destructive) { Task { await env.social.setBooking(booking.id, .declined); dismiss() } }.frame(maxWidth: .infinity)
+            Text("You keep \(Int((1 - CreatorEconomics.platformFee) * 100))% on card checkout. They pay only if they accept.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+        }
+        .padding(MSpacing.page).background(LiquidBackdrop(tint: .orange))
+        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+        .modifier(SocialErrorAlert())
     }
 }

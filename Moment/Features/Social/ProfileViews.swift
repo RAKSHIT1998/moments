@@ -383,7 +383,7 @@ struct SocialProfileView: View {
                     HStack {
                         Text("SUBSCRIPTION").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
                         Spacer()
-                        Text("\(env.social.price(for: plan.tier)) / 30 days").font(.subheadline.weight(.bold)).foregroundStyle(MColor.textPrimary)
+                        Text("\(plan.priceLabel()) / 30 days").font(.subheadline.weight(.bold)).foregroundStyle(MColor.textPrimary)
                     }
                     Text(plan.title).font(MFont.headline)
                     if !plan.pitch.isEmpty { Text(plan.pitch).font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
@@ -405,7 +405,7 @@ struct SocialProfileView: View {
                     HStack(spacing: MSpacing.m) {
                         Image(systemName: env.social.isSubscribed(to: userID) ? "checkmark.seal.fill" : "crown.fill").foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(env.social.isSubscribed(to: userID) ? "Subscribed" : "Subscribe · \(env.social.price(for: plan.tier)) / 30 days").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                            Text(env.social.isSubscribed(to: userID) ? "Subscribed" : "Subscribe · \(plan.priceLabel()) / 30 days").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
                             Text(plan.title).font(MFont.caption).foregroundStyle(MColor.textSecondary)
                         }
                         Spacer()

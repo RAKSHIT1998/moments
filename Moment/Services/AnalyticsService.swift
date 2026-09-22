@@ -52,6 +52,8 @@ final class AnalyticsService {
         case setPublished = "set_published"
         case setPurchased = "set_purchased"
         case bookingRequested = "booking_requested"
+        case requestAsked = "request_asked"
+        case captureAttempt = "capture_attempt"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

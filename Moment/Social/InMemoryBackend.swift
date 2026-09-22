@@ -415,16 +415,27 @@ actor InMemoryBackend: SocialBackend {
         offers[x.id] = x; return x
     }
     func deleteBookingOffer(id: String) async throws { try gate(); guard offers[id]?.creatorID == me.id else { throw SocialError.notAllowed }; offers[id] = nil }
-    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
-        try gate(); guard let o = offers[offerID], o.creatorID == creatorID, creatorID != me.id, o.active else { throw SocialError.notAllowed }
-        let b = Booking(id: "bk_\(UUID().uuidString)", offerID: offerID, creatorID: creatorID, creatorName: o.creatorName, buyerID: me.id, buyerName: me.displayName, kind: o.kind, minutes: o.minutes, amountMinor: o.priceMinor, currency: o.currency, startsAt: startsAt, status: .requested, note: note, rail: rail, reference: reference, roomID: "", createdAt: .now)
+    func requestBooking(offerID: String, creatorID: String, kind: BookingOffer.Kind, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
+        try gate(); guard creatorID != me.id else { throw SocialError.notAllowed }
+        let offer = offers[offerID]
+        if !offerID.isEmpty { guard let o = offer, o.creatorID == creatorID, o.active else { throw SocialError.notAllowed } }
+        let name = offer?.creatorName ?? users[creatorID]?.displayName ?? creatorID
+        let b = Booking(id: "bk_\(UUID().uuidString)", offerID: offerID, creatorID: creatorID, creatorName: name, buyerID: me.id, buyerName: me.displayName, kind: offer?.kind ?? kind, minutes: offer?.minutes ?? 0, amountMinor: offer?.priceMinor ?? 0, currency: offer?.currency ?? "INR", startsAt: startsAt, status: offer == nil ? .asked : .requested, note: note, rail: rail, reference: reference, roomID: "", createdAt: .now)
         bookings.append(b); return b
+    }
+    func quoteBooking(id: String, amountMinor: Int, currency: String, note: String) async throws -> Booking {
+        try gate(); guard let i = bookings.firstIndex(where: { $0.id == id }), bookings[i].creatorID == me.id, bookings[i].status == .asked else { throw SocialError.notAllowed }
+        bookings[i].amountMinor = amountMinor; bookings[i].currency = currency; bookings[i].status = .quoted
+        if !note.isBlank { bookings[i].note = bookings[i].note.isBlank ? note : bookings[i].note + "\n— " + note }
+        return bookings[i]
     }
     func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking {
         try gate(); guard let i = bookings.firstIndex(where: { $0.id == id }) else { throw SocialError.notFound }
         let b = bookings[i]
-        // The creator accepts or declines; either side can mark it done or refunded.
-        guard b.creatorID == me.id || (b.buyerID == me.id && (status == .done || status == .refunded)) else { throw SocialError.notAllowed }
+        // The creator accepts or declines; the buyer commits to a quote or walks away; either can close it.
+        let buyerMay: Set<Booking.Status> = [.requested, .declined, .done, .refunded]
+        guard b.creatorID == me.id || (b.buyerID == me.id && buyerMay.contains(status)) else { throw SocialError.notAllowed }
+        if status == .requested { guard b.status == .quoted, b.buyerID == me.id else { throw SocialError.notAllowed } }
         bookings[i].status = status
         if status == .accepted, bookings[i].roomID.isEmpty { bookings[i].roomID = "room_\(UUID().uuidString.prefix(12))" }
         return bookings[i]
@@ -602,8 +613,8 @@ actor InMemoryBackend: SocialBackend {
         add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), cover: "demo_223", contribs: [("u_public", .photo, "Bar", 0, "demo_195"), ("u_rahul", .photo, "Cocktails", 40, "demo_113")])
         add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), cover: "demo_92", contribs: [(me.id, .photo, "Anjuna", 0, "demo_200"), ("u_rahul", .photo, "Same beach", 30, "demo_215")])
         add("m_marine", creator: "u_public", title: "Marine Drive, 6am", desc: "Sunday run club. Before the city wakes up.", daysAgo: 0, members: ["u_public", "u_dev"], place: "Marine Drive", vis: .publicAll, color: UIColor(red: 0.3, green: 0.5, blue: 0.7, alpha: 1), cover: "demo_176", isLive: true, contribs: [("u_public", .photo, "First light", 0, "demo_176"), ("u_dev", .photo, "Coffee after", 45, "demo_30")])
-        plans["u_public"] = CreatorPlan(creatorID: "u_public", creatorName: "Sunset Society", title: "The raw frames", pitch: "Every full-resolution frame from every Friday, before the edit. Prints at cost.", tier: .t2, perks: ["Full-res photos, same night", "Vote on next week's spot", "Prints at cost"], payoutHint: "", createdAt: .now.adding(days: -60))
-        plans["u_sarah"] = CreatorPlan(creatorID: "u_sarah", creatorName: "Sarah Kim", title: "Sarah's kitchen", pitch: "The recipes behind the photos. One a week, no ads, no scrolling past a life story.", tier: .t1, perks: ["Weekly recipe with photos", "Ask me anything Sundays"], payoutHint: "", createdAt: .now.adding(days: -30))
+        plans["u_public"] = CreatorPlan(creatorID: "u_public", creatorName: "Sunset Society", title: "The raw frames", pitch: "Every full-resolution frame from every Friday, before the edit. Prints at cost.", priceMinor: 39900, currency: "INR", perks: ["Full-res photos, same night", "Vote on next week's spot", "Prints at cost"], payoutHint: "", createdAt: .now.adding(days: -60))
+        plans["u_sarah"] = CreatorPlan(creatorID: "u_sarah", creatorName: "Sarah Kim", title: "Sarah's kitchen", pitch: "The recipes behind the photos. One a week, no ads, no scrolling past a life story.", priceMinor: 14900, currency: "INR", perks: ["Weekly recipe with photos", "Ask me anything Sundays"], payoutHint: "", createdAt: .now.adding(days: -30))
         add("m_raw", creator: "u_public", title: "Versova, the raw frames", desc: "Friday's full set. Subscribers only.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .subscribers, color: UIColor(red: 0.9, green: 0.5, blue: 0.3, alpha: 1), cover: "demo_213", contribs: [("u_public", .photo, "Frame 1", 0, "demo_213"), ("u_public", .photo, "Frame 2", 3, "demo_110"), ("u_public", .photo, "Frame 3", 5, "demo_173"), ("u_public", .photo, "Frame 4", 9, "demo_270")])
         add("m_recipe", creator: "u_sarah", title: "Tonkotsu, the long way", desc: "18 hours. Worth it.", daysAgo: 1, members: ["u_sarah"], place: "Lower Parel", vis: .subscribers, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), cover: "demo_312", contribs: [("u_sarah", .photo, "The broth", 0, "demo_312"), ("u_sarah", .photo, "Aromatics", 20, "demo_292"), ("u_sarah", .text, "Roast the bones first. Everyone skips this.", 30, nil)])
         subs = [
@@ -637,6 +648,7 @@ actor InMemoryBackend: SocialBackend {
         set("set_sarah_kitchen", "u_sarah", "Kitchen, close up", "Eighteen hours of broth in twelve photos.", 19900, "demo_312", ["demo_312", "demo_292", "demo_225"])
         offers["offer_call_sunsets"] = BookingOffer(id: "offer_call_sunsets", creatorID: "u_public", creatorName: "Sunset Society", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "Fifteen minutes, camera on, ask me anything about the shoot.", active: true)
         offers["offer_custom_sarah"] = BookingOffer(id: "offer_custom_sarah", creatorID: "u_sarah", creatorName: "Sarah Kim", kind: .custom, minutes: 0, priceMinor: 29900, currency: "INR", note: "A recipe shot the way you want it.", active: true)
+        bookings = [Booking(id: "bk_demo_ask", offerID: "", creatorID: me.id, creatorName: me.displayName, buyerID: "u_dev", buyerName: "Dev Patel", kind: .photo, minutes: 0, amountMinor: 0, currency: "INR", startsAt: .now.adding(days: 2), status: .asked, note: "A shot of the pier at 6:40 — the one you didn't post?", rail: .web, reference: nil, roomID: "", createdAt: .now.addingTimeInterval(-5400))]
         links["u_public"] = CreatorLinks(instagram: "sunsetsociety", x: "", tiktok: "sunsetsociety", youtube: "", website: "sunsetsociety.example")
         links["u_sarah"] = CreatorLinks(instagram: "sarahkimeats", x: "sarahkimeats", tiktok: "", youtube: "", website: "")
         likes = [DatingLike(id: "like_mira", fromID: "u_mira", fromName: "Mira Shah", toID: me.id, note: "You were at Versova last Friday too — the one with the birds?", promptQuestion: nil, createdAt: .now.addingTimeInterval(-3600))]

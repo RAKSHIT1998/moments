@@ -120,7 +120,7 @@ struct CreatorPostCard: View {
             .buttonStyle(.plain).accessibilityIdentifier("unlockPost-\(post.id)")
         case .subscribe(let tier, _):
             Button(action: onSubscribe) {
-                Text("Subscribe · \(env.social.price(for: tier))")
+                Text("Subscribe · \(env.social.plan(for: post.creatorID)?.priceLabel() ?? "")")
                     .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
                     .padding(.horizontal, 22).padding(.vertical, 12)
                     .background(Capsule().fill(MColor.accent))
@@ -155,7 +155,7 @@ struct SuggestedCreatorsRow: View {
         var seen: Set<String> = [env.social.myID]
         var out: [(String, String, String?)] = []
         for s in env.social.setsByCreator.values.flatMap({ $0 }).sorted(by: { $0.createdAt > $1.createdAt }) where seen.insert(s.creatorID).inserted {
-            out.append((s.creatorID, s.creatorName, env.social.plan(for: s.creatorID).map { env.social.price(for: $0.tier) }))
+            out.append((s.creatorID, s.creatorName, env.social.plan(for: s.creatorID).map { $0.priceLabel() }))
         }
         return out
     }
