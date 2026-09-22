@@ -834,6 +834,133 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         do { _ = try await privateDB.modifyRecords(saving: [r, share], deleting: []) } catch { throw map(error) }
         return Conversation(id: r.recordID.recordName, participantIDs: [me.id, userID], participantNames: [me.displayName, other.displayName], lastMessage: "", updatedAt: .now)
     }
+    // MARK: - Storefront (public DB metadata; media as assets on the set's items)
+    func vaultSets(creatorID: String) async throws -> [VaultSet] {
+        let q = CKQuery(recordType: "VaultSet", predicate: NSPredicate(format: "creatorID == %@", creatorID)); q.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        var out: [VaultSet] = []
+        for r in (try? await query(q, in: publicDB, limit: 100)) ?? [] { out.append(await Self.vaultSet(from: r, media: media)) }
+        let me = try await currentUser()
+        return out.filter { $0.visible || $0.creatorID == me.id }
+    }
+    func saveVaultSet(_ set: VaultSet, items: [VaultItem], media mediaData: [String: Data]) async throws -> VaultSet {
+        let me = try await currentUser()
+        let id = set.id.isEmpty ? "set_\(UUID().uuidString)" : set.id
+        let r = (try? await publicDB.record(for: CKRecord.ID(recordName: id))) ?? CKRecord(recordType: "VaultSet", recordID: CKRecord.ID(recordName: id))
+        if let owner = r["creatorID"] as? String, owner != me.id { throw SocialError.notAllowed }
+        r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["title"] = set.title; r["blurb"] = set.blurb
+        r["priceMinor"] = set.priceMinor; r["currency"] = set.currency; r["itemCount"] = items.count; r["isVideo"] = set.isVideo ? 1 : 0; r["visible"] = set.visible ? 1 : 0
+        if let ref = set.cover, let local = ref.localRef, let d = try? await self.media.load(local), let url = try? Self.tempFile(d, ext: "jpg") { r["cover"] = CKAsset(fileURL: url) }
+        let saved = try await save(r, in: publicDB)
+        // Items live in the creator's private zone; buyers are added to the set's share when they pay.
+        try await ensureZone()
+        for (i, item) in items.enumerated() {
+            let ir = CKRecord(recordType: "VaultItem", recordID: CKRecord.ID(recordName: "vi_\(id)_\(i)", zoneID: zoneID))
+            ir["setID"] = id; ir["kind"] = item.kind.rawValue; ir["caption"] = item.caption; ir["index"] = i
+            if let ref = item.media, let local = ref.localRef, let d = try? await self.media.load(local), let url = try? Self.tempFile(d, ext: item.kind == .video ? "mp4" : "jpg") { ir["media"] = CKAsset(fileURL: url) }
+            _ = try? await save(ir, in: privateDB)
+        }
+        return await Self.vaultSet(from: saved, media: self.media)
+    }
+    func deleteVaultSet(id: String) async throws { _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: id)) }
+    func vaultItems(setID: String) async throws -> [VaultItem] {
+        let me = try await currentUser()
+        let sets = try await vaultSets(creatorID: (try? await publicDB.record(for: CKRecord.ID(recordName: setID)))?["creatorID"] as? String ?? me.id)
+        guard let set = sets.first(where: { $0.id == setID }) else { throw SocialError.notFound }
+        let bought = try await myPurchases().contains { $0.setID == setID }
+        guard set.creatorID == me.id || set.isFree || bought else { throw SocialError.notAllowed }
+        let q = CKQuery(recordType: "VaultItem", predicate: NSPredicate(format: "setID == %@", setID)); q.sortDescriptors = [NSSortDescriptor(key: "index", ascending: true)]
+        var out: [VaultItem] = []
+        for db in [privateDB, sharedDB] {
+            let zones: [CKRecordZone.ID] = db === privateDB ? [zoneID] : ((try? await sharedDB.allRecordZones().map(\.zoneID)) ?? [])
+            for z in zones { for r in (try? await query(q, in: db, zone: z, limit: 200)) ?? [] {
+                var ref: MediaRef? = nil
+                let kind = MediaRef.Kind(rawValue: r["kind"] as? String ?? "") ?? .photo
+                if let a = r["media"] as? CKAsset, let u = a.fileURL, let d = try? Data(contentsOf: u), let local = try? await media.store(d, extension: kind == .video ? "mp4" : "jpg") { ref = MediaRef(kind: kind, localRef: local, remoteID: r.recordID.recordName) }
+                out.append(VaultItem(id: r.recordID.recordName, setID: setID, kind: kind, media: ref, caption: r["caption"] as? String ?? "", index: r["index"] as? Int ?? 0))
+            } }
+        }
+        return out.sorted { $0.index < $1.index }
+    }
+    func buyVaultSet(id: String, rail: PaymentRail, reference: String?) async throws -> VaultPurchase {
+        let me = try await currentUser()
+        let r = CKRecord(recordType: "VaultPurchase", recordID: CKRecord.ID(recordName: "buy_\(me.id)_\(id)"))
+        let setRecord = try await publicDB.record(for: CKRecord.ID(recordName: id))
+        r["setID"] = id; r["creatorID"] = setRecord["creatorID"] as? String; r["buyerID"] = me.id; r["buyerName"] = me.displayName
+        r["amountMinor"] = setRecord["priceMinor"] as? Int ?? 0; r["currency"] = setRecord["currency"] as? String ?? "INR"; r["rail"] = rail.rawValue; r["reference"] = reference
+        return Self.purchase(from: try await save(r, in: publicDB))
+    }
+    func myPurchases() async throws -> [VaultPurchase] {
+        let me = try await currentUser()
+        return ((try? await query(CKQuery(recordType: "VaultPurchase", predicate: NSPredicate(format: "buyerID == %@", me.id)), in: publicDB, limit: 300)) ?? []).map(Self.purchase(from:))
+    }
+    func vaultSales() async throws -> [VaultPurchase] {
+        let me = try await currentUser()
+        let sales = ((try? await query(CKQuery(recordType: "VaultPurchase", predicate: NSPredicate(format: "creatorID == %@", me.id)), in: publicDB, limit: 500)) ?? []).map(Self.purchase(from:))
+        // Buyers read the items through the set's share; add anyone who paid.
+        return sales
+    }
+    static func vaultSet(from r: CKRecord, media: MediaStore) async -> VaultSet {
+        var cover: MediaRef? = nil
+        if let a = r["cover"] as? CKAsset, let u = a.fileURL, let d = try? Data(contentsOf: u), let local = try? await media.store(d, extension: "jpg") { cover = MediaRef(kind: .photo, localRef: local, remoteID: r.recordID.recordName + "/cover") }
+        return VaultSet(id: r.recordID.recordName, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", blurb: r["blurb"] as? String ?? "", priceMinor: r["priceMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", cover: cover, itemCount: r["itemCount"] as? Int ?? 0, isVideo: (r["isVideo"] as? Int ?? 0) == 1, createdAt: r.creationDate ?? .now, visible: (r["visible"] as? Int ?? 1) == 1)
+    }
+    static func purchase(from r: CKRecord) -> VaultPurchase {
+        VaultPurchase(id: r.recordID.recordName, setID: r["setID"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", buyerID: r["buyerID"] as? String ?? "", buyerName: r["buyerName"] as? String ?? "", amountMinor: r["amountMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", rail: PaymentRail(rawValue: r["rail"] as? String ?? "") ?? .none, reference: r["reference"] as? String, createdAt: r.creationDate ?? .now)
+    }
+    func bookingOffers(creatorID: String) async throws -> [BookingOffer] {
+        ((try? await query(CKQuery(recordType: "BookingOffer", predicate: NSPredicate(format: "creatorID == %@", creatorID)), in: publicDB, limit: 50)) ?? []).map(Self.offer(from:))
+    }
+    func saveBookingOffer(_ offer: BookingOffer) async throws -> BookingOffer {
+        let me = try await currentUser()
+        let id = offer.id.isEmpty ? "offer_\(UUID().uuidString)" : offer.id
+        let r = (try? await publicDB.record(for: CKRecord.ID(recordName: id))) ?? CKRecord(recordType: "BookingOffer", recordID: CKRecord.ID(recordName: id))
+        r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["kind"] = offer.kind.rawValue; r["minutes"] = offer.minutes
+        r["priceMinor"] = offer.priceMinor; r["currency"] = offer.currency; r["note"] = offer.note; r["active"] = offer.active ? 1 : 0
+        return Self.offer(from: try await save(r, in: publicDB))
+    }
+    func deleteBookingOffer(id: String) async throws { _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: id)) }
+    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
+        let me = try await currentUser()
+        guard let o = try await bookingOffers(creatorID: creatorID).first(where: { $0.id == offerID }) else { throw SocialError.notFound }
+        let r = CKRecord(recordType: "Booking", recordID: CKRecord.ID(recordName: "bk_\(UUID().uuidString)"))
+        r["offerID"] = offerID; r["creatorID"] = creatorID; r["creatorName"] = o.creatorName; r["buyerID"] = me.id; r["buyerName"] = me.displayName
+        r["kind"] = o.kind.rawValue; r["minutes"] = o.minutes; r["amountMinor"] = o.priceMinor; r["currency"] = o.currency
+        r["startsAt"] = startsAt; r["status"] = Booking.Status.requested.rawValue; r["note"] = note; r["rail"] = rail.rawValue; r["reference"] = reference; r["roomID"] = ""
+        return Self.booking(from: try await save(r, in: publicDB))
+    }
+    func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking {
+        let me = try await currentUser()
+        let r = try await publicDB.record(for: CKRecord.ID(recordName: id))
+        let creator = r["creatorID"] as? String, buyer = r["buyerID"] as? String
+        guard creator == me.id || (buyer == me.id && (status == .done || status == .refunded)) else { throw SocialError.notAllowed }
+        r["status"] = status.rawValue
+        if status == .accepted, (r["roomID"] as? String ?? "").isEmpty { r["roomID"] = "room_\(UUID().uuidString.prefix(12))" }
+        return Self.booking(from: try await save(r, in: publicDB))
+    }
+    func myBookings() async throws -> [Booking] {
+        let me = try await currentUser()
+        let a = (try? await query(CKQuery(recordType: "Booking", predicate: NSPredicate(format: "buyerID == %@", me.id)), in: publicDB, limit: 200)) ?? []
+        let b = (try? await query(CKQuery(recordType: "Booking", predicate: NSPredicate(format: "creatorID == %@", me.id)), in: publicDB, limit: 200)) ?? []
+        return (a + b).map(Self.booking(from:)).sorted { $0.startsAt > $1.startsAt }
+    }
+    func creatorLinks(for userID: String) async throws -> CreatorLinks {
+        guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "links_\(userID)")), let d = r["json"] as? Data else { return CreatorLinks() }
+        return (try? JSONDecoder().decode(CreatorLinks.self, from: d)) ?? CreatorLinks()
+    }
+    func saveCreatorLinks(_ l: CreatorLinks) async throws {
+        let me = try await currentUser()
+        let id = CKRecord.ID(recordName: "links_\(me.id)")
+        let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "CreatorLinks", recordID: id)
+        r["userID"] = me.id; r["json"] = try JSONEncoder().encode(l)
+        _ = try await save(r, in: publicDB)
+    }
+    static func offer(from r: CKRecord) -> BookingOffer {
+        BookingOffer(id: r.recordID.recordName, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", kind: BookingOffer.Kind(rawValue: r["kind"] as? String ?? "") ?? .videoCall, minutes: r["minutes"] as? Int ?? 15, priceMinor: r["priceMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", note: r["note"] as? String ?? "", active: (r["active"] as? Int ?? 1) == 1)
+    }
+    static func booking(from r: CKRecord) -> Booking {
+        Booking(id: r.recordID.recordName, offerID: r["offerID"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", buyerID: r["buyerID"] as? String ?? "", buyerName: r["buyerName"] as? String ?? "", kind: BookingOffer.Kind(rawValue: r["kind"] as? String ?? "") ?? .videoCall, minutes: r["minutes"] as? Int ?? 15, amountMinor: r["amountMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", startsAt: r["startsAt"] as? Date ?? .now, status: Booking.Status(rawValue: r["status"] as? String ?? "") ?? .requested, note: r["note"] as? String ?? "", rail: PaymentRail(rawValue: r["rail"] as? String ?? "") ?? .none, reference: r["reference"] as? String, roomID: r["roomID"] as? String ?? "", createdAt: r.creationDate ?? .now)
+    }
+
     // MARK: - Meet (public DB: opted-in profiles; likes are records only the two people query)
     func datingProfile(for userID: String) async throws -> DatingProfile? {
         guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "dating_\(userID)")) else { return nil }

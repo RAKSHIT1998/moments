@@ -129,6 +129,24 @@ protocol SocialBackend: AnyObject, Sendable {
     func passedUserIDs() async throws -> [String]
     func likesReceived() async throws -> [DatingLike]
     func likesSent() async throws -> [DatingLike]
+    // Storefront
+    func vaultSets(creatorID: String) async throws -> [VaultSet]
+    func saveVaultSet(_ set: VaultSet, items: [VaultItem], media: [String: Data]) async throws -> VaultSet
+    func deleteVaultSet(id: String) async throws
+    /// The items inside a set. Throws `.notAllowed` unless it's free, mine, or I've bought it.
+    func vaultItems(setID: String) async throws -> [VaultItem]
+    func buyVaultSet(id: String, rail: PaymentRail, reference: String?) async throws -> VaultPurchase
+    func myPurchases() async throws -> [VaultPurchase]
+    /// Sales of my sets.
+    func vaultSales() async throws -> [VaultPurchase]
+    func bookingOffers(creatorID: String) async throws -> [BookingOffer]
+    func saveBookingOffer(_ offer: BookingOffer) async throws -> BookingOffer
+    func deleteBookingOffer(id: String) async throws
+    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking
+    func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking
+    func myBookings() async throws -> [Booking]
+    func creatorLinks(for userID: String) async throws -> CreatorLinks
+    func saveCreatorLinks(_ links: CreatorLinks) async throws
     func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip
     /// Tips I've received.
     func tips() async throws -> [CreatorTip]

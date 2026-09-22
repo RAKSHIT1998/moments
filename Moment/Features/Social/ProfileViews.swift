@@ -71,7 +71,7 @@ struct SocialProfileView: View {
                 }
             }
         }
-        .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims(); await env.social.refreshCreator() } else { await env.social.loadCreatorPlan(userID) } }
+        .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims(); await env.social.refreshCreator(); await env.social.refreshStorefront() } else { await env.social.loadCreatorPlan(userID); await env.social.loadStorefront(userID) } }
         .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
         .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
         .fullScreenCover(isPresented: $showMemories) { PrivateMemoryHubView() }
@@ -136,6 +136,16 @@ struct SocialProfileView: View {
                     .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
                 }
                 .buttonStyle(.plain).glass(radius: 12, tint: .pink).accessibilityIdentifier("meetProfileLink")
+                NavigationLink(value: SocialRoute.studio) {
+                    HStack(spacing: MSpacing.s) {
+                        Image(systemName: "bag.fill").foregroundStyle(.orange)
+                        Text(env.social.mySets.isEmpty ? "Sell your photos and your time" : "Studio · \(env.social.mySets.count) \(env.social.mySets.count == 1 ? "set" : "sets")")
+                        Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                    }
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
+                }
+                .buttonStyle(.plain).glass(radius: 12, tint: .orange).accessibilityIdentifier("studioLink")
             }
         }
         .accessibilityElement(children: .contain)
@@ -328,6 +338,29 @@ struct SocialProfileView: View {
                     Button(user?.isPrivateAccount == true ? "Request to follow" : "Follow") { Task { await env.social.follow(userID) } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("followToggle")
                 }
                 Button { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } } label: { Label("Message", systemImage: "bubble") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("messageButton")
+            }
+            if !env.social.sets(of: userID).isEmpty || !env.social.offers(of: userID).filter(\.active).isEmpty {
+                NavigationLink(value: SocialRoute.storefront(userID)) {
+                    HStack(spacing: MSpacing.m) {
+                        Image(systemName: "bag.fill").foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Shop").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                            Text("\(env.social.sets(of: userID).count) sets\(env.social.offers(of: userID).filter(\.active).isEmpty ? "" : " · books time")").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                        }
+                        Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                    }
+                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
+                }
+                .buttonStyle(.plain).glass(radius: 14, tint: .orange).accessibilityIdentifier("shopLink")
+            }
+            if !env.social.links(of: userID).all.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: MSpacing.s) {
+                        ForEach(env.social.links(of: userID).all, id: \.url) { label, handle, url in
+                            Link(destination: url) { HStack(spacing: 5) { Image(systemName: "link"); Text(handle) }.font(MFont.caption).padding(.horizontal, 10).padding(.vertical, 6) }.glassPill()
+                        }
+                    }
+                }
             }
             if let plan = env.social.plan(for: userID) {
                 Button { if !env.social.isSubscribed(to: userID) { showSubscribe = true } } label: {

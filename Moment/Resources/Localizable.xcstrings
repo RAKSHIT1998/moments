@@ -127,6 +127,9 @@
     "%@ is typing" : {
 
     },
+    "%@ isn't selling anything yet." : {
+
+    },
     "%@ joined" : {
 
     },
@@ -142,6 +145,16 @@
     },
     "%@ says you were there" : {
 
+    },
+    "%@ sets the price and keeps %lld%% on card checkout. Media stays on their storage; buying gets you the key, not a copy from us." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ sets the price and keeps %2$lld%% on card checkout. Media stays on their storage; buying gets you the key, not a copy from us."
+          }
+        }
+      }
     },
     "%@ wants %@" : {
       "localizations" : {
@@ -246,6 +259,16 @@
         }
       }
     },
+    "%@%@ · %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$@ · %3$@ · %4$@"
+          }
+        }
+      }
+    },
     "%@%lld %@ · %lld people" : {
       "localizations" : {
         "en" : {
@@ -299,6 +322,36 @@
         }
       }
     },
+    "%lld %@ · %lld sides" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$lld sides"
+          }
+        }
+      }
+    },
+    "%lld %@ · %lld subscribers · %lld booked" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$lld subscribers · %4$lld booked"
+          }
+        }
+      }
+    },
+    "%lld %@ from %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ from %3$@"
+          }
+        }
+      }
+    },
     "%lld %@ together" : {
       "localizations" : {
         "en" : {
@@ -345,6 +398,9 @@
     "%lld all time" : {
 
     },
+    "%lld chosen" : {
+
+    },
     "%lld in" : {
 
     },
@@ -359,6 +415,9 @@
       }
     },
     "%lld items" : {
+
+    },
+    "%lld minutes" : {
 
     },
     "%lld minutes with nothing in the Moment." : {
@@ -449,6 +508,16 @@
     "%lld selected" : {
 
     },
+    "%lld sets%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sets%2$@"
+          }
+        }
+      }
+    },
     "%lld shared moments · make it a Moment" : {
 
     },
@@ -462,7 +531,20 @@
         }
       }
     },
+    "%lld sides from %lld %@, in order. It grows as people add." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sides from %2$lld %3$@, in order. It grows as people add."
+          }
+        }
+      }
+    },
     "%lld uploads need a retry" : {
+
+    },
+    "%lld waiting" : {
 
     },
     "%lld/6 chosen" : {
@@ -511,6 +593,9 @@
     "A group is a private space for the people you keep making Moments with." : {
 
     },
+    "A line about it" : {
+
+    },
     "A line about it (optional)" : {
 
     },
@@ -532,6 +617,9 @@
     "A one-off. They get %lld%% of what's left after the App Store." : {
 
     },
+    "A reel appears when a night has three sides in it — or when someone adds a video. Add yours and the cut updates for everyone." : {
+
+    },
     "About" : {
 
     },
@@ -539,6 +627,9 @@
 
     },
     "About MOMENT" : {
+
+    },
+    "Accept" : {
 
     },
     "Active" : {
@@ -679,8 +770,21 @@
     "Anyone with the QR can join" : {
 
     },
+    "Anything they should know" : {
+
+    },
     "Anything you want to remember" : {
 
+    },
+    "App Store: Apple takes %lld%% first, then you keep %lld%% of what's left. Card checkout is the %lld%% rail." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "App Store: Apple takes %1$lld%% first, then you keep %2$lld%% of what's left. Card checkout is the %3$lld%% rail."
+          }
+        }
+      }
     },
     "Appearance" : {
 
@@ -748,6 +852,9 @@
     "Blocked people (%lld)" : {
 
     },
+    "Bookings" : {
+
+    },
     "Born" : {
 
     },
@@ -755,6 +862,9 @@
 
     },
     "Business name" : {
+
+    },
+    "Buy · %@" : {
 
     },
     "Cafés, bars, beaches, venues near you." : {
@@ -781,6 +891,16 @@
     "Capture something real — a plan, a promise, something a friend wants. Watch MOMENT understand it." : {
 
     },
+    "Card checkout: you keep %lld%% — MOMENT takes %lld%%, your processor takes its own cut." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Card checkout: you keep %1$lld%% — MOMENT takes %2$lld%%, your processor takes its own cut."
+          }
+        }
+      }
+    },
     "Change" : {
 
     },
@@ -791,6 +911,9 @@
 
     },
     "Chats" : {
+
+    },
+    "Choose from your library" : {
 
     },
     "Choose photos" : {
@@ -824,6 +947,9 @@
 
     },
     "Close friend ★" : {
+
+    },
+    "Close reels" : {
 
     },
     "Cloud AI" : {
@@ -937,6 +1063,9 @@
     "Dates come from your photos." : {
 
     },
+    "Decline" : {
+
+    },
     "Delete" : {
 
     },
@@ -1024,6 +1153,12 @@
     "Edit profile" : {
 
     },
+    "Edit set" : {
+
+    },
+    "ELSEWHERE" : {
+
+    },
     "End" : {
 
     },
@@ -1059,6 +1194,9 @@
 
     },
     "Everyone who was invited loses access. Their own photos stay on their phones." : {
+
+    },
+    "Everyone's cut" : {
 
     },
     "Everything about %@" : {
@@ -1173,6 +1311,9 @@
         }
       }
     },
+    "Free sets are how people find you." : {
+
+    },
     "Friends you follow back see this. Your exact location is never shared." : {
 
     },
@@ -1246,10 +1387,16 @@
     "Groups" : {
 
     },
+    "Grows as people add" : {
+
+    },
     "handle" : {
 
     },
     "Handle" : {
+
+    },
+    "Handles" : {
 
     },
     "Happening here" : {
@@ -1358,6 +1505,9 @@
 
     },
     "Inbox" : {
+
+    },
+    "Instagram" : {
 
     },
     "Intelligence" : {
@@ -1793,6 +1943,12 @@
     "New name" : {
 
     },
+    "New offer" : {
+
+    },
+    "New set" : {
+
+    },
     "New subscribers-only Moment" : {
 
     },
@@ -1854,6 +2010,9 @@
 
     },
     "No public Moments within %lld km yet. Be the first — add the place to your next one." : {
+
+    },
+    "No reels yet." : {
 
     },
     "No saved memories yet." : {
@@ -1919,6 +2078,9 @@
     "Nothing here yet." : {
 
     },
+    "Nothing is charged until they accept. They can decline; you can cancel." : {
+
+    },
     "Nothing left to save." : {
 
     },
@@ -1943,6 +2105,9 @@
     "Nothing to tidy up." : {
 
     },
+    "Nothing yet." : {
+
+    },
     "Notifications" : {
 
     },
@@ -1962,6 +2127,9 @@
 
     },
     "Off by default: notifications only say that something matters. Turn on to see the name and what it's about, e.g. “Sarah's birthday is in 7 days”." : {
+
+    },
+    "Offer" : {
 
     },
     "OK" : {
@@ -2054,6 +2222,9 @@
     "Pause" : {
 
     },
+    "Paused" : {
+
+    },
     "Payment is charged to your Apple Account at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period, and you can manage or cancel them in your Apple Account settings. Lifetime is a one-time purchase." : {
 
     },
@@ -2070,6 +2241,9 @@
 
     },
     "People around %@ see it and can join. Great for cafés, venues, public events." : {
+
+    },
+    "People booking you" : {
 
     },
     "People in it can add" : {
@@ -2159,6 +2333,9 @@
     "Post" : {
 
     },
+    "Post a free set so people can see what you make, and a paid one for the rest. You set every price." : {
+
+    },
     "Post a NOW yourself — people who are out tonight see each other here first." : {
 
     },
@@ -2175,6 +2352,9 @@
 
     },
     "PRICE · 30 DAYS" : {
+
+    },
+    "Price (₹)" : {
 
     },
     "Prices are set by the App Store in each country. Apple takes its cut on every purchase." : {
@@ -2213,6 +2393,9 @@
     "Prompts" : {
 
     },
+    "Publish set" : {
+
+    },
     "Question" : {
 
     },
@@ -2242,6 +2425,9 @@
 
     },
     "Recovery phrase" : {
+
+    },
+    "Reels" : {
 
     },
     "Regulars" : {
@@ -2334,7 +2520,13 @@
     "Reports are reviewed. The person isn't told who reported them." : {
 
     },
+    "Request · %@" : {
+
+    },
     "Request to follow" : {
+
+    },
+    "Requested. They'll confirm." : {
 
     },
     "Reset what MOMENT learned from your feedback" : {
@@ -2362,6 +2554,9 @@
 
     },
     "Ritual" : {
+
+    },
+    "Room %@" : {
 
     },
     "Run setup again" : {
@@ -2496,6 +2691,9 @@
     "Sell what you make" : {
 
     },
+    "Sell your photos and your time" : {
+
+    },
     "Send" : {
 
     },
@@ -2533,6 +2731,9 @@
 
     },
     "Set up your profile" : {
+
+    },
+    "SETS" : {
 
     },
     "Settings" : {
@@ -2631,6 +2832,9 @@
     "Show Upcoming Plans" : {
 
     },
+    "Shown on your profile. We don't check them — they're yours to claim." : {
+
+    },
     "Shows as LIVE; people can add as it happens." : {
 
     },
@@ -2689,6 +2893,9 @@
     "Start & show QR" : {
 
     },
+    "Start a Moment" : {
+
+    },
     "Start a new Moment" : {
 
     },
@@ -2713,6 +2920,19 @@
     "Stop selling?" : {
 
     },
+    "Studio" : {
+
+    },
+    "Studio · %lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Studio · %1$lld %2$@"
+          }
+        }
+      }
+    },
     "Subscribe" : {
 
     },
@@ -2734,7 +2954,13 @@
     "Subscribers pay for 30 days at a time and see every Moment you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt." : {
 
     },
+    "Subscription · %@ / 30 days" : {
+
+    },
     "Subscriptions" : {
+
+    },
+    "Subscriptions & tips" : {
 
     },
     "Summary" : {
@@ -2762,6 +2988,9 @@
 
     },
     "The boys, Family, Travel crew…" : {
+
+    },
+    "The creator made this one free." : {
 
     },
     "The file is useless without the phrase. Keep them apart." : {
@@ -2833,10 +3062,19 @@
     "Tidy up" : {
 
     },
+    "TikTok" : {
+
+    },
+    "TIME" : {
+
+    },
     "Time Machine" : {
 
     },
     "TIME MACHINE" : {
+
+    },
+    "TIME YOU SELL" : {
 
     },
     "Timeline" : {
@@ -2923,10 +3161,16 @@
     "Unlike" : {
 
     },
+    "Unlock — free" : {
+
+    },
     "Unlock · %@" : {
 
     },
     "Unlock with %@" : {
+
+    },
+    "Unlocked." : {
 
     },
     "Unmark important" : {
@@ -3016,6 +3260,12 @@
     "wants" : {
 
     },
+    "Watch the cut" : {
+
+    },
+    "Website" : {
+
+    },
     "week" : {
 
     },
@@ -3026,6 +3276,9 @@
 
     },
     "Were you there?" : {
+
+    },
+    "What" : {
 
     },
     "What are we remembering?" : {
@@ -3065,6 +3318,9 @@
 
     },
     "What spreads MOMENT" : {
+
+    },
+    "What they get" : {
 
     },
     "What to remember" : {
@@ -3157,10 +3413,16 @@
     "wss://relay.example.org" : {
 
     },
+    "X" : {
+
+    },
     "You" : {
 
     },
     "You + %@" : {
+
+    },
+    "You booked" : {
 
     },
     "You can also tell me things: “Remember that Rahul likes Japanese food.”" : {
@@ -3170,6 +3432,9 @@
 
     },
     "You had to be there." : {
+
+    },
+    "You keep %lld%% on card checkout. The photos stay on your storage — buyers get a key." : {
 
     },
     "You mentioned %@." : {
@@ -3203,6 +3468,9 @@
 
     },
     "Your first one starts here." : {
+
+    },
+    "Your handles" : {
 
     },
     "Your key is ready." : {
@@ -3256,6 +3524,9 @@
     "Your numbers" : {
 
     },
+    "Your other handles" : {
+
+    },
     "Your page, last 30 days" : {
 
     },
@@ -3281,6 +3552,9 @@
 
     },
     "Yours" : {
+
+    },
+    "YouTube" : {
 
     }
   },

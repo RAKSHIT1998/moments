@@ -49,6 +49,9 @@ final class AnalyticsService {
         case meetOptedIn = "meet_opted_in"
         case meetLiked = "meet_liked"
         case meetMatched = "meet_matched"
+        case setPublished = "set_published"
+        case setPurchased = "set_purchased"
+        case bookingRequested = "booking_requested"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

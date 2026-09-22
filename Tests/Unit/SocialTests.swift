@@ -838,3 +838,92 @@ final class ReelBuilderTests: XCTestCase {
         XCTAssertEqual(goa.sides, goa.sides.sorted { ($0.originalTimestamp ?? $0.createdAt) < ($1.originalTimestamp ?? $1.createdAt) })
     }
 }
+
+final class StorefrontEconomicsTests: XCTestCase {
+    func testTakeRatesDifferByRailAndAreNeverConflated() {
+        // ₹1000 sold on our own rail: we keep 10%.
+        XCTAssertEqual(CreatorEconomics.creatorTake(100_000, rail: .web), 900, accuracy: 0.01)
+        // Same price through Apple: Apple takes 30% first, then the app's 80/20 on the rest.
+        XCTAssertEqual(CreatorEconomics.creatorTake(100_000, rail: .appStore), 1000 * 0.7 * 0.8, accuracy: 0.01)
+        XCTAssertEqual(CreatorEconomics.creatorTake(100_000, rail: .none), 0)
+        XCTAssertGreaterThan(CreatorEconomics.creatorTake(100_000, rail: .web), CreatorEconomics.creatorTake(100_000, rail: .appStore))
+    }
+
+    func testMonthlyEstimateAddsSalesAndAcceptedBookings() {
+        let now = Date(), monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: now))!
+        let sale = VaultPurchase(id: "1", setID: "s", creatorID: "me", buyerID: "b", buyerName: "B", amountMinor: 50_000, currency: "INR", rail: .web, reference: nil, createdAt: now)
+        let old = VaultPurchase(id: "2", setID: "s", creatorID: "me", buyerID: "c", buyerName: "C", amountMinor: 50_000, currency: "INR", rail: .web, reference: nil, createdAt: monthStart.addingTimeInterval(-86400))
+        func booking(_ status: Booking.Status) -> Booking {
+            Booking(id: status.rawValue, offerID: "o", creatorID: "me", creatorName: "Me", buyerID: "b", buyerName: "B", kind: .videoCall, minutes: 15, amountMinor: 100_000, currency: "INR", startsAt: now, status: status, note: "", rail: .web, reference: nil, roomID: "", createdAt: now)
+        }
+        let total = CreatorEconomics.creatorEstimate([], tips: [], sales: [sale, old], bookings: [booking(.accepted), booking(.requested), booking(.declined)])
+        XCTAssertEqual(total, 450 + 900, accuracy: 0.01, "only this month's sales and only accepted/done bookings")
+    }
+}
+
+@MainActor
+final class StorefrontFlowTests: XCTestCase {
+    private func env() async throws -> (AppEnvironment, InMemoryBackend) {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        return (env, backend)
+    }
+
+    func testPaidSetStaysShutUntilBought() async throws {
+        let (env, backend) = try await env()
+        await env.social.loadStorefront("u_public")
+        let sets = env.social.sets(of: "u_public")
+        let free = try XCTUnwrap(sets.first { $0.isFree })
+        let paid = try XCTUnwrap(sets.first { !$0.isFree })
+        XCTAssertTrue(env.social.isUnlocked(free)); XCTAssertFalse(env.social.isUnlocked(paid))
+        // Free set opens for anyone; the paid one refuses.
+        await env.social.loadItems(free.id)
+        XCTAssertEqual(env.social.items(free.id).count, 3)
+        var refused = false
+        do { _ = try await backend.vaultItems(setID: paid.id) } catch { refused = true }
+        XCTAssertTrue(refused, "items are withheld until payment")
+        // Buy it: unlocked, and the sale shows on the creator's side with the right take.
+        let ok = await env.social.buySet(paid)
+        XCTAssertTrue(ok); XCTAssertTrue(env.social.isUnlocked(paid))
+        XCTAssertEqual(env.social.items(paid.id).count, 4)
+        var sales: [VaultPurchase] = []
+        try await backend.acting(as: "u_public") { b in sales = try await b.vaultSales() }
+        XCTAssertEqual(sales.map(\.amountMinor), [49900])
+        XCTAssertEqual(CreatorEconomics.creatorTake(sales[0].amountMinor, rail: .web), 449.1, accuracy: 0.01)
+        // Buying twice doesn't charge twice.
+        _ = await env.social.buySet(paid)
+        XCTAssertEqual(env.social.myPurchases.filter { $0.setID == paid.id }.count, 1)
+    }
+
+    func testPublishASetAndSellTimeWithLinks() async throws {
+        let (env, _) = try await env()
+        await env.social.refreshStorefront()
+        XCTAssertTrue(env.social.mySets.isEmpty)
+        let refOpt = await env.social.storeLocalMedia(UIGraphicsImageRenderer(size: .init(width: 40, height: 60)).image { c in UIColor.red.setFill(); c.fill(.init(x: 0, y: 0, width: 40, height: 60)) }.jpegData(compressionQuality: 0.8)!, kind: .photo)
+        let ref = try XCTUnwrap(refOpt)
+        let savedOpt = await env.social.saveSet(VaultSet(id: "", creatorID: "", creatorName: "", title: "Backstage", blurb: "Ten frames", priceMinor: 29900, currency: "INR", cover: ref, itemCount: 0, isVideo: false, createdAt: .now, visible: true), items: [VaultItem(id: "", setID: "", kind: .photo, media: ref, caption: "", index: 0)])
+        let set = try XCTUnwrap(savedOpt)
+        XCTAssertEqual(set.creatorID, env.social.myID); XCTAssertEqual(set.itemCount, 1); XCTAssertTrue(set.priceLabel(Locale(identifier: "en_IN")).replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: " ", with: "").hasSuffix("299"), set.priceLabel(Locale(identifier: "en_IN")))
+        XCTAssertTrue(env.social.isCreator)
+        // Time: an offer, then someone books it and I accept.
+        let offerOpt = await env.social.saveOffer(BookingOffer(id: "", creatorID: "", creatorName: "", kind: .videoCall, minutes: 20, priceMinor: 199900, currency: "INR", note: "Camera on.", active: true))
+        let offer = try XCTUnwrap(offerOpt)
+        // Rahul books it; I accept, which mints the room.
+        let backend2 = try XCTUnwrap(env.social.backend as? InMemoryBackend)
+        var booked: Booking?
+        try await backend2.acting(as: "u_rahul") { b in booked = try await b.requestBooking(offerID: offer.id, creatorID: env.social.myID, startsAt: .now.addingTimeInterval(7200), note: "About the sunset shoot", rail: .web, reference: nil) }
+        let request = try XCTUnwrap(booked)
+        XCTAssertEqual(request.status, .requested); XCTAssertTrue(request.roomID.isEmpty)
+        await env.social.refreshStorefront()
+        let acceptedOpt = await env.social.setBooking(request.id, .accepted)
+        let accepted = try XCTUnwrap(acceptedOpt)
+        XCTAssertEqual(accepted.status, .accepted); XCTAssertFalse(accepted.roomID.isEmpty, "a confirmed booking gets a room")
+        XCTAssertEqual(env.social.storefrontEarnings, CreatorEconomics.creatorTake(199900, rail: .web), accuracy: 0.01)
+        await env.social.saveLinks(CreatorLinks(instagram: "@rakshit", x: "", tiktok: "", youtube: "", website: "rakshit.example"))
+        let links = env.social.links(of: env.social.myID).all
+        XCTAssertEqual(links.map(\.label), ["Instagram", "Website"])
+        XCTAssertEqual(links[0].url.absoluteString, "https://instagram.com/rakshit")
+    }
+}

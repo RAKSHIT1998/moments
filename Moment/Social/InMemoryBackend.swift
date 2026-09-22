@@ -35,6 +35,12 @@ actor InMemoryBackend: SocialBackend {
     var subs: [CreatorSubscription] = []
     var tipsList: [CreatorTip] = []
     var seenByConversation: [String: [String: String]] = [:]
+    var vaultSets: [String: VaultSet] = [:]
+    var vaultItemsBySet: [String: [VaultItem]] = [:]
+    var purchases: [VaultPurchase] = []
+    var offers: [String: BookingOffer] = [:]
+    var bookings: [Booking] = []
+    var links: [String: CreatorLinks] = [:]
     var datingProfiles: [String: DatingProfile] = [:]
     var likes: [DatingLike] = []
     var passes: [String: Set<String>] = [:]
@@ -372,6 +378,61 @@ actor InMemoryBackend: SocialBackend {
         let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: [me.id, userID], participantNames: [me.displayName, u.displayName], lastMessage: "", updatedAt: .now)
         convos.append(c); return c
     }
+    // MARK: Storefront
+    func vaultSets(creatorID: String) async throws -> [VaultSet] {
+        try gate()
+        return vaultSets.values.filter { $0.creatorID == creatorID && ($0.visible || creatorID == me.id) && !blocked.contains($0.creatorID) }.sorted { $0.createdAt > $1.createdAt }
+    }
+    func saveVaultSet(_ set: VaultSet, items: [VaultItem], media: [String: Data]) async throws -> VaultSet {
+        try gate()
+        var x = set; x.creatorID = me.id; x.creatorName = me.displayName; x.itemCount = items.count
+        if x.id.isEmpty { x.id = "set_\(UUID().uuidString)" }
+        for (k, d) in media { mediaBlobs[k] = d }
+        vaultSets[x.id] = x
+        vaultItemsBySet[x.id] = items.enumerated().map { i, item in var y = item; y.setID = x.id; y.index = i; return y }
+        return x
+    }
+    func deleteVaultSet(id: String) async throws { try gate(); guard vaultSets[id]?.creatorID == me.id else { throw SocialError.notAllowed }; vaultSets[id] = nil; vaultItemsBySet[id] = nil }
+    func vaultItems(setID: String) async throws -> [VaultItem] {
+        try gate(); guard let set = vaultSets[setID] else { throw SocialError.notFound }
+        let mine = set.creatorID == me.id
+        let bought = purchases.contains { $0.setID == setID && $0.buyerID == me.id }
+        guard mine || set.isFree || bought else { throw SocialError.notAllowed }
+        return vaultItemsBySet[setID] ?? []
+    }
+    func buyVaultSet(id: String, rail: PaymentRail, reference: String?) async throws -> VaultPurchase {
+        try gate(); guard let set = vaultSets[id], set.creatorID != me.id else { throw SocialError.notAllowed }
+        if let existing = purchases.first(where: { $0.setID == id && $0.buyerID == me.id }) { return existing }
+        let p = VaultPurchase(id: "buy_\(UUID().uuidString)", setID: id, creatorID: set.creatorID, buyerID: me.id, buyerName: me.displayName, amountMinor: set.priceMinor, currency: set.currency, rail: set.isFree ? .none : rail, reference: reference, createdAt: .now)
+        purchases.append(p); return p
+    }
+    func myPurchases() async throws -> [VaultPurchase] { try gate(); return purchases.filter { $0.buyerID == me.id }.sorted { $0.createdAt > $1.createdAt } }
+    func vaultSales() async throws -> [VaultPurchase] { try gate(); return purchases.filter { $0.creatorID == me.id }.sorted { $0.createdAt > $1.createdAt } }
+    func bookingOffers(creatorID: String) async throws -> [BookingOffer] { try gate(); return offers.values.filter { $0.creatorID == creatorID && ($0.active || creatorID == me.id) }.sorted { $0.priceMinor < $1.priceMinor } }
+    func saveBookingOffer(_ offer: BookingOffer) async throws -> BookingOffer {
+        try gate(); var x = offer; x.creatorID = me.id; x.creatorName = me.displayName
+        if x.id.isEmpty { x.id = "offer_\(UUID().uuidString)" }
+        offers[x.id] = x; return x
+    }
+    func deleteBookingOffer(id: String) async throws { try gate(); guard offers[id]?.creatorID == me.id else { throw SocialError.notAllowed }; offers[id] = nil }
+    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
+        try gate(); guard let o = offers[offerID], o.creatorID == creatorID, creatorID != me.id, o.active else { throw SocialError.notAllowed }
+        let b = Booking(id: "bk_\(UUID().uuidString)", offerID: offerID, creatorID: creatorID, creatorName: o.creatorName, buyerID: me.id, buyerName: me.displayName, kind: o.kind, minutes: o.minutes, amountMinor: o.priceMinor, currency: o.currency, startsAt: startsAt, status: .requested, note: note, rail: rail, reference: reference, roomID: "", createdAt: .now)
+        bookings.append(b); return b
+    }
+    func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking {
+        try gate(); guard let i = bookings.firstIndex(where: { $0.id == id }) else { throw SocialError.notFound }
+        let b = bookings[i]
+        // The creator accepts or declines; either side can mark it done or refunded.
+        guard b.creatorID == me.id || (b.buyerID == me.id && (status == .done || status == .refunded)) else { throw SocialError.notAllowed }
+        bookings[i].status = status
+        if status == .accepted, bookings[i].roomID.isEmpty { bookings[i].roomID = "room_\(UUID().uuidString.prefix(12))" }
+        return bookings[i]
+    }
+    func myBookings() async throws -> [Booking] { try gate(); return bookings.filter { $0.buyerID == me.id || $0.creatorID == me.id }.sorted { $0.startsAt > $1.startsAt } }
+    func creatorLinks(for userID: String) async throws -> CreatorLinks { try gate(); return links[userID] ?? CreatorLinks() }
+    func saveCreatorLinks(_ l: CreatorLinks) async throws { try gate(); links[me.id] = l }
+
     // MARK: Meet
     func datingProfile(for userID: String) async throws -> DatingProfile? { try gate(); return datingProfiles[userID] }
     func saveDatingProfile(_ p: DatingProfile) async throws -> DatingProfile { try gate(); var x = p; x.userID = me.id; x.displayName = me.displayName; x.updatedAt = .now; datingProfiles[me.id] = x; return x }
@@ -563,6 +624,21 @@ actor InMemoryBackend: SocialBackend {
         dp("u_kabir", "Kabir Rao", 1996, .man, [.woman], .relationship, [("The night I'd relive", "Bastian, that Saturday. Nobody wanted to leave."), ("A ritual I never skip", "Last light. Every Friday since March.")], ["c_m_kabir_bastian_0", "c_m_bastian_1"], "Sunsets, mostly.")
         dp("u_anaya", "Anaya Rao", 1999, .woman, [.man], .notSure, [("My go-to Friday", "Coffee after the run, then whatever happens.")], ["c_m_marine_1"], "")
         dp("u_dev", "Dev Patel", 1995, .man, [.woman, .man, .nonBinary], .friends, [("I'm weirdly good at", "Pacing. 21k, no walking.")], ["c_m_run_0", "c_m_run_1"], "Runs. Talks about running.")
+        func set(_ id: String, _ creator: String, _ title: String, _ blurb: String, _ price: Int, _ cover: String, _ photos: [String], video: Bool = false) {
+            mediaBlobs["vc_\(id)"] = DemoPhotos.data(cover)
+            vaultSets[id] = VaultSet(id: id, creatorID: creator, creatorName: users[creator]?.displayName ?? creator, title: title, blurb: blurb, priceMinor: price, currency: "INR", cover: MediaRef(kind: .photo, localRef: nil, remoteID: "vc_\(id)"), itemCount: photos.count, isVideo: video, createdAt: .now.adding(days: -Int.random(in: 1...20)), visible: true)
+            vaultItemsBySet[id] = photos.enumerated().map { i, p in
+                mediaBlobs["vi_\(id)_\(i)"] = DemoPhotos.data(p)
+                return VaultItem(id: "vi_\(id)_\(i)", setID: id, kind: .photo, media: MediaRef(kind: .photo, localRef: nil, remoteID: "vi_\(id)_\(i)"), caption: "", index: i)
+            }
+        }
+        set("set_sunsets_free", "u_public", "Versova, the free set", "Three frames from last Friday. The rest is in the paid set.", 0, "demo_270", ["demo_270", "demo_213", "demo_110"])
+        set("set_sunsets_raw", "u_public", "The raw Friday", "Every frame, full resolution, before the edit.", 49900, "demo_173", ["demo_173", "demo_176", "demo_195", "demo_154"])
+        set("set_sarah_kitchen", "u_sarah", "Kitchen, close up", "Eighteen hours of broth in twelve photos.", 19900, "demo_312", ["demo_312", "demo_292", "demo_225"])
+        offers["offer_call_sunsets"] = BookingOffer(id: "offer_call_sunsets", creatorID: "u_public", creatorName: "Sunset Society", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "Fifteen minutes, camera on, ask me anything about the shoot.", active: true)
+        offers["offer_custom_sarah"] = BookingOffer(id: "offer_custom_sarah", creatorID: "u_sarah", creatorName: "Sarah Kim", kind: .custom, minutes: 0, priceMinor: 29900, currency: "INR", note: "A recipe shot the way you want it.", active: true)
+        links["u_public"] = CreatorLinks(instagram: "sunsetsociety", x: "", tiktok: "sunsetsociety", youtube: "", website: "sunsetsociety.example")
+        links["u_sarah"] = CreatorLinks(instagram: "sarahkimeats", x: "sarahkimeats", tiktok: "", youtube: "", website: "")
         likes = [DatingLike(id: "like_mira", fromID: "u_mira", fromName: "Mira Shah", toID: me.id, note: "You were at Versova last Friday too — the one with the birds?", promptQuestion: nil, createdAt: .now.addingTimeInterval(-3600))]
         tipsList = [CreatorTip(id: "tip_1", fromID: "u_dev", fromName: "Dev Patel", creatorID: "u_sarah", momentID: "m_cafe", amount: .medium, note: "that broth 🙏", createdAt: .now.adding(days: -2), transactionID: nil)]
         // Real video sides: reels play these, the cuts use the photos.
@@ -575,7 +651,7 @@ actor InMemoryBackend: SocialBackend {
             m.contributionCount += 1; m.mediaCount += 1; moments[momentID] = m
         }
         videoSide("m_sunset", "u_public", "6:47pm, the whole sky", 6)
-        videoSide("m_goa", "u_rahul", "Palolem, before dinner", 90)
+        videoSide("m_bday", "u_dev", "The speech, all of it", 30)
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
         func story(_ id: String, _ photo: String) -> MediaRef? {

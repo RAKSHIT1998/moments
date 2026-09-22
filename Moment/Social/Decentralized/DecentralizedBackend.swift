@@ -30,6 +30,12 @@ actor DecentralizedBackend: SocialBackend {
         struct Tip: Codable { var amount: String; var note: String; var transactionID: String?; var name: String }
         struct Dating: Codable { var profile: DatingProfile?; var photos: [String] }   // photos as base64 thumbnails; nil profile = withdrawn
         struct Like: Codable { var note: String; var prompt: String?; var name: String }
+        /// The set as everyone sees it: title, price, cover. The items are sealed under the set key.
+        struct Vault: Codable { var set: VaultSet?; var cover: String?; var sealedItems: String?; var itemCount: Int }
+        struct Buy: Codable { var amountMinor: Int; var currency: String; var rail: String; var reference: String?; var name: String }
+        struct Offer: Codable { var offer: BookingOffer? }
+        struct BookingBody: Codable { var booking: Booking }
+        struct Links: Codable { var links: CreatorLinks }
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
@@ -148,6 +154,160 @@ actor DecentralizedBackend: SocialBackend {
         return out
     }
 
+    // MARK: - Storefront (metadata is public; the media is sealed and the key is handed to buyers only)
+
+    /// One key per set, kept on the creator's phone. A buyer gets it sealed to their agreement key.
+    private func setKey(_ id: String) -> SymmetricKey {
+        if let k = keys.load("set.\(id)") { return k }
+        let k = MomentKeys.new(); keys.save(k, for: "set.\(id)"); return k
+    }
+    func vaultSets(creatorID: String) async throws -> [VaultSet] {
+        var latest: [String: VaultSet] = [:]
+        for e in await store.all(.vaultSet) where e.author == creatorID && !localBlocked.contains(e.author) {
+            guard let v = e.payload(Payloads.Vault.self) else { continue }
+            guard var set = v.set else { latest[e.tags["set"] ?? ""] = nil; continue }
+            set.creatorID = creatorID; set.itemCount = v.itemCount
+            if let c = v.cover, let d = Data(base64Encoded: c) {
+                let key = "vcover.\(e.id)"
+                var local = mediaCache[key]
+                if local == nil { local = try? await media.store(d, extension: "jpg") }
+                if let local { mediaCache[key] = local; set.cover = MediaRef(kind: .photo, localRef: local, remoteID: key) }
+            }
+            latest[set.id] = set
+        }
+        return latest.values.filter { $0.visible || creatorID == myID }.sorted { $0.createdAt > $1.createdAt }
+    }
+    func saveVaultSet(_ set: VaultSet, items: [VaultItem], media mediaData: [String: Data]) async throws -> VaultSet {
+        let me = try await currentUser()
+        var x = set; x.creatorID = myID; x.creatorName = me.displayName; x.itemCount = items.count
+        if x.id.isEmpty { x.id = "set_" + UUID().uuidString }
+        x.cover = nil
+        let key = setKey(x.id)
+        // Items (with their media inline) are sealed under the set key; only buyers ever get that key.
+        var payloadItems: [[String: String]] = []
+        for (i, item) in items.enumerated() {
+            guard let ref = item.media, let local = ref.localRef, let d = try? await media.load(local) else { continue }
+            let shrunk = item.kind == .video ? d : (MediaPipeline.thumbnail(d, side: 1600) ?? d)
+            payloadItems.append(["id": item.id.isEmpty ? "vi_\(x.id)_\(i)" : item.id, "kind": item.kind.rawValue, "caption": item.caption, "media": shrunk.base64EncodedString()])
+        }
+        let sealed = try AES.GCM.seal(JSONEncoder.event.encode(payloadItems), using: key).combined!.base64EncodedString()
+        var coverB64: String? = nil
+        if let ref = set.cover, let local = ref.localRef, let d = try? await media.load(local) { coverB64 = MediaPipeline.thumbnail(d, side: 900)?.base64EncodedString() }
+        try await emit(.vaultSet, tags: ["set": x.id, "price": String(x.priceMinor)], payload: Payloads.Vault(set: x, cover: coverB64, sealedItems: sealed, itemCount: items.count))
+        return try await vaultSets(creatorID: myID).first { $0.id == x.id } ?? x
+    }
+    func deleteVaultSet(id: String) async throws {
+        try await emit(.vaultSet, tags: ["set": id], payload: Payloads.Vault(set: nil, cover: nil, sealedItems: nil, itemCount: 0))
+        keys.save(MomentKeys.new(), for: "set.\(id)")   // rotate: nothing new can be handed out
+    }
+    func vaultItems(setID: String) async throws -> [VaultItem] {
+        guard let e = await store.all(.vaultSet).last(where: { $0.tags["set"] == setID }), let v = e.payload(Payloads.Vault.self), let set = v.set, let sealed = v.sealedItems else { throw SocialError.notFound }
+        let key: SymmetricKey?
+        if e.author == myID { key = setKey(setID) }
+        else if set.isFree, let k = keys.load("set.\(setID)") { key = k }
+        else { key = keys.load("set.\(setID)") }
+        guard let key, let boxed = Data(base64Encoded: sealed), let box = try? AES.GCM.SealedBox(combined: boxed), let plain = try? AES.GCM.open(box, using: key),
+              let rows = try? JSONDecoder.event.decode([[String: String]].self, from: plain) else { throw SocialError.notAllowed }
+        var out: [VaultItem] = []
+        for (i, r) in rows.enumerated() {
+            var ref: MediaRef? = nil
+            let kind = MediaRef.Kind(rawValue: r["kind"] ?? "") ?? .photo
+            if let b = r["media"], let d = Data(base64Encoded: b) {
+                let ck = "vitem.\(setID).\(i)"
+                var local = mediaCache[ck]
+                if local == nil { local = try? await media.store(d, extension: kind == .video ? "mp4" : "jpg") }
+                if let local { mediaCache[ck] = local; ref = MediaRef(kind: kind, localRef: local, remoteID: ck) }
+            }
+            out.append(VaultItem(id: r["id"] ?? "\(setID)_\(i)", setID: setID, kind: kind, media: ref, caption: r["caption"] ?? "", index: i))
+        }
+        return out
+    }
+    func buyVaultSet(id: String, rail: PaymentRail, reference: String?) async throws -> VaultPurchase {
+        guard let e = await store.all(.vaultSet).last(where: { $0.tags["set"] == id }), let set = e.payload(Payloads.Vault.self)?.set, e.author != myID else { throw SocialError.notAllowed }
+        let me = try await currentUser()
+        let ev = try await emit(.vaultBuy, tags: ["set": id, "to": e.author], payload: Payloads.Buy(amountMinor: set.priceMinor, currency: set.currency, rail: (set.isFree ? PaymentRail.none : rail).rawValue, reference: reference, name: me.displayName))
+        // Ask relays for the key the creator will seal back to me.
+        for t in transports { (t as? RelayTransport)?.subscribe(id: "vkeys", .init(kinds: ["vaultKey"], tags: ["to": myID])) }
+        return VaultPurchase(id: ev.id, setID: id, creatorID: e.author, buyerID: myID, buyerName: me.displayName, amountMinor: set.priceMinor, currency: set.currency, rail: set.isFree ? .none : rail, reference: reference, createdAt: ev.createdAt)
+    }
+    private func purchase(from e: SignedEvent) -> VaultPurchase? {
+        guard let setID = e.tags["set"], let to = e.tags["to"], let b = e.payload(Payloads.Buy.self) else { return nil }
+        return VaultPurchase(id: e.id, setID: setID, creatorID: to, buyerID: e.author, buyerName: b.name, amountMinor: b.amountMinor, currency: b.currency, rail: PaymentRail(rawValue: b.rail) ?? .none, reference: b.reference, createdAt: e.createdAt)
+    }
+    func myPurchases() async throws -> [VaultPurchase] {
+        await store.all(.vaultBuy).filter { $0.author == myID }.compactMap(purchase(from:)).sorted { $0.createdAt > $1.createdAt }
+    }
+    func vaultSales() async throws -> [VaultPurchase] {
+        let sales = await store.all(.vaultBuy).filter { $0.tags["to"] == myID && !localBlocked.contains($0.author) }.compactMap(purchase(from:))
+        await handOutKeys(for: sales)
+        return sales.sorted { $0.createdAt > $1.createdAt }
+    }
+    /// The creator's phone releases the set key to whoever paid. Sealed to them; nobody else can use it.
+    private func handOutKeys(for sales: [VaultPurchase]) async {
+        let done = Set(await store.all(.vaultKey).filter { $0.author == myID }.map { "\($0.tags["to"] ?? "")|\($0.tags["set"] ?? "")" })
+        for s in sales where !done.contains("\(s.buyerID)|\(s.setID)") {
+            guard let profile = await store.all(.profile).last(where: { $0.author == s.buyerID })?.payload(Payloads.Profile.self), let agree = profile.agreePK,
+                  let box = try? SealedForPeer.seal(setKey(s.setID).withUnsafeBytes { Data($0) }, from: agreement, to: agree) else { continue }
+            _ = try? await emit(.vaultKey, tags: ["to": s.buyerID, "set": s.setID], payload: ["box": box])
+        }
+    }
+    /// A key addressed to me: open it and keep it, so the set unlocks.
+    private func acceptKeys() async {
+        for e in await store.all(.vaultKey) where e.tags["to"] == myID {
+            guard let setID = e.tags["set"], keys.load("set.\(setID)") == nil,
+                  let their = await store.all(.profile).last(where: { $0.author == e.author })?.payload(Payloads.Profile.self), let agree = their.agreePK,
+                  let box = e.payload([String: String].self)?["box"], let raw = SealedForPeer.open(box, with: agreement, from: agree) else { continue }
+            keys.save(SymmetricKey(data: raw), for: "set.\(setID)")
+        }
+    }
+    func bookingOffers(creatorID: String) async throws -> [BookingOffer] {
+        var latest: [String: BookingOffer] = [:]
+        for e in await store.all(.offer) where e.author == creatorID {
+            guard let o = e.payload(Payloads.Offer.self)?.offer else { if let id = e.tags["offer"] { latest[id] = nil }; continue }
+            latest[o.id] = o
+        }
+        return latest.values.filter { $0.active || creatorID == myID }.sorted { $0.priceMinor < $1.priceMinor }
+    }
+    func saveBookingOffer(_ offer: BookingOffer) async throws -> BookingOffer {
+        let me = try await currentUser()
+        var x = offer; x.creatorID = myID; x.creatorName = me.displayName
+        if x.id.isEmpty { x.id = "offer_" + UUID().uuidString }
+        try await emit(.offer, tags: ["offer": x.id], payload: Payloads.Offer(offer: x))
+        return x
+    }
+    func deleteBookingOffer(id: String) async throws { try await emit(.offer, tags: ["offer": id], payload: Payloads.Offer(offer: nil)) }
+    func requestBooking(offerID: String, creatorID: String, startsAt: Date, note: String, rail: PaymentRail, reference: String?) async throws -> Booking {
+        guard let o = try await bookingOffers(creatorID: creatorID).first(where: { $0.id == offerID }), creatorID != myID else { throw SocialError.notAllowed }
+        let me = try await currentUser()
+        let b = Booking(id: "bk_" + UUID().uuidString, offerID: offerID, creatorID: creatorID, creatorName: o.creatorName, buyerID: myID, buyerName: me.displayName, kind: o.kind, minutes: o.minutes, amountMinor: o.priceMinor, currency: o.currency, startsAt: startsAt, status: .requested, note: note, rail: rail, reference: reference, roomID: "", createdAt: .now)
+        try await emit(.booking, tags: ["booking": b.id, "to": creatorID], payload: Payloads.BookingBody(booking: b))
+        return b
+    }
+    func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking {
+        guard var b = try await myBookings().first(where: { $0.id == id }) else { throw SocialError.notFound }
+        guard b.creatorID == myID || (b.buyerID == myID && (status == .done || status == .refunded)) else { throw SocialError.notAllowed }
+        b.status = status
+        if status == .accepted, b.roomID.isEmpty { b.roomID = "room_" + UUID().uuidString.prefix(12) }
+        try await emit(.booking, tags: ["booking": b.id, "to": b.creatorID == myID ? b.buyerID : b.creatorID], payload: Payloads.BookingBody(booking: b))
+        return b
+    }
+    func myBookings() async throws -> [Booking] {
+        var latest: [String: (Date, Booking)] = [:]
+        for e in await store.all(.booking) {
+            guard let b = e.payload(Payloads.BookingBody.self)?.booking, b.buyerID == myID || b.creatorID == myID else { continue }
+            // Only the two of them can move it, and only the creator can accept/decline.
+            let mover = e.author
+            guard mover == b.buyerID || mover == b.creatorID else { continue }
+            if (b.status == .accepted || b.status == .declined) && mover != b.creatorID { continue }
+            if (latest[b.id]?.0 ?? .distantPast) <= e.createdAt { latest[b.id] = (e.createdAt, b) }
+        }
+        return latest.values.map(\.1).sorted { $0.startsAt > $1.startsAt }
+    }
+    func creatorLinks(for userID: String) async throws -> CreatorLinks {
+        await store.all(.links).last { $0.author == userID }?.payload(Payloads.Links.self)?.links ?? CreatorLinks()
+    }
+    func saveCreatorLinks(_ l: CreatorLinks) async throws { try await emit(.links, payload: Payloads.Links(links: l)) }
+
     func markSeen(conversationID: String, lastMessageID: String) async throws {
         // Don't spam the network: one event per conversation per last-message.
         if let last = await store.all(.seen).last(where: { $0.author == myID && $0.tags["moment"] == conversationID }), last.tags["last"] == lastMessageID { return }
@@ -182,6 +342,8 @@ actor DecentralizedBackend: SocialBackend {
         case .follow, .unfollow: if e.tags["to"] == myID { followCache.removeAll() }
         case .momentUpdate: if let m = e.tags["moment"] { coverCache[m] = nil }
         case .subscribe where e.tags["to"] == myID: Task { _ = try? await self.subscribers() }
+        case .vaultBuy where e.tags["to"] == myID: Task { _ = try? await self.vaultSales() }
+        case .vaultKey where e.tags["to"] == myID: Task { await self.acceptKeys() }
         case .grant where e.tags["to"] == myID: Task { await self.acceptGrant(e) }
         default: break
         }
@@ -805,7 +967,12 @@ actor DecentralizedBackend: SocialBackend {
         coverCache.removeAll()
     }
     /// Creator side: react to new subscriptions as they arrive so people get in without the creator opening the app screen.
-    func processGrants() async { _ = try? await subscribers(); for e in await store.all(.grant) where e.tags["to"] == myID { await acceptGrant(e) } }
+    func processGrants() async {
+        _ = try? await subscribers()
+        for e in await store.all(.grant) where e.tags["to"] == myID { await acceptGrant(e) }
+        _ = try? await vaultSales()   // hand set keys to whoever paid
+        await acceptKeys()
+    }
 
     // MARK: - Sync stats
 

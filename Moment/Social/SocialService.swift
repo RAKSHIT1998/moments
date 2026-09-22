@@ -818,6 +818,7 @@ final class SocialService {
 
     func refreshNow() async {
         if let posts = try? await backend.nowFeed() { nowPosts = posts.filter { !muted.contains($0.authorID) && !blocked.contains($0.authorID) } }
+        applySavedNow()
     }
 
     func postNow(text: String, photo: Data?, place: String?, activity: NowPost.Activity = .none, hours: Double = 24, venue: SocialPlace? = nil) async -> Bool {
@@ -837,8 +838,22 @@ final class SocialService {
         guard let me else { return }
         let c = Contribution(id: UUID().uuidString, momentID: momentID, authorID: me.id, authorName: me.displayName, kind: post.media == nil ? .text : .photo, media: post.media, caption: post.text, createdAt: .now, originalTimestamp: post.createdAt, reactionCounts: [:], commentCount: 0, uploadState: .pending)
         queue.enqueue(.contribution(c))
+        // "I kept this one" is this phone's own record — the NOW itself is unchanged for everyone else,
+        // so it has to survive the next refresh rather than living only in the array.
+        var saved = savedNowIDs; saved[post.id] = momentID; savedNowIDs = saved
         if let i = nowPosts.firstIndex(where: { $0.id == post.id }) { nowPosts[i].savedToMomentID = momentID }
         analytics.track(.nowSaved)
+    }
+
+    private var savedNowIDs: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: "now.savedTo") as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "now.savedTo") }
+    }
+    /// Re-applies what this phone kept, after any refresh replaces the posts.
+    private func applySavedNow() {
+        let saved = savedNowIDs
+        guard !saved.isEmpty else { return }
+        for i in nowPosts.indices { if let m = saved[nowPosts[i].id] { nowPosts[i].savedToMomentID = m } }
     }
 
     func joinNow(_ post: NowPost) async {
@@ -1078,6 +1093,93 @@ final class SocialService {
         return sorted.compactMap { $0.media }
     }
 
+    // MARK: - Storefront
+
+    private(set) var mySets: [VaultSet] = []
+    private(set) var setsByCreator: [String: [VaultSet]] = [:]
+    private(set) var itemsBySet: [String: [VaultItem]] = [:]
+    private(set) var myPurchases: [VaultPurchase] = []
+    private(set) var mySales: [VaultPurchase] = []
+    private(set) var offersByCreator: [String: [BookingOffer]] = [:]
+    private(set) var myBookings: [Booking] = []
+    private(set) var linksByCreator: [String: CreatorLinks] = [:]
+    private(set) var busy = false
+
+    /// Where the money goes through. Web (card) keeps the platform fee at 10%; Apple's rail can't.
+    var rail: PaymentRail { settings.webCheckoutEnabled ? .web : .appStore }
+
+    func refreshStorefront() async {
+        mySets = (try? await backend.vaultSets(creatorID: myID)) ?? []
+        setsByCreator[myID] = mySets
+        myPurchases = (try? await backend.myPurchases()) ?? []
+        mySales = (try? await backend.vaultSales()) ?? []
+        myBookings = (try? await backend.myBookings()) ?? []
+        offersByCreator[myID] = (try? await backend.bookingOffers(creatorID: myID)) ?? []
+        linksByCreator[myID] = (try? await backend.creatorLinks(for: myID)) ?? CreatorLinks()
+        if let mesh = backend as? DecentralizedBackend { await mesh.processGrants() }
+    }
+    func loadStorefront(_ creatorID: String) async {
+        setsByCreator[creatorID] = (try? await backend.vaultSets(creatorID: creatorID)) ?? []
+        offersByCreator[creatorID] = (try? await backend.bookingOffers(creatorID: creatorID)) ?? []
+        linksByCreator[creatorID] = (try? await backend.creatorLinks(for: creatorID)) ?? CreatorLinks()
+    }
+    func sets(of creatorID: String) -> [VaultSet] { setsByCreator[creatorID] ?? [] }
+    func offers(of creatorID: String) -> [BookingOffer] { offersByCreator[creatorID] ?? [] }
+    func links(of creatorID: String) -> CreatorLinks { linksByCreator[creatorID] ?? CreatorLinks() }
+    func hasBought(_ setID: String) -> Bool { myPurchases.contains { $0.setID == setID } }
+    func isUnlocked(_ set: VaultSet) -> Bool { set.isFree || set.creatorID == myID || hasBought(set.id) }
+    func loadItems(_ setID: String) async { itemsBySet[setID] = (try? await backend.vaultItems(setID: setID)) ?? [] }
+    func items(_ setID: String) -> [VaultItem] { itemsBySet[setID] ?? [] }
+
+    @discardableResult
+    func saveSet(_ set: VaultSet, items: [VaultItem]) async -> VaultSet? {
+        busy = true; defer { busy = false }
+        do { let saved = try await backend.saveVaultSet(set, items: items, media: [:]); await refreshStorefront(); analytics.track(.setPublished); return saved }
+        catch { lastError = error.localizedDescription; return nil }
+    }
+    func deleteSet(_ id: String) async { try? await backend.deleteVaultSet(id: id); await refreshStorefront() }
+
+    /// Buys a set. Free sets need no payment; paid ones go through the rail the creator's platform uses.
+    /// On the web rail the app hands off to the creator's checkout and records the reference it returns.
+    func buySet(_ set: VaultSet, reference: String? = nil) async -> Bool {
+        busy = true; defer { busy = false }
+        do {
+            _ = try await backend.buyVaultSet(id: set.id, rail: set.isFree ? .none : rail, reference: reference)
+            myPurchases = (try? await backend.myPurchases()) ?? []
+            await loadItems(set.id)
+            if !set.isFree { analytics.track(.setPurchased, category: set.currency) }
+            return true
+        } catch { lastError = error.localizedDescription; return false }
+    }
+
+    @discardableResult
+    func saveOffer(_ offer: BookingOffer) async -> BookingOffer? {
+        do { let o = try await backend.saveBookingOffer(offer); await refreshStorefront(); return o } catch { lastError = error.localizedDescription; return nil }
+    }
+    func deleteOffer(_ id: String) async { try? await backend.deleteBookingOffer(id: id); await refreshStorefront() }
+    func requestBooking(_ offer: BookingOffer, startsAt: Date, note: String, reference: String? = nil) async -> Booking? {
+        busy = true; defer { busy = false }
+        do {
+            let b = try await backend.requestBooking(offerID: offer.id, creatorID: offer.creatorID, startsAt: startsAt, note: note, rail: rail, reference: reference)
+            myBookings = (try? await backend.myBookings()) ?? []
+            analytics.track(.bookingRequested, category: offer.kind.rawValue)
+            // The request lands in the creator's chat so nothing depends on them opening a dashboard.
+            if let c = await conversation(with: offer.creatorID) {
+                _ = await send(conversationID: c.id, text: "Booked: \(offer.kind.label), \(offer.minutes > 0 ? "\(offer.minutes) min, " : "")\(offer.priceLabel()) — \(startsAt.formatted(date: .abbreviated, time: .shortened))." + (note.isBlank ? "" : " “\(note.trimmed)”"))
+            }
+            return b
+        } catch { lastError = error.localizedDescription; return nil }
+    }
+    @discardableResult
+    func setBooking(_ id: String, _ status: Booking.Status) async -> Booking? {
+        do { let b = try await backend.setBookingStatus(id: id, status: status); myBookings = (try? await backend.myBookings()) ?? []; return b } catch { lastError = error.localizedDescription; return nil }
+    }
+    func saveLinks(_ l: CreatorLinks) async { try? await backend.saveCreatorLinks(l); linksByCreator[myID] = l }
+
+    /// This month, after the platform fee on each rail. Sales and bookings included.
+    var storefrontEarnings: Double { CreatorEconomics.creatorEstimate(subscribers, tips: tipsReceived, sales: mySales, bookings: myBookings.filter { $0.creatorID == myID }) }
+    var isCreator: Bool { myPlan != nil || !mySets.isEmpty || !(offersByCreator[myID] ?? []).isEmpty }
+
     // MARK: - Reels
 
     private(set) var reels: [Reel] = []
@@ -1111,6 +1213,13 @@ final class SocialService {
     }
 
     // MARK: - Media
+
+    /// Stores a picked photo/clip in the local media store and returns a ref the storefront can carry.
+    func storeLocalMedia(_ data: Data, kind: MediaRef.Kind) async -> MediaRef? {
+        let prepared = kind == .photo ? (MediaPipeline.preparePhoto(data)?.data ?? data) : data
+        guard let local = try? await media.store(prepared, extension: kind == .video ? "mp4" : "jpg") else { return nil }
+        return MediaRef(kind: kind, localRef: local, remoteID: nil)
+    }
 
     /// Raw bytes for non-image media (voice notes).
     func data(for ref: MediaRef) async -> Data? {

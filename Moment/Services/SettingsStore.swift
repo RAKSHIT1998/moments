@@ -20,6 +20,8 @@ final class SettingsStore {
         networkMode = NetworkMode(rawValue: defaults.string(forKey: "networkMode") ?? "") ?? .mesh
         relayURLs = defaults.stringArray(forKey: "relayURLs") ?? NetworkMode.defaultRelays
         meshEnabled = defaults.object(forKey: "meshEnabled") as? Bool ?? true
+        webCheckoutEnabled = defaults.bool(forKey: "webCheckoutEnabled")
+        checkoutBaseURL = defaults.string(forKey: "checkoutBaseURL") ?? ""
         dailyNotificationBudget = defaults.object(forKey: "dailyNotificationBudget") as? Int ?? 2
         lockScreenWidgetAllowed = defaults.bool(forKey: "lockScreenWidgetAllowed")
         analyticsEnabled = defaults.bool(forKey: "analyticsEnabled")
@@ -83,6 +85,10 @@ final class SettingsStore {
     var networkMode: NetworkMode { didSet { defaults.set(networkMode.rawValue, forKey: "networkMode") } }
     var relayURLs: [String] { didSet { defaults.set(relayURLs, forKey: "relayURLs") } }
     var meshEnabled: Bool { didSet { defaults.set(meshEnabled, forKey: "meshEnabled") } }
+    /// Card checkout on the web rail: the platform keeps 10% instead of Apple's 30%. Only legal to link
+    /// out to from the app in storefronts where Apple allows it; off by default.
+    var webCheckoutEnabled: Bool { didSet { defaults.set(webCheckoutEnabled, forKey: "webCheckoutEnabled") } }
+    var checkoutBaseURL: String { didSet { defaults.set(checkoutBaseURL, forKey: "checkoutBaseURL") } }
     var dailyNotificationBudget: Int { didSet { defaults.set(dailyNotificationBudget, forKey: "dailyNotificationBudget") } }
     var lockScreenWidgetAllowed: Bool { didSet { defaults.set(lockScreenWidgetAllowed, forKey: "lockScreenWidgetAllowed") } }
     var analyticsEnabled: Bool { didSet { defaults.set(analyticsEnabled, forKey: "analyticsEnabled") } }

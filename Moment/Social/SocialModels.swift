@@ -462,14 +462,151 @@ struct CreatorTip: Codable, Sendable, Equatable, Hashable, Identifiable {
     var transactionID: String?
 }
 
+// MARK: - Creator storefront (sets, purchases, bookings, links)
+
+/// A set the creator sells: photos/videos they own, priced once. Free sets are how people find them.
+/// Media never leaves the creator's storage unencrypted; a buyer receives a key, not a copy from us.
+struct VaultSet: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var creatorID: String
+    var creatorName: String
+    var title: String
+    var blurb: String
+    /// 0 = free. Otherwise the creator's asking price in their currency, before the platform fee.
+    var priceMinor: Int
+    var currency: String
+    /// The one image everyone can see — the creator picks it.
+    var cover: MediaRef?
+    var itemCount: Int
+    var isVideo: Bool
+    var createdAt: Date
+    var visible: Bool
+    var isFree: Bool { priceMinor == 0 }
+    func priceLabel(_ locale: Locale = .current) -> String {
+        isFree ? "Free" : (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0)))
+    }
+}
+
+/// One photo or clip inside a set. `sealed` is the media, encrypted under the set key.
+struct VaultItem: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var setID: String
+    var kind: MediaRef.Kind
+    var media: MediaRef?
+    var caption: String
+    var index: Int
+}
+
+/// Proof someone paid for a set. The key that opens it is delivered separately, sealed to them.
+struct VaultPurchase: Codable, Sendable, Equatable, Hashable, Identifiable {
+    var id: String
+    var setID: String
+    var creatorID: String
+    var buyerID: String
+    var buyerName: String
+    var amountMinor: Int
+    var currency: String
+    /// How the money moved: App Store product, or a web checkout reference from the creator's processor.
+    var rail: PaymentRail
+    var reference: String?
+    var createdAt: Date
+}
+
+enum PaymentRail: String, Codable, Sendable, CaseIterable {
+    case appStore, web, none
+    var label: String { switch self { case .appStore: "App Store"; case .web: "Card"; case .none: "Free" } }
+}
+
+/// Paid time: a call, a shoot, a custom. The creator sets the length, price and when they're available.
+struct BookingOffer: Codable, Sendable, Equatable, Hashable, Identifiable {
+    enum Kind: String, Codable, CaseIterable, Sendable { case videoCall, voiceCall, custom
+        var label: String { switch self { case .videoCall: "Video call"; case .voiceCall: "Voice call"; case .custom: "Custom request" } }
+        var symbol: String { switch self { case .videoCall: "video.fill"; case .voiceCall: "phone.fill"; case .custom: "sparkles" } }
+    }
+    var id: String
+    var creatorID: String
+    var creatorName: String
+    var kind: Kind
+    var minutes: Int
+    var priceMinor: Int
+    var currency: String
+    var note: String
+    var active: Bool
+    func priceLabel(_ locale: Locale = .current) -> String { (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0))) }
+}
+
+struct Booking: Codable, Sendable, Equatable, Hashable, Identifiable {
+    enum Status: String, Codable, Sendable { case requested, accepted, declined, done, refunded
+        var label: String { switch self { case .requested: "Waiting on them"; case .accepted: "Confirmed"; case .declined: "Declined"; case .done: "Done"; case .refunded: "Refunded" } }
+    }
+    var id: String
+    var offerID: String
+    var creatorID: String
+    var creatorName: String
+    var buyerID: String
+    var buyerName: String
+    var kind: BookingOffer.Kind
+    var minutes: Int
+    var amountMinor: Int
+    var currency: String
+    var startsAt: Date
+    var status: Status
+    var note: String
+    var rail: PaymentRail
+    var reference: String?
+    /// Room the two of them join at the time. Empty until accepted.
+    var roomID: String
+    var createdAt: Date
+}
+
+/// Where else to find the creator. Shown on their profile, verified only by them saying so.
+struct CreatorLinks: Codable, Sendable, Equatable, Hashable {
+    var instagram: String = ""
+    var x: String = ""
+    var tiktok: String = ""
+    var youtube: String = ""
+    var website: String = ""
+    var all: [(label: String, handle: String, url: URL)] {
+        var out: [(String, String, URL)] = []
+        func add(_ label: String, _ raw: String, _ base: String) {
+            let h = raw.trimmed.replacingOccurrences(of: "@", with: "")
+            guard !h.isEmpty else { return }
+            if h.hasPrefix("http"), let u = URL(string: h) { out.append((label, h, u)) }
+            else if let u = URL(string: base + h) { out.append((label, "@" + h, u)) }
+        }
+        add("Instagram", instagram, "https://instagram.com/")
+        add("X", x, "https://x.com/")
+        add("TikTok", tiktok, "https://tiktok.com/@")
+        add("YouTube", youtube, "https://youtube.com/@")
+        add("Website", website, "https://")
+        return out
+    }
+}
+
 /// The split. MOMENT receives net proceeds from the App Store; creators are paid this share of that.
 enum CreatorEconomics {
+    /// What MOMENT keeps on its own rail (web checkout): 10%. The creator keeps the rest of what's left
+    /// after their payment processor. On Apple's rail the platform can't keep 10% — Apple takes 30% first —
+    /// so `creatorShare` applies there and the honest numbers differ per rail. Never quote one for the other.
+    static let platformFee = 0.10
     static let creatorShare = 0.80
     static let appStoreShare = 0.30
-    static func creatorEstimate(_ subs: [CreatorSubscription], tips: [CreatorTip] = [], since: Date = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .distantPast) -> Double {
+    /// What the creator receives from a sale on a given rail, before their own processor's cut.
+    static func creatorTake(_ amountMinor: Int, rail: PaymentRail) -> Double {
+        let gross = Double(amountMinor) / 100
+        switch rail {
+        case .web: return gross * (1 - platformFee)
+        case .appStore: return gross * (1 - appStoreShare) * creatorShare
+        case .none: return 0
+        }
+    }
+    static func creatorEstimate(_ subs: [CreatorSubscription], tips: [CreatorTip] = [], sales: [VaultPurchase] = [], bookings: [Booking] = [], since: Date = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .distantPast) -> Double {
         let subTotal = subs.filter(\.isActive).reduce(0) { $0 + $1.tier.referenceAmount }
         let tipTotal = tips.filter { $0.createdAt >= since }.reduce(0) { $0 + $1.amount.referenceAmount }
-        return (subTotal + tipTotal) * (1 - appStoreShare) * creatorShare
+        let appStorePart = (subTotal + tipTotal) * (1 - appStoreShare) * creatorShare
+        let salePart = sales.filter { $0.createdAt >= since }.reduce(0.0) { $0 + creatorTake($1.amountMinor, rail: $1.rail) }
+        let bookingPart = bookings.filter { $0.createdAt >= since && ($0.status == .accepted || $0.status == .done) }.reduce(0.0) { $0 + creatorTake($1.amountMinor, rail: $1.rail) }
+        return appStorePart + salePart + bookingPart
     }
 }
 

@@ -274,3 +274,80 @@ final class DecentralizedMeetTests: XCTestCase {
         XCTAssertTrue(after.isEmpty)
     }
 }
+
+final class DecentralizedStorefrontTests: XCTestCase {
+    func testPaidSetIsCiphertextUntilTheCreatorHandsOverTheKey() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-shop-\(UUID().uuidString)")
+        func phone(_ n: String) -> (DecentralizedBackend, EventStore, MediaStore) {
+            let store = EventStore(directory: dir.appending(path: n)), media = MediaStore(directory: dir.appending(path: "m-\(n)"))
+            return (DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), agreement: Curve25519.KeyAgreement.PrivateKey(), media: media, store: store, keys: MomentKeys(namespace: "t.\(n).\(UUID().uuidString)")), store, media)
+        }
+        let (creator, cStore, cMedia) = phone("c"), (buyer, bStore, _) = phone("b"), (eve, eStore, _) = phone("e")
+        for (p, n) in [(creator, "Creator"), (buyer, "Buyer"), (eve, "Eve")] { _ = try await p.updateProfile(displayName: n, handle: n.lowercased(), bio: "", avatar: nil) }
+        func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
+        await sync(bStore, cStore); await sync(eStore, cStore); await sync(cStore, bStore); await sync(cStore, eStore)
+
+        let jpeg = UIGraphicsImageRenderer(size: CGSize(width: 60, height: 90)).image { c in UIColor.magenta.setFill(); c.fill(CGRect(x: 0, y: 0, width: 60, height: 90)) }.jpegData(compressionQuality: 0.9)!
+        let local = try await cMedia.store(jpeg, extension: "jpg")
+        let ref = MediaRef(kind: .photo, localRef: local, remoteID: nil)
+        let set = try await creator.saveVaultSet(VaultSet(id: "", creatorID: "", creatorName: "", title: "Backstage", blurb: "Ten frames", priceMinor: 49900, currency: "INR", cover: ref, itemCount: 0, isVideo: false, createdAt: .now, visible: true), items: [VaultItem(id: "", setID: "", kind: .photo, media: ref, caption: "one", index: 0)], media: [:])
+        await sync(cStore, bStore); await sync(cStore, eStore)
+
+        // Metadata is public: everyone sees the title and the price, nobody sees the photos.
+        let seen = try await buyer.vaultSets(creatorID: await creator.myID)
+        XCTAssertEqual(seen.map(\.title), ["Backstage"]); XCTAssertEqual(seen.first?.priceMinor, 49900)
+        var refused = false
+        do { _ = try await buyer.vaultItems(setID: set.id) } catch { refused = true }
+        XCTAssertTrue(refused)
+        let rawEvents = await eStore.all(.vaultSet)
+        let raw = try XCTUnwrap(rawEvents.last)
+        XCTAssertTrue(raw.content.contains("Backstage"), "the shop window is public")
+        XCTAssertFalse(raw.content.contains("\"caption\":\"one\""), "the goods are sealed")
+
+        // Buyer pays; the creator's phone releases the key sealed to them.
+        _ = try await buyer.buyVaultSet(id: set.id, rail: .web, reference: "ch_test_123")
+        await sync(bStore, cStore)
+        let sales = try await creator.vaultSales()
+        XCTAssertEqual(sales.map(\.amountMinor), [49900]); XCTAssertEqual(sales.first?.rail, .web)
+        await sync(cStore, bStore); await sync(cStore, eStore)
+        await buyer.processGrants(); await eve.processGrants()
+        let items = try await buyer.vaultItems(setID: set.id)
+        XCTAssertEqual(items.map(\.caption), ["one"]); XCTAssertNotNil(items.first?.media)
+        var eveRefused = false
+        do { _ = try await eve.vaultItems(setID: set.id) } catch { eveRefused = true }
+        XCTAssertTrue(eveRefused, "Eve holds every byte, including the key handoff, and still can't open it")
+
+        // Withdrawing rotates the key: whoever already paid keeps what they have, nothing new leaks.
+        try await creator.deleteVaultSet(id: set.id)
+        await sync(cStore, bStore)
+        let gone = try await buyer.vaultSets(creatorID: await creator.myID)
+        XCTAssertTrue(gone.isEmpty)
+    }
+
+    func testBookingsOnlyMoveWhenTheRightPersonMovesThem() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-book-\(UUID().uuidString)")
+        func phone(_ n: String) -> (DecentralizedBackend, EventStore) {
+            let store = EventStore(directory: dir.appending(path: n))
+            return (DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), agreement: Curve25519.KeyAgreement.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m-\(n)")), store: store, keys: MomentKeys(namespace: "t.\(n).\(UUID().uuidString)")), store)
+        }
+        let (creator, cStore) = phone("c"), (fan, fStore) = phone("f")
+        _ = try await creator.updateProfile(displayName: "Creator", handle: "c", bio: "", avatar: nil)
+        _ = try await fan.updateProfile(displayName: "Fan", handle: "f", bio: "", avatar: nil)
+        func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
+        let offer = try await creator.saveBookingOffer(BookingOffer(id: "", creatorID: "", creatorName: "", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "Camera on.", active: true))
+        await sync(cStore, fStore)
+        let creatorID = await creator.myID
+        let b = try await fan.requestBooking(offerID: offer.id, creatorID: creatorID, startsAt: .now.addingTimeInterval(3600), note: "hi", rail: .web, reference: nil)
+        await sync(fStore, cStore)
+        // The fan can't accept their own booking.
+        var blocked = false
+        do { _ = try await fan.setBookingStatus(id: b.id, status: .accepted) } catch { blocked = true }
+        XCTAssertTrue(blocked)
+        let accepted = try await creator.setBookingStatus(id: b.id, status: .accepted)
+        XCTAssertEqual(accepted.status, .accepted); XCTAssertFalse(accepted.roomID.isEmpty)
+        await sync(cStore, fStore)
+        let fanView = try await fan.myBookings()
+        XCTAssertEqual(fanView.first?.status, .accepted)
+        XCTAssertEqual(fanView.first?.roomID, accepted.roomID, "both sides land on the same room")
+    }
+}
