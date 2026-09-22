@@ -234,6 +234,7 @@
 		FAE3D5587634EF1768F8909D /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D5B0733F5386FA454BC8C50 /* ImportService.swift */; };
 		FECE727353FCE24EA2ADBC6D /* DataLifecycleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A6B537367DE45D354ECB22 /* DataLifecycleService.swift */; };
 		FEDAC3C84D3122CE37E0A40D /* demo_176.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3DCAA43EDA1864ACB6110251 /* demo_176.jpg */; };
+		FF6FA240839788E7586724D5 /* VoiceNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57B090FCEBDF5373271071DD /* VoiceNotes.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -369,6 +370,7 @@
 		5448A08E37BA411D80BA9745 /* CaptureResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureResultView.swift; sourceTree = "<group>"; };
 		54497CFEEEB3446AC4AA41A5 /* SharedCaptureItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedCaptureItem.swift; sourceTree = "<group>"; };
 		548D7B752AA64A26C32B349D /* MediaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaStore.swift; sourceTree = "<group>"; };
+		57B090FCEBDF5373271071DD /* VoiceNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNotes.swift; sourceTree = "<group>"; };
 		59012AC598B479CEAB1B4D08 /* demo_200.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_200.jpg; sourceTree = "<group>"; };
 		5A304459386E4B71A51CFDA5 /* SocialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialService.swift; sourceTree = "<group>"; };
 		5AA848AB27C2E9D6A983848E /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
@@ -939,6 +941,7 @@
 				C7A5F365A8464F0635F14CBA /* SocialPolish.swift */,
 				D66547F996E7EBA68A487DF2 /* StartActivityView.swift */,
 				02B1F4F35283648A73218767 /* TimeMachineView.swift */,
+				57B090FCEBDF5373271071DD /* VoiceNotes.swift */,
 			);
 			path = Social;
 			sourceTree = "<group>";
@@ -1502,6 +1505,7 @@
 				1E2E9CEDB3E53263EDA7D911 /* UserProfile.swift in Sources */,
 				49285B648C7470E208684776 /* VaultView.swift in Sources */,
 				5C0A475C535BCBC8D0CAC375 /* VoiceCaptureView.swift in Sources */,
+				FF6FA240839788E7586724D5 /* VoiceNotes.swift in Sources */,
 				AFCA652AABF8A5FF8F5F2140 /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

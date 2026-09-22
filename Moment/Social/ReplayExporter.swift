@@ -46,7 +46,11 @@ enum ReplayExporter {
         }
         let size = options.size
         try await emit({ ctx, t in Cards.title(ctx, size: size, title: title, subtitle: subtitle, t: t) }, seconds: 2.2)
-        for b in shown { try await emit({ ctx, t in Cards.beat(ctx, size: size, beat: b, t: t, title: title) }, seconds: spb) }
+        for var b in shown {
+            // Scale once per beat (aspect-fill at the max zoom); every frame is then a cheap blit.
+            if let img = b.image { b.image = Cards.prescaled(img, to: size, zoom: 1.06) }
+            try await emit({ ctx, t in Cards.beat(ctx, size: size, beat: b, t: t, title: title) }, seconds: spb)
+        }
         try await emit({ ctx, t in Cards.end(ctx, size: size, title: title, line: inviteLine, t: t) }, seconds: 2.6)
         input.markAsFinished()
         await writer.finishWriting()
@@ -82,10 +86,18 @@ enum ReplayExporter {
             text(subtitle, at: CGRect(x: 80, y: size.height * 0.44 + 250, width: size.width - 160, height: 80), font: .systemFont(ofSize: 40, weight: .medium), color: UIColor.white.withAlphaComponent(0.7 * a), align: .center)
         }
 
+        static func prescaled(_ image: UIImage, to size: CGSize, zoom: CGFloat) -> UIImage {
+            let target = CGSize(width: size.width * zoom, height: size.height * zoom)
+            let scale = max(target.width / image.size.width, target.height / image.size.height)
+            let w = image.size.width * scale, h = image.size.height * scale
+            let f = UIGraphicsImageRendererFormat(); f.scale = 1; f.opaque = true
+            return UIGraphicsImageRenderer(size: target, format: f).image { _ in image.draw(in: CGRect(x: (target.width - w) / 2, y: (target.height - h) / 2, width: w, height: h)) }
+        }
+
         static func beat(_ ctx: CGContext, size: CGSize, beat: Beat, t: Double, title: String) {
             UIColor.black.setFill(); ctx.fill(CGRect(origin: .zero, size: size))
             if let img = beat.image?.cgImage {
-                // Slow push-in, aspect-fill.
+                // Slow push-in, aspect-fill (image is pre-scaled to size × 1.06).
                 let zoom = 1.0 + 0.06 * ease(t)
                 let iw = CGFloat(img.width), ih = CGFloat(img.height)
                 let scale = max(size.width / iw, size.height / ih) * zoom

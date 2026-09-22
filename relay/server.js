@@ -9,6 +9,7 @@
 //
 // Protocol (JSON arrays, one per message):
 //   client → relay   ["EVENT", <event>]              publish
+//                    ["EPHEMERAL", <event>]          forward to subscribers, don't store (typing)
 //                    ["REQ", <id>, <filter>]          subscribe; filter = {kinds, authors, moments, geo, tags, since}
 //                    ["CLOSE", <id>]
 //   relay  → client  ["EVENT", <event>]              matching stored + live events
@@ -96,6 +97,13 @@ wss.on('connection', ws => {
       for (const [peer, filters] of subs) {
         if (peer === ws || peer.readyState !== 1) continue;
         for (const f of filters.values()) { if (matches(f, a)) { peer.send(JSON.stringify(['EVENT', a])); break; } }
+      }
+    } else if (type === 'EPHEMERAL') {
+      // Typing indicators and the like: verified, forwarded to matching subscribers, never written down.
+      if (!isValid(a)) return;
+      for (const [peer, filters] of subs) {
+        if (peer === ws || peer.readyState !== 1) continue;
+        for (const f of filters.values()) { if (matches(f, a)) { peer.send(JSON.stringify(['EPHEMERAL', a])); break; } }
       }
     } else if (type === 'REQ' && typeof a === 'string') {
       subs.get(ws).set(a, b);

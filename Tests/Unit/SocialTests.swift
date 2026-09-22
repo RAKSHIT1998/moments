@@ -665,3 +665,31 @@ final class ReplayExporterTests: XCTestCase {
         XCTAssertGreaterThan(duration, 50, "all 30 sides fit by shortening each beat, not by dropping them")
     }
 }
+
+@MainActor
+final class ReceiptsAndTypingTests: XCTestCase {
+    func testSeenAndTypingShowUpWithNames() async throws {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try! StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        let conv = await env.social.conversation(with: "u_sarah")
+        let c = try XCTUnwrap(conv)
+        await env.social.loadMessages(c.id)
+        _ = await env.social.send(conversationID: c.id, text: "see this?")
+        XCTAssertTrue(env.social.seenNames(for: c.id).isEmpty, "nobody has seen it yet")
+        // Sarah opens the chat.
+        try await backend.acting(as: "u_sarah") { b in let last = try await b.messages(conversationID: c.id).last!; try await b.markSeen(conversationID: c.id, lastMessageID: last.id) }
+        await env.social.refreshSeen(c.id)
+        XCTAssertEqual(env.social.seenNames(for: c.id), ["Sarah Kim"])
+        // Typing: the demo backend echoes a burst back from the other person.
+        env.social.noteTyping(c.id)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(env.social.typingNames(for: c.id), ["Sarah Kim"])
+        // A voice note travels as .voice media with a duration.
+        let voice = Data(repeating: 1, count: 4000)
+        _ = await env.social.send(conversationID: c.id, text: "", voice: voice)
+        XCTAssertEqual(env.social.messages[c.id]?.last?.media?.kind, .voice)
+        XCTAssertEqual(env.social.conversations.first { $0.id == c.id }?.lastMessage, "Voice note")
+    }
+}

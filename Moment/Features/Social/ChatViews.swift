@@ -175,6 +175,21 @@ struct ChatView: View {
                             bubble(m, showName: (conversation?.isGroup ?? false) && m.authorID != env.social.myID && (i == 0 || messages[i - 1].authorID != m.authorID))
                                 .id(m.id)
                         }
+                        let seen = env.social.seenNames(for: conversationID)
+                        if !seen.isEmpty, messages.last?.authorID == env.social.myID {
+                            Text(conversation?.isGroup == true ? "Seen by \(seen.joined(separator: ", "))" : "Seen").font(MFont.caption).foregroundStyle(MColor.textTertiary).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 6)
+                                .accessibilityIdentifier("seenLine")
+                        }
+                        let _ = env.social.typingTick
+                        let typing = env.social.typingNames(for: conversationID)
+                        if !typing.isEmpty {
+                            HStack(spacing: 6) {
+                                TypingDots()
+                                Text(typing.count == 1 ? "\(typing[0].split(separator: " ").first.map(String.init) ?? typing[0]) is typing" : "\(typing.count) people are typing").font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 7).glassPill().frame(maxWidth: .infinity, alignment: .leading).id("typing")
+                            .accessibilityIdentifier("typingIndicator")
+                        }
                     }
                     .padding(.horizontal, MSpacing.l).padding(.top, MSpacing.m).padding(.bottom, MSpacing.s)
                 }
@@ -222,14 +237,15 @@ struct ChatView: View {
                         RoundedRectangle(cornerRadius: 2).fill(MColor.accent).frame(width: 3)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(quoted.authorID == env.social.myID ? "You" : quoted.authorName).font(.caption.weight(.semibold))
-                            Text(quoted.text.isEmpty ? (quoted.momentID != nil ? "A Moment" : "Photo") : quoted.text).font(MFont.caption).lineLimit(2)
+                            Text(quoted.text.isEmpty ? (quoted.momentID != nil ? "A Moment" : (quoted.media?.kind == .voice ? "Voice note" : "Photo")) : quoted.text).font(MFont.caption).lineLimit(2)
                         }
                         .foregroundStyle(MColor.textSecondary)
                     }
                     .padding(8).glass(radius: 10)
                 }
                 if let momentID = m.momentID { momentCard(momentID) }
-                if let media = m.media { SocialImage(ref: media).frame(width: 230, height: 230).clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(.white.opacity(0.35), lineWidth: 0.5)) }
+                if let media = m.media, media.kind == .voice { VoiceNoteBubble(message: m, mine: mine) }
+                else if let media = m.media { SocialImage(ref: media).frame(width: 230, height: 230).clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(.white.opacity(0.35), lineWidth: 0.5)) }
                 if !m.text.isEmpty, m.momentID == nil || m.text != env.social.moments[m.momentID ?? ""]?.title {
                     Text(m.text).font(MFont.body)
                         .padding(.horizontal, 14).padding(.vertical, 9)
@@ -323,11 +339,19 @@ struct ChatView: View {
                     .padding(.horizontal, MSpacing.m).padding(.vertical, 9)
                     .glass(radius: 20)
                     .accessibilityIdentifier("messageField")
-                Button { let t = text, r = replyTo?.id; text = ""; replyTo = nil; Task { _ = await env.social.send(conversationID: conversationID, text: t, replyTo: r) } } label: {
-                    Image(systemName: "arrow.up").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36)
-                        .background(Circle().fill(text.isBlank ? MColor.textTertiary : MColor.accent))
+                    .onChange(of: text) { _, t in if !t.isEmpty { env.social.noteTyping(conversationID) } }
+                if text.isBlank {
+                    VoiceRecordButton { url in
+                        let r = replyTo?.id; replyTo = nil
+                        Task { if let d = try? Data(contentsOf: url) { _ = await env.social.send(conversationID: conversationID, text: "", voice: d, replyTo: r) }; try? FileManager.default.removeItem(at: url) }
+                    }
+                } else {
+                    Button { let t = text, r = replyTo?.id; text = ""; replyTo = nil; Task { _ = await env.social.send(conversationID: conversationID, text: t, replyTo: r) } } label: {
+                        Image(systemName: "arrow.up").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36)
+                            .background(Circle().fill(MColor.accent))
+                    }
+                    .accessibilityLabel("Send").accessibilityIdentifier("sendMessage")
                 }
-                .disabled(text.isBlank).accessibilityLabel("Send").accessibilityIdentifier("sendMessage")
             }
         }
         .padding(.horizontal, MSpacing.m).padding(.vertical, MSpacing.s)
@@ -349,5 +373,21 @@ struct MomentPickerSheet: View {
             .navigationTitle("Share a Moment")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
+    }
+}
+
+/// Three dots breathing in turn.
+struct TypingDots: View {
+    @State private var on = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle().fill(MColor.textSecondary).frame(width: 6, height: 6).opacity(on ? 1 : 0.3)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.2), value: on)
+            }
+        }
+        .onAppear { if !ProcessInfo.processInfo.arguments.contains("-uitest") { on = true } }
+        .accessibilityHidden(true)
     }
 }

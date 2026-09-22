@@ -34,6 +34,8 @@ actor InMemoryBackend: SocialBackend {
     var plans: [String: CreatorPlan] = [:]
     var subs: [CreatorSubscription] = []
     var tipsList: [CreatorTip] = []
+    var seenByConversation: [String: [String: String]] = [:]
+    var typingHandler: (@Sendable (String, String) -> Void)?
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
     var offline = false
@@ -355,9 +357,9 @@ actor InMemoryBackend: SocialBackend {
         let other = convos[i].participantIDs.first { $0 != me.id } ?? ""
         guard !blocked.contains(other) else { throw SocialError.blocked }
         var m = message
-        if let mediaData { mediaBlobs[m.id] = mediaData; m.media = MediaRef(kind: .photo, localRef: message.media?.localRef, remoteID: m.id) }
+        if let mediaData { mediaBlobs[m.id] = mediaData; m.media = MediaRef(kind: message.media?.kind ?? .photo, localRef: message.media?.localRef, remoteID: m.id, durationSeconds: message.media?.durationSeconds) }
         dms[message.conversationID, default: []].append(m)
-        if !m.isReaction { convos[i].lastMessage = m.text.isEmpty ? (m.momentID != nil ? "Shared a Moment" : "Photo") : m.text; convos[i].updatedAt = .now }
+        if !m.isReaction { convos[i].lastMessage = m.text.isEmpty ? (m.momentID != nil ? "Shared a Moment" : (m.media?.kind == .voice ? "Voice note" : "Photo")) : m.text; convos[i].updatedAt = .now }
         return m
     }
     func conversation(with userID: String) async throws -> Conversation {
@@ -367,6 +369,14 @@ actor InMemoryBackend: SocialBackend {
         let c = Conversation(id: "c_\(UUID().uuidString)", participantIDs: [me.id, userID], participantNames: [me.displayName, u.displayName], lastMessage: "", updatedAt: .now)
         convos.append(c); return c
     }
+    func markSeen(conversationID: String, lastMessageID: String) async throws { try gate(); seenByConversation[conversationID, default: [:]][me.id] = lastMessageID }
+    func seen(conversationID: String) async throws -> [String: String] { try gate(); return seenByConversation[conversationID] ?? [:] }
+    func setTyping(conversationID: String, typing: Bool) async {
+        // Demo: the other person answers a typing burst with one of their own, so the indicator can be seen.
+        guard typing, let c = convos.first(where: { $0.id == conversationID }), let other = c.participantIDs.first(where: { $0 != me.id }), let h = typingHandler else { return }
+        h(conversationID, other)
+    }
+    func onTyping(_ handler: @escaping @Sendable (String, String) -> Void) async { typingHandler = handler }
     func conversation(forGroup group: SocialGroup) async throws -> Conversation {
         try gate()
         if let c = convos.first(where: { $0.groupID == group.id }) { return c }

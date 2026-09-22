@@ -7,6 +7,9 @@ protocol EventTransport: AnyObject {
     func publish(_ event: SignedEvent)
     func start()
     func stop()
+    /// Fire-and-forget, never stored: typing indicators. Signed so peers know who it's from.
+    func whisper(_ event: SignedEvent)
+    var onWhisper: (@Sendable (SignedEvent) -> Void)? { get set }
 }
 
 /// Phone-to-phone over Wi-Fi/Bluetooth with MultipeerConnectivity. No internet, no server:
@@ -34,9 +37,11 @@ final class MeshTransport: NSObject, EventTransport, MCSessionDelegate, MCNearby
     func start() { advertiser.startAdvertisingPeer(); browser.startBrowsingForPeers() }
     func stop() { advertiser.stopAdvertisingPeer(); browser.stopBrowsingForPeers(); session.disconnect() }
 
-    enum Frame: Codable { case have([String]), want([String]), events([SignedEvent]) }
+    enum Frame: Codable { case have([String]), want([String]), events([SignedEvent]), whisper(SignedEvent) }
+    var onWhisper: (@Sendable (SignedEvent) -> Void)?
 
     func publish(_ event: SignedEvent) { send(.events([event]), to: session.connectedPeers) }
+    func whisper(_ event: SignedEvent) { send(.whisper(event), to: session.connectedPeers) }
 
     private func send(_ frame: Frame, to peers: [MCPeerID]) {
         guard !peers.isEmpty, let data = try? JSONEncoder.event.encode(frame) else { return }
@@ -61,6 +66,8 @@ final class MeshTransport: NSObject, EventTransport, MCSessionDelegate, MCNearby
             case .want(let ids):
                 let evs = await store.get(ids)
                 for chunk in stride(from: 0, to: evs.count, by: 20) { send(.events(Array(evs[chunk..<min(chunk + 20, evs.count)])), to: [peer]) }
+            case .whisper(let e):
+                if e.isValid { onWhisper?(e) }
             case .events(let evs):
                 for e in evs { await store.ingest(e) }
             }
@@ -109,6 +116,13 @@ final class RelayTransport: NSObject, EventTransport, URLSessionWebSocketDelegat
         let frame = "[\"EVENT\",\(json)]"
         for (u, t) in tasks { if connected.contains(u) { t.send(.string(frame)) { _ in } } else { pending[u, default: []].append(frame) } }
     }
+    var onWhisper: (@Sendable (SignedEvent) -> Void)?
+    /// ["EPHEMERAL", event]: the relay forwards it to matching subscribers and forgets it.
+    func whisper(_ event: SignedEvent) {
+        guard let data = try? JSONEncoder.event.encode(event), let json = String(data: data, encoding: .utf8) else { return }
+        let frame = "[\"EPHEMERAL\",\(json)]"
+        for (u, t) in tasks where connected.contains(u) { t.send(.string(frame)) { _ in } }
+    }
 
     /// Ask relays for what this device cares about: my follows, my Moments, public activity in cells.
     func subscribe(id: String, _ filter: Filter) {
@@ -123,9 +137,10 @@ final class RelayTransport: NSObject, EventTransport, URLSessionWebSocketDelegat
             guard let self else { return }
             switch result {
             case .success(let msg):
-                if case .string(let s) = msg, let data = s.data(using: .utf8), let arr = try? JSONSerialization.jsonObject(with: data) as? [Any], arr.count >= 2, (arr[0] as? String) == "EVENT",
+                if case .string(let s) = msg, let data = s.data(using: .utf8), let arr = try? JSONSerialization.jsonObject(with: data) as? [Any], arr.count >= 2, let type = arr[0] as? String,
                    let evData = try? JSONSerialization.data(withJSONObject: arr[1]), let e = try? JSONDecoder.event.decode(SignedEvent.self, from: evData) {
-                    Task { await self.store.ingest(e) }
+                    if type == "EVENT" { Task { await self.store.ingest(e) } }
+                    else if type == "EPHEMERAL", e.isValid { self.onWhisper?(e) }
                 }
                 self.receive(on: task, url: url)
             case .failure:

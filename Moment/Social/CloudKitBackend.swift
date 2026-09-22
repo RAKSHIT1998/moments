@@ -795,7 +795,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         var out: [DirectMessage] = []
         for r in try await query(q, in: db, zone: record.recordID.zoneID, limit: 500) {
             var ref: MediaRef? = nil
-            if let asset = r["media"] as? CKAsset, let url = asset.fileURL, let data = try? Data(contentsOf: url), let local = try? await media.store(data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: r.recordID.recordName) }
+            let kind = MediaRef.Kind(rawValue: r["mediaKind"] as? String ?? "") ?? .photo
+            if let asset = r["media"] as? CKAsset, let url = asset.fileURL, let data = try? Data(contentsOf: url), let local = try? await media.store(data, extension: kind == .voice ? "m4a" : "jpg") { ref = MediaRef(kind: kind, localRef: local, remoteID: r.recordID.recordName, durationSeconds: r["mediaDuration"] as? Double) }
             out.append(DirectMessage(id: r.recordID.recordName, conversationID: conversationID, authorID: r["authorID"] as? String ?? "", authorName: r["authorName"] as? String ?? "", text: r["text"] as? String ?? "", media: ref, momentID: r["momentID"] as? String, createdAt: r.creationDate ?? .now, replyToID: r["replyToID"] as? String))
         }
         return out
@@ -808,7 +809,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         r["conversationRef"] = CKRecord.Reference(recordID: conv.recordID, action: .deleteSelf)
         r.parent = CKRecord.Reference(recordID: conv.recordID, action: .none)
         r["authorID"] = message.authorID; r["authorName"] = message.authorName; r["text"] = message.text; r["momentID"] = message.momentID; r["replyToID"] = message.replyToID
-        if let mediaData, let url = try? Self.tempFile(mediaData, ext: "jpg") { r["media"] = CKAsset(fileURL: url) }
+        r["mediaKind"] = message.media?.kind.rawValue; r["mediaDuration"] = message.media?.durationSeconds
+        if let mediaData, let url = try? Self.tempFile(mediaData, ext: message.media?.kind == .voice ? "m4a" : "jpg") { r["media"] = CKAsset(fileURL: url) }
         let saved = try await save(r, in: db)
         if !message.isReaction { conv["lastMessage"] = message.text.isEmpty ? (message.momentID != nil ? "Shared a Moment" : "Photo") : message.text; _ = try? await save(conv, in: db) }
         var out = message; out.id = saved.recordID.recordName
@@ -832,6 +834,24 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         do { _ = try await privateDB.modifyRecords(saving: [r, share], deleting: []) } catch { throw map(error) }
         return Conversation(id: r.recordID.recordName, participantIDs: [me.id, userID], participantNames: [me.displayName, other.displayName], lastMessage: "", updatedAt: .now)
     }
+    func markSeen(conversationID: String, lastMessageID: String) async throws {
+        let me = try await currentUser()
+        let (conv, db) = try await anyRecord(name: conversationID, type: "Conversation")
+        let id = CKRecord.ID(recordName: "seen_\(conversationID)_\(me.id)", zoneID: conv.recordID.zoneID)
+        let r = (try? await db.record(for: id)) ?? CKRecord(recordType: "Seen", recordID: id)
+        if r["conversationRef"] == nil { r["conversationRef"] = CKRecord.Reference(recordID: conv.recordID, action: .deleteSelf); r.parent = CKRecord.Reference(recordID: conv.recordID, action: .none) }
+        r["userID"] = me.id; r["lastMessageID"] = lastMessageID
+        _ = try await save(r, in: db)
+    }
+    func seen(conversationID: String) async throws -> [String: String] {
+        let (conv, db) = try await anyRecord(name: conversationID, type: "Conversation")
+        let q = CKQuery(recordType: "Seen", predicate: NSPredicate(format: "conversationRef == %@", CKRecord.Reference(recordID: conv.recordID, action: .deleteSelf)))
+        var out: [String: String] = [:]
+        for r in (try? await query(q, in: db, zone: conv.recordID.zoneID, limit: 100)) ?? [] { if let u = r["userID"] as? String, let m = r["lastMessageID"] as? String { out[u] = m } }
+        return out
+    }
+    func setTyping(conversationID: String, typing: Bool) async {}   // no live channel in CloudKit; nothing to send
+    func onTyping(_ handler: @escaping @Sendable (String, String) -> Void) async {}
     func conversation(forGroup group: SocialGroup) async throws -> Conversation {
         try await ensureZone()
         let me = try await currentUser()

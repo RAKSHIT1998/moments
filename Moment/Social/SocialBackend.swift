@@ -86,6 +86,14 @@ protocol SocialBackend: AnyObject, Sendable {
     func conversation(with userID: String) async throws -> Conversation
     /// The chat that belongs to a group; created on first use, everyone in the group is in it.
     func conversation(forGroup group: SocialGroup) async throws -> Conversation
+    /// Read receipt: the last message I've seen in a conversation. Others see "Seen"; nobody else learns anything.
+    func markSeen(conversationID: String, lastMessageID: String) async throws
+    /// userID → last message id they've seen.
+    func seen(conversationID: String) async throws -> [String: String]
+    /// Ephemeral: never stored, never relayed beyond the people in the chat. Backends without a live channel ignore it.
+    func setTyping(conversationID: String, typing: Bool) async
+    /// Called with (conversationID, userID) when someone starts typing.
+    func onTyping(_ handler: @escaping @Sendable (String, String) -> Void) async
 
     // Groups
     func groups() async throws -> [SocialGroup]

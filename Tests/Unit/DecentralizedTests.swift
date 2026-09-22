@@ -210,3 +210,35 @@ final class DecentralizedMessagingTests: XCTestCase {
         XCTAssertEqual(convs.first?.lastMessage, "look", "a reaction is not the preview")
     }
 }
+
+final class DecentralizedReceiptsTests: XCTestCase {
+    func testSeenIsAnEventAndTypingIsNeverStored() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-seen-\(UUID().uuidString)")
+        let aStore = EventStore(directory: dir.appending(path: "a")), bStore = EventStore(directory: dir.appending(path: "b"))
+        let alice = DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "ma")), store: aStore, keys: MomentKeys(namespace: "t.a.\(UUID().uuidString)"))
+        let bob = DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), media: MediaStore(directory: dir.appending(path: "mb")), store: bStore, keys: MomentKeys(namespace: "t.b.\(UUID().uuidString)"))
+        _ = try await alice.updateProfile(displayName: "Alice", handle: "alice", bio: "", avatar: nil)
+        _ = try await bob.updateProfile(displayName: "Bob", handle: "bob", bio: "", avatar: nil)
+        func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
+        await sync(bStore, aStore)
+        let bobID = await bob.myID, aliceID = await alice.myID
+        let c = try await alice.conversation(with: bobID)
+        let url = try await alice.share(momentID: c.id, with: [bobID])
+        await sync(aStore, bStore); _ = try await bob.acceptInvite(url: url)
+        let m = try await alice.send(DirectMessage(id: "", conversationID: c.id, authorID: "", authorName: "Alice", text: "hi", media: nil, momentID: nil, createdAt: .now), mediaData: nil)
+        await sync(aStore, bStore)
+        try await bob.markSeen(conversationID: c.id, lastMessageID: m.id)
+        try await bob.markSeen(conversationID: c.id, lastMessageID: m.id)   // idempotent: one event
+        await sync(bStore, aStore)
+        let seen = try await alice.seen(conversationID: c.id)
+        XCTAssertEqual(seen[bobID], m.id)
+        let seenEvents = await aStore.all(.seen)
+        XCTAssertEqual(seenEvents.count, 1)
+        // Typing goes through transports as a whisper; with no transport attached nothing is written anywhere.
+        let before = await bStore.count
+        await bob.setTyping(conversationID: c.id, typing: true)
+        let after = await bStore.count
+        XCTAssertEqual(before, after, "typing never touches the store")
+        XCTAssertNotEqual(aliceID, bobID)
+    }
+}

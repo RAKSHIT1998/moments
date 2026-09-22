@@ -123,6 +123,7 @@ final class SocialService {
             }
             if let ck = backend as? CloudKitBackend { Task { await ck.ensureSubscriptions() } }
             if let mesh = backend as? DecentralizedBackend { await mesh.startObserving { [weak self] in Task { @MainActor in self?.scheduleMeshRefresh() } } }
+            await startTypingObserver()
             if let identity, me?.publicKey != identity.publicKeyBase64 {
                 try? await backend.publishIdentity(publicKey: identity.publicKeyBase64, momentID: identity.momentID)
                 me = try? await backend.currentUser()
@@ -937,18 +938,19 @@ final class SocialService {
 
     func markActivityRead() async { activity = activity.map { var a = $0; a.read = true; return a }; try? await backend.markActivityRead() }
 
-    func loadMessages(_ conversationID: String) async { messages[conversationID] = (try? await backend.messages(conversationID: conversationID)) ?? [] }
+    func loadMessages(_ conversationID: String) async { messages[conversationID] = (try? await backend.messages(conversationID: conversationID)) ?? []; await refreshSeen(conversationID) }
 
     func conversation(with userID: String) async -> Conversation? {
         do { let c = try await backend.conversation(with: userID); if !conversations.contains(where: { $0.id == c.id }) { conversations.insert(c, at: 0) }; return c } catch { lastError = error.localizedDescription; return nil }
     }
 
-    func send(conversationID: String, text: String, momentID: String? = nil, photo: Data? = nil, replyTo: String? = nil) async -> Bool {
+    func send(conversationID: String, text: String, momentID: String? = nil, photo: Data? = nil, voice: Data? = nil, replyTo: String? = nil) async -> Bool {
         guard let me else { return false }
         if case .blocked(let why) = ContentModeration.check(text) { lastError = why; return false }
         var ref: MediaRef? = nil
         var data: Data? = nil
         if let photo, let p = MediaPipeline.preparePhoto(photo), let local = try? await media.store(p.data, extension: "jpg") { ref = MediaRef(kind: .photo, localRef: local, remoteID: nil); data = p.data }
+        if let voice, let local = try? await media.store(voice, extension: "m4a") { ref = MediaRef(kind: .voice, localRef: local, remoteID: nil, durationSeconds: VoiceNotePlayer.duration(of: voice)); data = voice }
         let m = DirectMessage(id: UUID().uuidString, conversationID: conversationID, authorID: me.id, authorName: me.displayName, text: text.trimmed, media: ref, momentID: momentID, createdAt: .now, replyToID: replyTo)
         do {
             let saved = try await backend.send(m, mediaData: data)
@@ -977,7 +979,37 @@ final class SocialService {
         get { (UserDefaults.standard.dictionary(forKey: "chat.readAt") as? [String: Double] ?? [:]).mapValues { Date(timeIntervalSince1970: $0) } }
         set { UserDefaults.standard.set(newValue.mapValues { $0.timeIntervalSince1970 }, forKey: "chat.readAt") }
     }
-    func markRead(_ conversationID: String) { var r = readAt; r[conversationID] = .now; readAt = r; readTick += 1 }
+    func markRead(_ conversationID: String) {
+        var r = readAt; r[conversationID] = .now; readAt = r; readTick += 1
+        if let last = messages[conversationID]?.last(where: { !$0.isReaction }) { Task { try? await backend.markSeen(conversationID: conversationID, lastMessageID: last.id); await refreshSeen(conversationID) } }
+    }
+    // Read receipts and typing, per conversation.
+    private(set) var seenBy: [String: [String: String]] = [:]
+    private(set) var typingIn: [String: [String: Date]] = [:]
+    func refreshSeen(_ conversationID: String) async { seenBy[conversationID] = (try? await backend.seen(conversationID: conversationID)) ?? [:] }
+    /// Others who have seen my latest message in this conversation (names).
+    func seenNames(for conversationID: String) -> [String] {
+        guard let c = conversations.first(where: { $0.id == conversationID }), let mine = messages[conversationID]?.last(where: { $0.authorID == myID && !$0.isReaction }),
+              let idx = messages[conversationID]?.firstIndex(where: { $0.id == mine.id }) else { return [] }
+        let ids = messages[conversationID]?.prefix(through: idx).map(\.id) ?? []
+        return zip(c.participantIDs, c.participantNames).filter { $0.0 != myID && (seenBy[conversationID]?[$0.0]).map { ids.contains($0) } == true }.map { $0.1 }
+    }
+    func typingNames(for conversationID: String) -> [String] {
+        guard let c = conversations.first(where: { $0.id == conversationID }) else { return [] }
+        let live = (typingIn[conversationID] ?? [:]).filter { $0.value.timeIntervalSinceNow > -6 }
+        return zip(c.participantIDs, c.participantNames).filter { live[$0.0] != nil }.map { $0.1 }
+    }
+    private var lastTypingSent: [String: Date] = [:]
+    func noteTyping(_ conversationID: String) {
+        guard (lastTypingSent[conversationID]?.timeIntervalSinceNow ?? -10) < -3 else { return }
+        lastTypingSent[conversationID] = .now
+        Task { await backend.setTyping(conversationID: conversationID, typing: true) }
+    }
+    private(set) var typingTick = 0
+    func startTypingObserver() async {
+        await backend.onTyping { [weak self] conv, user in Task { @MainActor in self?.typingIn[conv, default: [:]][user] = .now; self?.typingTick += 1
+            try? await Task.sleep(for: .seconds(6.5)); self?.typingTick += 1 } }
+    }
     private(set) var readTick = 0
     func isUnread(_ c: Conversation) -> Bool { _ = readTick; return c.updatedAt > (readAt[c.id] ?? .distantPast) && !c.lastMessage.isEmpty }
     var unreadChats: Int { conversations.filter { isUnread($0) }.count }
@@ -1003,6 +1035,12 @@ final class SocialService {
     }
 
     // MARK: - Media
+
+    /// Raw bytes for non-image media (voice notes).
+    func data(for ref: MediaRef) async -> Data? {
+        if let local = ref.localRef, let d = try? await media.load(local) { return d }
+        return try? await backend.download(ref)
+    }
 
     func image(for ref: MediaRef?) async -> UIImage? {
         guard let ref else { return nil }

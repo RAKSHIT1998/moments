@@ -31,7 +31,7 @@ actor DecentralizedBackend: SocialBackend {
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
-        struct Comment: Codable { var text: String; var contributionID: String?; var authorName: String; var media: String? = nil; var replyTo: String? = nil }
+        struct Comment: Codable { var text: String; var contributionID: String?; var authorName: String; var media: String? = nil; var replyTo: String? = nil; var mediaKind: String? = nil; var duration: Double? = nil }
         struct Reaction: Codable { var kind: String?; var contributionID: String? }
         struct Now: Codable { var text: String; var media: String?; var expiresAt: Date; var coarsePlace: String?; var activity: String; var place: SocialPlace?; var authorName: String }
         struct Join: Codable { var name: String }
@@ -76,7 +76,32 @@ actor DecentralizedBackend: SocialBackend {
         }
     }
 
-    func attach(_ t: EventTransport) { transports.append(t); t.start() }
+    private var typingHandler: (@Sendable (String, String) -> Void)?
+    func attach(_ t: EventTransport) {
+        t.onWhisper = { [weak self] e in Task { await self?.receiveWhisper(e) } }
+        transports.append(t); t.start()
+    }
+    private func receiveWhisper(_ e: SignedEvent) {
+        guard e.kind == .seen, e.tags["typing"] == "1", let conv = e.tags["moment"], e.author != myID, abs(e.createdAt.timeIntervalSinceNow) < 30 else { return }
+        typingHandler?(conv, e.author)
+    }
+    func markSeen(conversationID: String, lastMessageID: String) async throws {
+        // Don't spam the network: one event per conversation per last-message.
+        if let last = await store.all(.seen).last(where: { $0.author == myID && $0.tags["moment"] == conversationID }), last.tags["last"] == lastMessageID { return }
+        try await emit(.seen, tags: ["moment": conversationID, "last": lastMessageID], payload: ["v": "1"])
+    }
+    func seen(conversationID: String) async throws -> [String: String] {
+        var out: [String: (Date, String)] = [:]
+        for e in await store.all(.seen) where e.tags["moment"] == conversationID && e.tags["typing"] != "1" {
+            if let last = e.tags["last"], (out[e.author]?.0 ?? .distantPast) <= e.createdAt { out[e.author] = (e.createdAt, last) }
+        }
+        return out.mapValues(\.1)
+    }
+    func setTyping(conversationID: String, typing: Bool) async {
+        guard typing, let e = try? SignedEvent.make(kind: .seen, key: key, tags: ["moment": conversationID, "typing": "1"], content: "{}") else { return }
+        for t in transports { t.whisper(e) }
+    }
+    func onTyping(_ handler: @escaping @Sendable (String, String) -> Void) async { typingHandler = handler }
 
     /// Called for every new event from anywhere (mesh, relay, or this phone). Invalidates derived caches
     /// and lets the UI know something changed. `foreign` is true when another person authored it.
@@ -576,9 +601,10 @@ actor DecentralizedBackend: SocialBackend {
             guard let p = e.payload(Payloads.Comment.self, momentKey: k) else { continue }
             var ref: MediaRef? = nil
             if let b = p.media, let d = Data(base64Encoded: b) {
+                let kind = MediaRef.Kind(rawValue: p.mediaKind ?? "") ?? .photo
                 var local = mediaCache[e.id]
-                if local == nil { local = try? await media.store(d, extension: "jpg") }
-                if let local { mediaCache[e.id] = local; ref = MediaRef(kind: .photo, localRef: local, remoteID: e.id) }
+                if local == nil { local = try? await media.store(d, extension: kind == .voice ? "m4a" : "jpg") }
+                if let local { mediaCache[e.id] = local; ref = MediaRef(kind: kind, localRef: local, remoteID: e.id, durationSeconds: p.duration) }
             }
             out.append(DirectMessage(id: e.id, conversationID: conversationID, authorID: e.author, authorName: p.authorName, text: p.text, media: ref, momentID: p.contributionID, createdAt: e.createdAt, replyToID: p.replyTo))
         }
@@ -586,8 +612,9 @@ actor DecentralizedBackend: SocialBackend {
     }
     func send(_ message: DirectMessage, mediaData: Data?) async throws -> DirectMessage {
         guard ContentModeration.check(message.text) == .ok, let m = await build(message.conversationID), m.memberIDs.contains(myID) else { throw SocialError.notAllowed }
-        let b64 = mediaData.flatMap { MediaPipeline.thumbnail($0, side: 1280) ?? $0 }?.base64EncodedString()
-        let e = try await emit(.comment, tags: ["moment": message.conversationID], payload: Payloads.Comment(text: message.text, contributionID: message.momentID, authorName: message.authorName, media: b64, replyTo: message.replyToID), momentKey: await childKey(message.conversationID))
+        let isVoice = message.media?.kind == .voice
+        let b64 = mediaData.flatMap { isVoice ? $0 : (MediaPipeline.thumbnail($0, side: 1280) ?? $0) }?.base64EncodedString()
+        let e = try await emit(.comment, tags: ["moment": message.conversationID], payload: Payloads.Comment(text: message.text, contributionID: message.momentID, authorName: message.authorName, media: b64, replyTo: message.replyToID, mediaKind: message.media?.kind.rawValue, duration: message.media?.durationSeconds), momentKey: await childKey(message.conversationID))
         var out = message; out.id = e.id; out.authorID = myID; out.createdAt = e.createdAt; return out
     }
     func conversation(forGroup group: SocialGroup) async throws -> Conversation {
