@@ -86,7 +86,7 @@ struct Waveform: View {
             for (i, l) in levels.enumerated() {
                 let h = max(4, CGFloat(l) * size.height)
                 let rect = CGRect(x: CGFloat(i) * (w + gap), y: (size.height - h) / 2, width: w, height: h)
-                ctx.fill(Path(roundedRect: rect, cornerRadius: w / 2), with: .color(Color.accentColor.opacity(0.35 + Double(l) * 0.65)))
+                ctx.fill(Path(roundedRect: rect, cornerRadius: w / 2), with: .color(Color("AccentColor").opacity(0.35 + Double(l) * 0.65)))
             }
         }
     }

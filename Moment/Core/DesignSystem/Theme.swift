@@ -13,8 +13,10 @@ enum MColor {
     static let textSecondary = Color(uiColor: .secondaryLabel)
     static let textTertiary = Color(uiColor: .tertiaryLabel)
     static let separator = Color(uiColor: .separator)
-    static let accent = Color.accentColor
-    static let accentSoft = Color.accentColor.opacity(0.10)
+    /// Read the asset by name, not `Color.accentColor`: the latter resolves to whatever `.tint` an
+    /// ancestor set (the tab bar sets ink), which silently turned every accent surface black.
+    static let accent = Color("AccentColor")
+    static let accentSoft = Color("AccentColor").opacity(0.10)
     /// Solid ink for filled buttons; inverts with the theme.
     static let ink = Color(uiColor: .label)
     static let onInk = Color(uiColor: .systemBackground)
@@ -44,7 +46,7 @@ enum MColor {
 
     /// Kept for avatars and a few hero surfaces; deliberately near-flat — one accent, no rainbow.
     static let accentGradient = LinearGradient(
-        colors: [Color.accentColor, Color.accentColor.opacity(0.82)],
+        colors: [Color("AccentColor"), Color("AccentColor").opacity(0.82)],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 }

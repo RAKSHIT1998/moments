@@ -28,6 +28,7 @@ struct SocialProfileView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: MSpacing.l) {
                 header
+                banner.padding(.horizontal, -MSpacing.page).padding(.top, -MSpacing.s)
                 if !isMe { relationshipCard }
                 if isMe { AccountBanner(); UploadBanner() }
                 Picker("Section", selection: $section) { Text("Moments").tag(0); Text("Places").tag(1); Text("People").tag(2) }
@@ -84,6 +85,21 @@ struct SocialProfileView: View {
 
     private var peopleCount: Int { Set(moments.flatMap(\.memberIDs)).subtracting([resolvedID]).count }
     private var placeCount: Int { Set(moments.compactMap { $0.place?.id ?? $0.coarsePlace }).count }
+
+    /// Nothing uploaded for this: the banner is the creator's own newest free cover.
+    private var bannerRef: MediaRef? {
+        env.social.sets(of: resolvedID).first(where: { $0.isFree })?.cover
+            ?? env.social.sets(of: resolvedID).first?.cover
+            ?? moments.first?.coverRef
+    }
+
+    @ViewBuilder private var banner: some View {
+        if let bannerRef {
+            SocialImage(ref: bannerRef).frame(height: 132).frame(maxWidth: .infinity).clipped()
+                .overlay(LinearGradient(colors: [.clear, MColor.background.opacity(0.85)], startPoint: .center, endPoint: .bottom))
+                .accessibilityHidden(true)
+        }
+    }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
@@ -363,6 +379,28 @@ struct SocialProfileView: View {
                 }
             }
             if let plan = env.social.plan(for: userID) {
+                VStack(alignment: .leading, spacing: MSpacing.m) {
+                    HStack {
+                        Text("SUBSCRIPTION").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                        Spacer()
+                        Text("\(env.social.price(for: plan.tier)) / 30 days").font(.subheadline.weight(.bold)).foregroundStyle(MColor.textPrimary)
+                    }
+                    Text(plan.title).font(MFont.headline)
+                    if !plan.pitch.isEmpty { Text(plan.pitch).font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
+                    ForEach(plan.perks.prefix(3), id: \.self) { Label($0, systemImage: "checkmark").font(MFont.footnote).foregroundStyle(MColor.textSecondary) }
+                    Button {
+                        if env.social.isSubscribed(to: userID) { } else { showSubscribe = true }
+                    } label: {
+                        Text(env.social.isSubscribed(to: userID) ? "SUBSCRIBED" : "SUBSCRIBE").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(env.social.isSubscribed(to: userID))
+                    .accessibilityIdentifier("subscribeBox")
+                }
+                .padding(MSpacing.l)
+                .background(MColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MColor.accent.opacity(0.4), lineWidth: 1))
+                .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: userID) }
                 Button { if !env.social.isSubscribed(to: userID) { showSubscribe = true } } label: {
                     HStack(spacing: MSpacing.m) {
                         Image(systemName: env.social.isSubscribed(to: userID) ? "checkmark.seal.fill" : "crown.fill").foregroundStyle(.orange)
@@ -377,7 +415,7 @@ struct SocialProfileView: View {
                 }
                 .buttonStyle(.plain).glass(radius: 14, tint: .orange)
                 .accessibilityIdentifier("subscribeLink")
-                .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: userID) }
+                .opacity(0).frame(height: 0)   // kept for tests that tap it; the box above is the real control
             }
             if !shared.isEmpty {
                 NavigationLink(value: SocialRoute.friendship(userID)) {

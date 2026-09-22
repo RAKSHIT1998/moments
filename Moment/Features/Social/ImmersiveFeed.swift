@@ -200,25 +200,27 @@ struct ImmersiveFeedView: View {
         }
     }
 
+    @AppStorage("homeTab") private var homeTab = 0
+
     private var header: some View {
         VStack(spacing: MSpacing.s) {
-            HStack(spacing: MSpacing.m) {
-                Wordmark(size: 20).foregroundStyle(.white)
+            HStack(spacing: MSpacing.s) {
+                Image("LogoMark").resizable().scaledToFit().frame(width: 26, height: 26)
+                Picker("Home", selection: $homeTab) { Text("Feed").tag(0); Text("Moments").tag(1) }
+                    .pickerStyle(.segmented).frame(width: 190).colorScheme(.dark)
+                    .accessibilityIdentifier("homeTabs")
                 Spacer()
-                NavigationLink(value: SocialRoute.reels(nil)) {
-                    HStack(spacing: 5) { Image(systemName: "play.rectangle.fill").font(.caption); Text("Reels") }.font(.subheadline.weight(.semibold)).foregroundStyle(.white).padding(.horizontal, 12).padding(.vertical, 7)
-                }
-                .glassPill(tint: .pink).accessibilityIdentifier("reelsLink")
-                NavigationLink(value: SocialRoute.now) {
-                    HStack(spacing: 5) { Glyph(.now, size: 16); Text("Now") }.font(.subheadline.weight(.semibold)).foregroundStyle(.white).padding(.horizontal, 12).padding(.vertical, 7)
-                }
-                .glassPill(tint: MColor.accent).accessibilityIdentifier("nowLink")
-                Button { showScanner = true } label: { Glyph(.scan, size: 20).foregroundStyle(.white).frame(width: 36, height: 36) }.glass(radius: 18).accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
+                NavigationLink(value: SocialRoute.reels(nil)) { Image(systemName: "play.rectangle.fill").font(.subheadline).foregroundStyle(.white).frame(width: 34, height: 34) }
+                    .glass(radius: 17).accessibilityIdentifier("reelsLink")
+                NavigationLink(value: SocialRoute.now) { Glyph(.now, size: 18).foregroundStyle(.white).frame(width: 34, height: 34) }
+                    .glass(radius: 17).accessibilityLabel("Now").accessibilityIdentifier("nowLink")
+                Button { showScanner = true } label: { Glyph(.scan, size: 18).foregroundStyle(.white).frame(width: 34, height: 34) }
+                    .glass(radius: 17).accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
                 NavigationLink(value: SocialRoute.inbox) {
-                    Glyph(.activity, size: 20).foregroundStyle(.white).frame(width: 36, height: 36)
-                        .overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: -4, y: 4) } }
+                    Glyph(.activity, size: 18).foregroundStyle(.white).frame(width: 34, height: 34)
+                        .overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 7, height: 7).offset(x: -3, y: 3) } }
                 }
-                .glass(radius: 18).accessibilityLabel("Activity").accessibilityIdentifier("inboxButton")
+                .glass(radius: 17).accessibilityLabel("Activity").accessibilityIdentifier("inboxButton")
             }
             .padding(.horizontal, MSpacing.page)
             StoriesRow(showComposer: $showNowComposer, selectedNow: $selectedNow, onDark: true)

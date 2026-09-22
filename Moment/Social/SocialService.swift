@@ -1180,6 +1180,24 @@ final class SocialService {
     var storefrontEarnings: Double { CreatorEconomics.creatorEstimate(subscribers, tips: tipsReceived, sales: mySales, bookings: myBookings.filter { $0.creatorID == myID }) }
     var isCreator: Bool { myPlan != nil || !mySets.isEmpty || !(offersByCreator[myID] ?? []).isEmpty }
 
+    /// The creator feed: every set and subscribers-only Moment from people I follow or pay, newest first.
+    private(set) var creatorFeed: [CreatorPost] = []
+    func refreshCreatorFeed() async {
+        // Whose shop to show: people I follow or pay, and anyone whose Moments already reach me.
+        var ids = Set(graph.following)
+        ids.formUnion(mySubscriptions.filter(\.isActive).map(\.creatorID))
+        ids.formUnion(setsByCreator.keys)
+        ids.formUnion(moments.values.map(\.creatorID))
+        ids.insert(myID)
+        for id in ids where setsByCreator[id] == nil { await loadStorefront(id) }
+        for id in ids where creatorPlans[id] == nil && !checkedPlans.contains(id) { await loadCreatorPlan(id) }
+        if myPurchases.isEmpty { myPurchases = (try? await backend.myPurchases()) ?? [] }
+        let sets = ids.flatMap { setsByCreator[$0] ?? [] }
+        var plans: [String: CreatorPlan] = [:]
+        for id in ids { if let p = creatorPlans[id] { plans[id] = p } }
+        creatorFeed = CreatorFeedBuilder.build(sets: sets, moments: Array(moments.values), plans: plans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked)
+    }
+
     // MARK: - Reels
 
     private(set) var reels: [Reel] = []

@@ -927,3 +927,60 @@ final class StorefrontFlowTests: XCTestCase {
         XCTAssertEqual(links[0].url.absoluteString, "https://instagram.com/rakshit")
     }
 }
+
+final class CreatorFeedTests: XCTestCase {
+    private func set(_ id: String, _ creator: String, price: Int, visible: Bool = true, at: Date = .now) -> VaultSet {
+        VaultSet(id: id, creatorID: creator, creatorName: creator, title: id, blurb: "", priceMinor: price, currency: "INR", cover: nil, itemCount: 3, isVideo: false, createdAt: at, visible: visible)
+    }
+    private func paidMoment(_ id: String, _ creator: String, locked: Bool, at: Date = .now) -> SocialMoment {
+        var m = SocialMoment(id: id, creatorID: creator, creatorName: creator, title: id, description: "", coverRef: nil, createdAt: at, startAt: at, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .subscribers, memberIDs: [creator], memberNames: [creator], contributionCount: 0, mediaCount: 4, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: false, templateID: nil, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true)
+        m.isLocked = locked
+        return m
+    }
+
+    func testGatesSayExactlyWhatOpensEachPost() {
+        let plan = CreatorPlan(creatorID: "c", creatorName: "C", title: "Inside", pitch: "", tier: .t2, perks: [], payoutHint: "", createdAt: .now)
+        let posts = CreatorFeedBuilder.build(
+            sets: [set("free", "c", price: 0), set("paid", "c", price: 49900), set("bought", "c", price: 19900), set("mine", "me", price: 9900), set("hidden", "c", price: 100, visible: false)],
+            moments: [paidMoment("locked", "c", locked: true), paidMoment("subbed", "d", locked: true)],
+            plans: ["c": plan],
+            purchases: ["bought"], subscribedTo: ["d"], me: "me")
+        func gate(_ id: String) -> CreatorPost.Gate? { posts.first { $0.id == id }?.gate }
+        XCTAssertEqual(gate("s_free"), .open)
+        XCTAssertEqual(gate("s_bought"), .open, "what you've paid for is open — the feed is also your library")
+        XCTAssertEqual(gate("s_mine"), .open)
+        XCTAssertEqual(gate("s_paid"), .buy(priceMinor: 49900, currency: "INR"))
+        XCTAssertEqual(gate("m_locked"), .subscribe(tier: .t2, title: "Inside"))
+        XCTAssertEqual(gate("m_subbed"), .open)
+        XCTAssertNil(gate("s_hidden"), "a hidden set isn't in anyone's feed")
+        XCTAssertEqual(posts.first { $0.id == "s_paid" }?.priceLabel(Locale(identifier: "en_IN"))?.filter(\.isNumber), "499")
+    }
+
+    func testFeedIsNewestFirstAndSkipsBlocked() {
+        let old = Date().addingTimeInterval(-86400)
+        let posts = CreatorFeedBuilder.build(sets: [set("a", "c", price: 0, at: old), set("b", "c", price: 0), set("x", "blocked", price: 0)], moments: [], plans: [:], purchases: [], subscribedTo: [], me: "me", blocked: ["blocked"])
+        XCTAssertEqual(posts.map(\.id), ["s_b", "s_a"])
+    }
+
+    @MainActor func testDemoFeedShowsLockedAndFreeSetsFromCreators() async throws {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        await env.social.refreshCreatorFeed()
+        let feed = env.social.creatorFeed
+        XCTAssertTrue(feed.contains { $0.creatorID == "u_public" && !$0.isLocked }, "the free set is open")
+        // Both kinds of lock are in the feed: a set you buy, and a Moment the subscription opens.
+        let paid = try XCTUnwrap(feed.first { $0.creatorID == "u_public" && $0.setID != nil && $0.isLocked })
+        if case .buy(let minor, _) = paid.gate { XCTAssertEqual(minor, 49900) } else { XCTFail("paid set should ask to buy, got \(paid.gate)") }
+        let subOnly = try XCTUnwrap(feed.first { $0.momentID != nil && $0.isLocked })
+        if case .subscribe(let tier, _) = subOnly.gate { XCTAssertEqual(tier, .t2) } else { XCTFail("subscribers-only Moment should ask to subscribe, got \(subOnly.gate)") }
+        // Buying it opens that card without touching anything else.
+        await env.social.loadStorefront("u_public")
+        let setID = try XCTUnwrap(paid.setID)
+        let set = try XCTUnwrap(env.social.sets(of: "u_public").first { $0.id == setID })
+        _ = await env.social.buySet(set)
+        await env.social.refreshCreatorFeed()
+        XCTAssertFalse(try XCTUnwrap(env.social.creatorFeed.first { $0.id == paid.id }).isLocked)
+    }
+}

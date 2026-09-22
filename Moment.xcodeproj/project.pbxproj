@@ -51,6 +51,7 @@
 		2F8CD7E4C6531252971282F2 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464154532F0FB495D0569F60 /* AppIntents.framework */; };
 		2FCA17F74EDF90CD63046310 /* IntentClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AF5F99C875785ED4DEF9B7 /* IntentClassifier.swift */; };
 		30237EE6E8F409E5C2CD08D6 /* CollectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117AB0C48540E075181FF08E /* CollectionsView.swift */; };
+		3098DF7473220D23C24A6E8C /* CreatorFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504A0C0A7CC917A1E39DEEE2 /* CreatorFeedView.swift */; };
 		30DCA2993B30609151FCADD1 /* ContactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23296DD1967CFBE1A9BBC3A7 /* ContactsService.swift */; };
 		30EBC49C2B586D2CD71372E2 /* ProfileViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35DF02CBAACFC80DBA64B3DE /* ProfileViews.swift */; };
 		317548CE115F3F4912ED2AC2 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B396A7FEE5C2AD0E6AE7B48 /* FeatureFlags.swift */; };
@@ -236,6 +237,7 @@
 		F2F6883D99882ABCF124F8BF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 839FD5950DFAF95EF50BAA35 /* Theme.swift */; };
 		F6380C89DA9184446A464620 /* MomentsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BFF5C08501233D36B9CC9 /* MomentsHubView.swift */; };
 		F6622EA9DEBD444482E05D3C /* ImportanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A556007B88DC6B38789AADAC /* ImportanceEngine.swift */; };
+		F759C325F929F029365D00F4 /* CreatorFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3C9B10688FA56F7F5665E5 /* CreatorFeed.swift */; };
 		F943C6E224E8B47999DF2EC5 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6A646F1DE414EA441ADB01 /* AppGroup.swift */; };
 		FAE3D5587634EF1768F8909D /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D5B0733F5386FA454BC8C50 /* ImportService.swift */; };
 		FECE727353FCE24EA2ADBC6D /* DataLifecycleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A6B537367DE45D354ECB22 /* DataLifecycleService.swift */; };
@@ -373,7 +375,9 @@
 		4B9F341F53258CE9F9B1AA14 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		4C5BFF5C08501233D36B9CC9 /* MomentsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentsHubView.swift; sourceTree = "<group>"; };
 		4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentTools.swift; sourceTree = "<group>"; };
+		4D3C9B10688FA56F7F5665E5 /* CreatorFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorFeed.swift; sourceTree = "<group>"; };
 		4F52E1AA7DA3C0CC26929069 /* SocialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialTests.swift; sourceTree = "<group>"; };
+		504A0C0A7CC917A1E39DEEE2 /* CreatorFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorFeedView.swift; sourceTree = "<group>"; };
 		52CF4190AA7B1191468EEFE6 /* SocialOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialOnboardingView.swift; sourceTree = "<group>"; };
 		536A2986515B5B1C3595EA22 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		5448A08E37BA411D80BA9745 /* CaptureResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureResultView.swift; sourceTree = "<group>"; };
@@ -870,6 +874,7 @@
 			children = (
 				4DBDAE2367A9D512C9CD361D /* Decentralized */,
 				AF14D5A43B7EE1B3BA53078A /* CloudKitBackend.swift */,
+				4D3C9B10688FA56F7F5665E5 /* CreatorFeed.swift */,
 				DAE17C8090CFD8B9147EE664 /* ImageColor.swift */,
 				CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */,
 				C4044A98C2B9BD83976C6F03 /* LocationService.swift */,
@@ -927,6 +932,7 @@
 				2262C63D4642A003CB7BBC35 /* AnyoneUpViews.swift */,
 				25C73214F55C33504B00EF9E /* ChatViews.swift */,
 				117AB0C48540E075181FF08E /* CollectionsView.swift */,
+				504A0C0A7CC917A1E39DEEE2 /* CreatorFeedView.swift */,
 				C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */,
 				2758C294DACD68F438B13F88 /* DiscoverView.swift */,
 				966FE654C032FA2AA510099B /* ExploreMapView.swift */,
@@ -1393,6 +1399,8 @@
 				60055EC2744563371C87C806 /* Components.swift in Sources */,
 				30DCA2993B30609151FCADD1 /* ContactsService.swift in Sources */,
 				C0148922EF8461FFE5BFB648 /* ContextResolver.swift in Sources */,
+				F759C325F929F029365D00F4 /* CreatorFeed.swift in Sources */,
+				3098DF7473220D23C24A6E8C /* CreatorFeedView.swift in Sources */,
 				7E7A00BE7F1EB36866B470A3 /* CreatorViews.swift in Sources */,
 				FECE727353FCE24EA2ADBC6D /* DataLifecycleService.swift in Sources */,
 				586AC5418F64B115245013E9 /* Date+Moment.swift in Sources */,

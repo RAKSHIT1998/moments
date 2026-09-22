@@ -18,7 +18,7 @@ enum MIcon {
 
 enum MShadow {
     static let card = (color: Color.black.opacity(0.05), radius: CGFloat(14), y: CGFloat(6))
-    static let accent = (color: Color.accentColor.opacity(0.35), radius: CGFloat(16), y: CGFloat(8))
+    static let accent = (color: Color("AccentColor").opacity(0.35), radius: CGFloat(16), y: CGFloat(8))
 }
 
 /// Motion: short, purposeful. Every animation honours Reduce Motion via `MAnimation.spring(reduce:)`.

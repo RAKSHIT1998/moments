@@ -16,8 +16,18 @@ final class MomentUITests: XCTestCase {
         app.launch()
     }
 
+    /// Home opens on the creator Feed; the Moments stack is the second segment.
     private func waitForFeed() {
+        let moments = app.buttons["Moments"].firstMatch
+        if moments.waitForExistence(timeout: 20), !moments.isSelected { moments.tap(); sleep(1) }
+        if !app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 10) { snap("debug-home-segments") }
         XCTAssertTrue(app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 30), "seeded social feed should show Goa '26")
+    }
+
+    private func goHomeFeed() {
+        app.tabBars.buttons["Home"].tap()
+        let feed = app.buttons["Feed"].firstMatch
+        if feed.waitForExistence(timeout: 10), !feed.isSelected { feed.tap(); sleep(2) }
     }
 
     private func openMoment(_ id: String) {
@@ -321,7 +331,8 @@ final class MomentUITests: XCTestCase {
         app.tabBars.buttons["Explore"].tap(); sleep(3); snap("05-globe")
         app.buttons["enableNearby"].tap(); sleep(3); snap("06-explore-near-me")
         app.tabBars.buttons["Create"].tap(); sleep(1); snap("07-create"); app.buttons["Cancel"].firstMatch.tap()
-        app.tabBars.buttons["Home"].tap(); app.buttons["nowLink"].tap(); sleep(1); snap("08-now"); app.navigationBars.buttons.element(boundBy: 0).tap()
+        goHomeFeed(); sleep(2); snap("08a-creator-feed")
+        app.buttons["nowLink"].firstMatch.exists ? app.buttons["nowLink"].firstMatch.tap() : app.buttons["reelsLink"].firstMatch.tap(); sleep(1); snap("08-now"); app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Chats"].tap(); sleep(2); snap("08b-chats")
         app.tabBars.buttons["Profile"].tap(); sleep(1); snap("09-profile")
         if app.buttons["passportLink"].exists { app.buttons["passportLink"].tap(); sleep(1); snap("10-passport"); app.navigationBars.buttons.element(boundBy: 0).tap() }
