@@ -64,6 +64,7 @@ extension View {
             case .passport: PassportView()
             case .earn: CreatorEarnView()
             case .meet: MeetView()
+            case .reels(let start): ReelsView(startAt: start)
             case .meetSetup: MeetSetupView()
             case .meetLikes: MeetLikesView()
             case .subscriptions: MySubscriptionsView()

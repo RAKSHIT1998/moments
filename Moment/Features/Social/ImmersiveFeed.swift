@@ -92,7 +92,10 @@ struct ImmersiveMomentCard: View {
                 dockButton(active: false, label: "Comments", id: "comments-\(moment.id)") { showComments = true } icon: { Glyph(.reply, size: 24).foregroundStyle(.white) }
                     .overlay(alignment: .bottom) { if moment.commentCount > 0 { Text("\(moment.commentCount)").font(.caption2.weight(.semibold)).foregroundStyle(.white).offset(y: 14) } }
                 dockButton(active: false, label: "Share", id: "share-\(moment.id)") { Task { await share() } } icon: { Glyph(.send, size: 24).foregroundStyle(.white) }
-                if moment.mediaCount > 1 && !hidden {
+                if moment.mediaCount >= 3 && !hidden {
+                    NavigationLink(value: SocialRoute.reels("c_\(moment.id)")) { Image(systemName: "play.fill").font(.title3).foregroundStyle(.white).frame(width: 46, height: 46) }
+                        .buttonStyle(.plain).glass(radius: 23).accessibilityLabel("Watch the cut").accessibilityIdentifier("watch-\(moment.id)")
+                } else if moment.mediaCount > 1 && !hidden {
                     dockButton(active: false, label: "Replay", id: "replay-\(moment.id)") { showReplay = true } icon: { Image(systemName: "play.fill").font(.title3).foregroundStyle(.white) }
                 }
                 if moment.creatorID != env.social.myID, env.social.plan(for: moment.creatorID) != nil {
@@ -202,6 +205,10 @@ struct ImmersiveFeedView: View {
             HStack(spacing: MSpacing.m) {
                 Wordmark(size: 20).foregroundStyle(.white)
                 Spacer()
+                NavigationLink(value: SocialRoute.reels(nil)) {
+                    HStack(spacing: 5) { Image(systemName: "play.rectangle.fill").font(.caption); Text("Reels") }.font(.subheadline.weight(.semibold)).foregroundStyle(.white).padding(.horizontal, 12).padding(.vertical, 7)
+                }
+                .glassPill(tint: .pink).accessibilityIdentifier("reelsLink")
                 NavigationLink(value: SocialRoute.now) {
                     HStack(spacing: 5) { Glyph(.now, size: 16); Text("Now") }.font(.subheadline.weight(.semibold)).foregroundStyle(.white).padding(.horizontal, 12).padding(.vertical, 7)
                 }

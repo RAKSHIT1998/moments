@@ -1078,6 +1078,18 @@ final class SocialService {
         return sorted.compactMap { $0.media }
     }
 
+    // MARK: - Reels
+
+    private(set) var reels: [Reel] = []
+    private var seenReels: Set<String> = []
+    /// Builds reels from what we already have, loading sides for the Moments that could carry one.
+    func refreshReels() async {
+        let candidates = moments.values.filter { !$0.isLocked && ($0.mediaCount >= 3 || $0.memberIDs.contains(myID) || $0.isLive) }.sorted { $0.createdAt > $1.createdAt }.prefix(18)
+        for m in candidates where allContributions(m.id).isEmpty { _ = await loadMoment(m.id) }
+        reels = ReelBuilder.build(moments: Array(moments.values), sides: { [weak self] id in self?.allContributions(id) ?? [] }, me: myID, seen: seenReels)
+    }
+    func markReelSeen(_ id: String) { seenReels.insert(id) }
+
     // MARK: - Replay video
 
     private(set) var exportingReplay = false

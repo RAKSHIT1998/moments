@@ -565,6 +565,17 @@ actor InMemoryBackend: SocialBackend {
         dp("u_dev", "Dev Patel", 1995, .man, [.woman, .man, .nonBinary], .friends, [("I'm weirdly good at", "Pacing. 21k, no walking.")], ["c_m_run_0", "c_m_run_1"], "Runs. Talks about running.")
         likes = [DatingLike(id: "like_mira", fromID: "u_mira", fromName: "Mira Shah", toID: me.id, note: "You were at Versova last Friday too — the one with the birds?", promptQuestion: nil, createdAt: .now.addingTimeInterval(-3600))]
         tipsList = [CreatorTip(id: "tip_1", fromID: "u_dev", fromName: "Dev Patel", creatorID: "u_sarah", momentID: "m_cafe", amount: .medium, note: "that broth 🙏", createdAt: .now.adding(days: -2), transactionID: nil)]
+        // Real video sides: reels play these, the cuts use the photos.
+        func videoSide(_ momentID: String, _ author: String, _ caption: String, _ minutes: Int) {
+            guard let d = DemoPhotos.data("demo_clip", ext: "mp4"), var m = moments[momentID] else { return }
+            let cid = "cv_\(momentID)_\(author)"
+            mediaBlobs[cid] = d
+            let at = (m.startAt ?? m.createdAt).addingTimeInterval(Double(minutes) * 60)
+            contributions[momentID, default: []].append(Contribution(id: cid, momentID: momentID, authorID: author, authorName: users[author]?.displayName ?? author, kind: .video, media: MediaRef(kind: .video, localRef: nil, remoteID: cid, width: 720, height: 1280, durationSeconds: 4), caption: caption, createdAt: at, originalTimestamp: at, reactionCounts: [:], commentCount: 0, uploadState: .uploaded))
+            m.contributionCount += 1; m.mediaCount += 1; moments[momentID] = m
+        }
+        videoSide("m_sunset", "u_public", "6:47pm, the whole sky", 6)
+        videoSide("m_goa", "u_rahul", "Palolem, before dinner", 90)
         comments["m_goa"] = [MomentComment(id: "cm1", momentID: "m_goa", contributionID: nil, authorID: "u_rahul", authorName: "Rahul Mehta", text: "We are going back.", createdAt: .now.adding(days: -8)), MomentComment(id: "cm2", momentID: "m_goa", contributionID: nil, authorID: "u_sarah", authorName: "Sarah Kim", text: "The thali though 🫶", createdAt: .now.adding(days: -8))]
         moments["m_goa"]!.commentCount = 2
         func story(_ id: String, _ photo: String) -> MediaRef? {
@@ -615,8 +626,8 @@ actor InMemoryBackend: SocialBackend {
 
 /// Real photographs bundled for the fictional demo (Unsplash-licensed via picsum.photos, no people identifiable).
 enum DemoPhotos {
-    static func data(_ name: String) -> Data? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "jpg") else { return nil }
+    static func data(_ name: String, ext: String = "jpg") -> Data? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: ext) else { return nil }
         return try? Data(contentsOf: url)
     }
 }

@@ -782,3 +782,59 @@ final class MeetFlowTests: XCTestCase {
         XCTAssertNil(env.social.myDating)
     }
 }
+
+final class ReelBuilderTests: XCTestCase {
+    private func side(_ id: String, _ author: String, _ kind: Contribution.Kind, at: Date, media: Bool = true) -> Contribution {
+        Contribution(id: id, momentID: "m", authorID: author, authorName: author, kind: kind, media: media ? MediaRef(kind: kind == .video ? .video : .photo, localRef: "l", remoteID: id) : nil, caption: "", createdAt: at, originalTimestamp: at, reactionCounts: [:], commentCount: 0, uploadState: .uploaded)
+    }
+    private func moment(_ id: String, members: [String] = ["a"], media: Int = 0, live: Bool = false, locked: Bool = false, teaser: Bool = false, daysAgo: Double = 1) -> SocialMoment {
+        let d = Date().addingTimeInterval(-daysAgo * 86400)
+        var m = SocialMoment(id: id, creatorID: members[0], creatorName: members[0], title: id, description: "", coverRef: nil, createdAt: d, startAt: d, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .publicAll, memberIDs: members, memberNames: members, contributionCount: media, mediaCount: media, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: live, templateID: nil, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: teaser)
+        m.isLocked = locked
+        return m
+    }
+
+    func testCutsNeedThreeSidesAndVideosAlwaysBecomeReels() {
+        let t = Date()
+        let sides: [String: [Contribution]] = [
+            "thin": [side("1", "a", .photo, at: t), side("2", "b", .photo, at: t)],                                   // only two → no cut
+            "rich": [side("3", "a", .photo, at: t), side("4", "b", .photo, at: t.addingTimeInterval(60)), side("5", "c", .photo, at: t.addingTimeInterval(120))],
+            "vid":  [side("6", "a", .video, at: t), side("7", "a", .text, at: t, media: false)]                       // video reel, no cut (one visual)
+        ]
+        let reels = ReelBuilder.build(moments: [moment("thin", media: 2), moment("rich", members: ["a", "b", "c"], media: 3), moment("vid", media: 1)], sides: { sides[$0] ?? [] }, me: "z")
+        XCTAssertEqual(Set(reels.map(\.id)), ["c_rich", "v_6"])
+        XCTAssertTrue(reels.first(where: { $0.id == "c_rich" })!.isCut)
+        XCTAssertEqual(reels.first(where: { $0.id == "c_rich" })!.sides.count, 3)
+        XCTAssertFalse(reels.first(where: { $0.id == "v_6" })!.isCut)
+    }
+
+    func testLockedAndUnrevealedTeasersNeverBecomeReels() {
+        let t = Date()
+        let three = [side("1", "a", .photo, at: t), side("2", "b", .photo, at: t), side("3", "c", .photo, at: t)]
+        let reels = ReelBuilder.build(moments: [moment("locked", media: 3, locked: true), moment("teaser", media: 3, teaser: true), moment("mine", members: ["me", "b"], media: 3, teaser: true)], sides: { _ in three }, me: "me")
+        XCTAssertEqual(reels.map(\.id), ["c_mine"], "a teaser you're in is fine; one you're not in stays a mystery")
+    }
+
+    func testRankingPutsYoursAndLiveFirstAndDemotesSeen() {
+        let t = Date()
+        let three = [side("1", "a", .photo, at: t), side("2", "b", .photo, at: t), side("3", "c", .photo, at: t)]
+        let ms = [moment("old", media: 3, daysAgo: 20), moment("mine", members: ["me", "b", "c"], media: 3, daysAgo: 5), moment("live", media: 3, live: true, daysAgo: 0)]
+        let reels = ReelBuilder.build(moments: ms, sides: { _ in three }, me: "me")
+        XCTAssertEqual(reels.map(\.id), ["c_live", "c_mine", "c_old"])
+        let afterSeen = ReelBuilder.build(moments: ms, sides: { _ in three }, me: "me", seen: ["c_live"])
+        XCTAssertEqual(afterSeen.first?.id, "c_mine", "what you've already watched drops down")
+    }
+
+    @MainActor func testDemoFeedHasVideoReelsAndCuts() async throws {
+        let backend = InMemoryBackend(displayName: "Rakshit")
+        await backend.seedDemo()
+        let env = AppEnvironment(storage: try! StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        await env.social.start()
+        await env.social.refreshReels()
+        XCTAssertTrue(env.social.reels.contains { !$0.isCut }, "a real video side is in the feed")
+        XCTAssertTrue(env.social.reels.contains { $0.isCut && $0.momentID == "m_goa" })
+        let goa = try XCTUnwrap(env.social.reels.first { $0.id == "c_m_goa" })
+        XCTAssertGreaterThanOrEqual(Set(goa.sides.map(\.authorID)).count, 2, "a cut is many people's sides")
+        XCTAssertEqual(goa.sides, goa.sides.sorted { ($0.originalTimestamp ?? $0.createdAt) < ($1.originalTimestamp ?? $1.createdAt) })
+    }
+}

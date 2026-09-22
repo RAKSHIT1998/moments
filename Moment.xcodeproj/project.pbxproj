@@ -75,6 +75,7 @@
 		48EB15A2DBA0905D27F3B951 /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = A32CD298346F88F5EBA6AB25 /* Place.swift */; };
 		49285B648C7470E208684776 /* VaultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B267A659083B6F6496CD8203 /* VaultView.swift */; };
 		4B4983AE5ADF0945469E3E6B /* ShareInboxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB026A89ABD957575E6BC6E /* ShareInboxService.swift */; };
+		4B89F6FC0B72C9A56DB814AB /* ReelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BE91272873B79E01E2AB1E8 /* ReelsView.swift */; };
 		4BD8072CDD074BDB025C68E7 /* MomentPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97439ADAD2FF323BF1FB95CB /* MomentPackage.swift */; };
 		4CCA0075BD1E73879E90186B /* TemporalParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2818E1AB600ACE530E54FB4 /* TemporalParser.swift */; };
 		4F3782D2C3C1D5D2C4623D34 /* demo_314.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 88B6F7197FB1D6CCEFB16037 /* demo_314.jpg */; };
@@ -114,11 +115,13 @@
 		7791CBAC77E9484DB558B003 /* MeetRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7685499009F146D54107A75C /* MeetRanker.swift */; };
 		78075C9B0407279F7E8D241C /* SocialOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52CF4190AA7B1191468EEFE6 /* SocialOnboardingView.swift */; };
 		7BCEDE1AA2915B7E885EC088 /* DecentralizedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAF5BED3DED33ACE8AE9C43 /* DecentralizedTests.swift */; };
+		7C196792D39FF3891C44033B /* Reels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C99B4653BAECAD83608107AD /* Reels.swift */; };
 		7C9B33D9A9F6FC4BDF31E97A /* CloudKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF14D5A43B7EE1B3BA53078A /* CloudKitBackend.swift */; };
 		7CB4CF16BD50ED00C9941548 /* demo_154.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 90501606CD3C44FD180A5BD8 /* demo_154.jpg */; };
 		7DC95ED419ABA2B4A37C4A9A /* demo_270.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C9ACC4551F899B2FA695A957 /* demo_270.jpg */; };
 		7E7A00BE7F1EB36866B470A3 /* CreatorViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */; };
 		7E8219B83E5B2FFF255B7848 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AA2E43C2DA317B153F92DF /* Source.swift */; };
+		7F83A017AB7C2FE706A3AB9D /* demo_clip.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = E8973BB7DC145BE712EBCFD0 /* demo_clip.mp4 */; };
 		7F8C0F76AF86C4F0A32AF7C1 /* MemoryExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97670D7D495DC8C9D24B011F /* MemoryExtractor.swift */; };
 		80B8B43F5D8947F386C00D15 /* StorySlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 879C6AD575C6CCDCD84FB776 /* StorySlideView.swift */; };
 		80E01B9BA724985CE173AA27 /* demo_213.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 8C237FBCF1B6F5BECC5600EB /* demo_213.jpg */; };
@@ -323,6 +326,7 @@
 		189A91C2DEB446D7707DA1A7 /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialModels.swift; sourceTree = "<group>"; };
 		1A6AC6EB53583E921BB0BD75 /* avatar_177.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = avatar_177.jpg; sourceTree = "<group>"; };
 		1B396A7FEE5C2AD0E6AE7B48 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
+		1BE91272873B79E01E2AB1E8 /* ReelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReelsView.swift; sourceTree = "<group>"; };
 		1C6A646F1DE414EA441ADB01 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		1D5B0733F5386FA454BC8C50 /* ImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportService.swift; sourceTree = "<group>"; };
 		1D887C1DD0EA1606B091CB51 /* MomentShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = MomentShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -471,6 +475,7 @@
 		C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialComponents.swift; sourceTree = "<group>"; };
 		C85AA650345DA9A7C1180B73 /* NearbyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbyViews.swift; sourceTree = "<group>"; };
 		C968E2C58941908662506CAB /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
+		C99B4653BAECAD83608107AD /* Reels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reels.swift; sourceTree = "<group>"; };
 		C9ACC4551F899B2FA695A957 /* demo_270.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_270.jpg; sourceTree = "<group>"; };
 		CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryBackend.swift; sourceTree = "<group>"; };
 		CBB6ED0572B5EFBC45EB3918 /* StoryExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryExporter.swift; sourceTree = "<group>"; };
@@ -502,6 +507,7 @@
 		E58414D611DF99E4833E03FF /* demo_92.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_92.jpg; sourceTree = "<group>"; };
 		E62AAB569901147E11EDB0C4 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E7B5D8D21EC367B123E20998 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		E8973BB7DC145BE712EBCFD0 /* demo_clip.mp4 */ = {isa = PBXFileReference; path = demo_clip.mp4; sourceTree = "<group>"; };
 		EAA3B0DB0F57E54464C67341 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		ED70F3581744EC11FD901E91 /* DiagnosticsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsUITests.swift; sourceTree = "<group>"; };
 		EF696884E35E0BB7D1A69F67 /* RemoteIntelligenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteIntelligenceProvider.swift; sourceTree = "<group>"; };
@@ -852,6 +858,7 @@
 				65DC457C96BBA6B83BB21856 /* demo_292.jpg */,
 				09974FA53BD0B0F016CD8482 /* demo_312.jpg */,
 				88B6F7197FB1D6CCEFB16037 /* demo_314.jpg */,
+				E8973BB7DC145BE712EBCFD0 /* demo_clip.mp4 */,
 			);
 			path = DemoPhotos;
 			sourceTree = "<group>";
@@ -867,6 +874,7 @@
 				3AFFF965467D61700ADAB3A4 /* MediaPipeline.swift */,
 				7685499009F146D54107A75C /* MeetRanker.swift */,
 				D9DF7D91F84A3C1442C1CB08 /* MomentMechanics.swift */,
+				C99B4653BAECAD83608107AD /* Reels.swift */,
 				10F61E3D55BFA1F51558DEFD /* ReplayExporter.swift */,
 				DDAFAA4ABE33475EA7B5BB14 /* SocialBackend.swift */,
 				189A91C2DEB446D7707DA1A7 /* SocialModels.swift */,
@@ -940,6 +948,7 @@
 				A30A2DD7ACE9C387984B8F46 /* PassportView.swift */,
 				A51760AF8F6A0625260BDBE8 /* PostCard.swift */,
 				35DF02CBAACFC80DBA64B3DE /* ProfileViews.swift */,
+				1BE91272873B79E01E2AB1E8 /* ReelsView.swift */,
 				0F67315BFEA8FA785861388C /* SetupView.swift */,
 				C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */,
 				6095FF6387263E8433445C6E /* SocialHomeView.swift */,
@@ -1305,6 +1314,7 @@
 				4F3782D2C3C1D5D2C4623D34 /* demo_314.jpg in Resources */,
 				583CFE3683952204501544B0 /* demo_56.jpg in Resources */,
 				0978D33A55D022D8987BC065 /* demo_92.jpg in Resources */,
+				7F83A017AB7C2FE706A3AB9D /* demo_clip.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1468,6 +1478,8 @@
 				2C913467DD2688980689051F /* PostCard.swift in Sources */,
 				30EBC49C2B586D2CD71372E2 /* ProfileViews.swift in Sources */,
 				E9A3239131C8633C4323E52B /* Promise.swift in Sources */,
+				7C196792D39FF3891C44033B /* Reels.swift in Sources */,
+				4B89F6FC0B72C9A56DB814AB /* ReelsView.swift in Sources */,
 				A7FD88291D531D168FD85D2E /* RemoteIntelligenceProvider.swift in Sources */,
 				B5171E014EBD525CB177CF3E /* ReplayExporter.swift in Sources */,
 				AB20C8C32B9BE45D0A048B16 /* RootView.swift in Sources */,

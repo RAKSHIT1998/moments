@@ -61,6 +61,7 @@ enum SocialRoute: Hashable {
     case passport
     case earn
     case meet
+    case reels(String?)
     case meetSetup
     case meetLikes
     case subscriptions

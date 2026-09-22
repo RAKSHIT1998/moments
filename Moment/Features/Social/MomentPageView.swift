@@ -47,6 +47,7 @@ struct MomentPageView: View {
                             if let candidate = mergeCandidate { mergeCard(moment, candidate) }
                             if Rituals.isRitual(moment) { ritualCard(moment) }
                             if isMember { yourSide(moment) }
+                            watchRow(moment)
                             sameSecond(moment)
                             fillTheGap(moment)
                             perspectives(moment)
@@ -341,6 +342,23 @@ struct MomentPageView: View {
             }
         }
         .momentCard()
+    }
+
+    @ViewBuilder private func watchRow(_ m: SocialMoment) -> some View {
+        if m.mediaCount >= 3, !m.isLocked {
+            NavigationLink(value: SocialRoute.reels("c_\(m.id)")) {
+                HStack(spacing: MSpacing.m) {
+                    Image(systemName: "play.rectangle.fill").font(.title3).foregroundStyle(.pink)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Watch the cut").font(MFont.headline)
+                        Text("\(m.mediaCount) sides from \(m.memberIDs.count) \(m.memberIDs.count == 1 ? "person" : "people"), in order. It grows as people add.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    }
+                    Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                }
+                .padding(MSpacing.l)
+            }
+            .buttonStyle(.plain).glass(radius: 18, tint: .pink).accessibilityIdentifier("watchReel")
+        }
     }
 
     private func timeline(_ m: SocialMoment) -> some View {
