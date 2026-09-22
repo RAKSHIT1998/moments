@@ -957,7 +957,7 @@ final class SocialService {
             messages[conversationID, default: []].append(saved)
             if !saved.isReaction, let i = conversations.firstIndex(where: { $0.id == conversationID }) {
                 var c = conversations.remove(at: i)
-                c.lastMessage = saved.text.isEmpty ? (momentID != nil ? "Shared a Moment" : "Photo") : saved.text; c.updatedAt = .now
+                c.lastMessage = saved.text.isEmpty ? (momentID != nil ? "Shared a Moment" : (saved.media?.kind == .voice ? "Voice note" : "Photo")) : saved.text; c.updatedAt = .now
                 conversations.insert(c, at: 0)
             }
             markRead(conversationID)

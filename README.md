@@ -42,6 +42,14 @@ What's built on top of that contract (all real data, nothing generated):
 
 Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the app uses `CloudKitBackend` with container `iCloud.com.rakshitbargotra.moment`. Nothing social is faked with local-only data in Release: if iCloud is unavailable the UI says so and keeps private Moments working.
 
+## Messaging & the mechanics
+
+**Chats** is a tab. Threads: day separators, quote replies, long‑press emoji reactions, photos, **voice notes** (hold the mic; AAC in a sealed message), Moment cards, **group chats** (one per group), **read receipts** ("Seen" / "Seen by …") and **typing indicators**. Unread state never leaves the phone. Over the mesh a read receipt is a small signed `seen` event; typing is an `EPHEMERAL` frame that peers and relays forward and never store (`relay/server.js`). CloudKit has no live channel, so typing is simply absent there.
+
+**Replay → video**: the share button in Replay renders the Moment as a 1080×1920 H.264 clip — title card, every side in order with who/when, an end card with the invite link — capped at 60 s by shortening beats before dropping any (`ReplayExporter`). Nothing is generated or invented; it's the sides, in order.
+
+**Only a Moment made by everyone can do these** (`MomentMechanics.swift`): *Same second* pairs two people's photos taken within 20 s; *Fill the gap* finds ≥45‑minute holes in the timeline and lets a member add to them or ask a witness (the question lands in their chat with the Moment attached); *Rituals* link weekly Moments with the same title into a series with a streak and next date.
+
 ## Creator economy (subscriptions)
 
 Creators sell access to **subscribers-only Moments** from their profile (Profile → *Earn from your Moments*, or Settings → Creators). One plan per creator: a name, a pitch, up to three perks, and a price tier. Fans pay through the App Store — **non‑renewing 30‑day products** `creator.30d.t1/t2/t3` (≈ ₹199 / ₹499 / ₹999; Apple localises the price) — so there is no card handling in the app and nothing auto‑renews. `SocialService.subscribe(to:)` runs the StoreKit 2 purchase, then records the subscription (`SocialBackend.subscribe`). Locked Moments show a frosted preview (cover + title) with an *Unlock* button; sides never reach a non‑subscriber.
