@@ -105,36 +105,126 @@ export class Relay {
   get connected() { return [...this.status.values()].filter(s => s === 'open').length; }
 }
 
-// ---- State: fold events into Moments / NOW / profiles --------------------------
+// ---- State: fold events into creators, posts and what you've unlocked ----------
+// The same events the iPhone app writes, read the same way. A set's window (title, price, cover) is
+// public; its contents are sealed under a per-set key the creator hands to buyers only — so this
+// browser can show you every locked post on the network and open exactly the ones you paid for.
 export class Store {
-  constructor() { this.events = new Map(); this.byMoment = new Map(); this.listeners = []; }
+  constructor() { this.events = new Map(); this.listeners = []; }
   ingest(e) {
     if (this.events.has(e.id)) return; this.events.set(e.id, e);
-    const m = e.tags?.moment; if (m) { if (!this.byMoment.has(m)) this.byMoment.set(m, []); this.byMoment.get(m).push(e); }
     for (const l of this.listeners) l(e);
   }
   kind(k) { return [...this.events.values()].filter(e => e.kind === k).sort((a, b) => a.createdAt - b.createdAt); }
   profile(author) { const p = this.kind('profile').filter(e => e.author === author).pop(); return p ? Events.payload(p) : null; }
-  /// A public Moment, or a private one when this browser holds its key.
-  async moment(id) {
-    const root = this.events.get(id); if (!root || root.kind !== 'moment') return null;
-    let p, locked = false, key = null;
-    if (root.tags.sub) { const env = Events.payload(root); p = env?.preview; locked = true; }
-    else if (root.tags.enc === '1') {
-      const k = Keys.load(id); if (!k) return { id, locked: true, title: 'Private Moment', createdAt: root.createdAt, creator: root.author, sides: [] };
-      key = await Keys.importRaw(k); try { p = JSON.parse(await Keys.open(key, root.content)); } catch { return null; }
-    } else p = Events.payload(root);
-    if (!p) return null;
-    const members = new Map([[root.author, p.creatorName]]); const sides = [];
-    for (const e of (this.byMoment.get(id) || [])) {
-      let body = null;
-      if (e.tags.enc === '1') { if (!key) continue; try { body = JSON.parse(await Keys.open(key, e.content)); } catch { continue; } } else body = Events.payload(e);
-      if (!body) continue;
-      if (e.kind === 'join') members.set(e.author, body.name);
-      if (e.kind === 'contribution') { members.set(e.author, body.authorName); sides.push({ id: e.id, author: body.authorName, caption: body.caption, media: body.media, kind: body.kind, at: (body.originalTimestamp || e.createdAt) }); }
-    }
-    sides.sort((a, b) => a.at - b.at);
-    return { id, locked, title: p.title, description: p.description || '', cover: p.cover, place: p.place, creator: root.author, creatorName: p.creatorName, createdAt: root.createdAt, members: [...members.values()], sides, isLive: p.isLive, visibility: p.visibility, key };
+  name(author) { return this.profile(author)?.displayName || 'Creator'; }
+
+  /// Everyone this browser has heard of who has published anything sellable.
+  creators() {
+    const ids = new Set();
+    for (const e of this.kind('vaultSet')) ids.add(e.author);
+    for (const e of this.kind('plan')) ids.add(e.author);
+    return [...ids];
   }
-  nows() { const now = Date.now() / 1000; return this.kind('now').map(e => ({ e, p: Events.payload(e) })).filter(x => x.p && x.p.expiresAt > now).reverse(); }
+
+  /// One creator's subscription, or null. `tier: "none"` is how the app cancels one.
+  plan(author) {
+    const e = this.kind('plan').filter(x => x.author === author).pop();
+    const p = e && Events.payload(e);
+    if (!p || p.tier === 'none') return null;
+    return { creatorID: author, creatorName: p.creatorName, title: p.title, pitch: p.pitch,
+             perks: p.perks || [], priceMinor: p.priceMinor ?? 0, currency: p.currency || 'INR' };
+  }
+
+  links(author) { const e = this.kind('links').filter(x => x.author === author).pop(); return (e && Events.payload(e)?.links) || null; }
+
+  /// Sets, newest first. A later event for the same set id replaces the earlier one; one with a null
+  /// `set` is a delete.
+  sets(author) {
+    const latest = new Map();
+    for (const e of this.kind('vaultSet')) {
+      if (author && e.author !== author) continue;
+      const v = Events.payload(e); if (!v) continue;
+      const id = e.tags?.set || v.set?.id;
+      if (!v.set) { latest.delete(id); continue; }
+      latest.set(id, { ...v.set, creatorID: e.author, itemCount: v.itemCount,
+                       cover: v.cover ? 'data:image/jpeg;base64,' + v.cover : null,
+                       sealedItems: v.sealedItems, eventID: e.id });
+    }
+    return [...latest.values()].filter(s => s.visible !== false).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  /// Sets I've paid for, by id.
+  purchases() {
+    const out = new Set();
+    for (const e of this.kind('vaultBuy')) if (e.author === Identity.author && e.tags?.set) out.add(e.tags.set);
+    return out;
+  }
+  /// Creators I'm subscribed to, with the 30 days the app grants.
+  subscriptions() {
+    const out = new Map();
+    for (const e of this.kind('subscribe')) {
+      if (e.author !== Identity.author) continue;
+      const p = Events.payload(e); const to = e.tags?.to; if (!to) continue;
+      const days = p?.days ?? 30;
+      out.set(to, { creatorID: to, expiresAt: e.createdAt + days * 86400 });
+    }
+    return out;
+  }
+  following() {
+    const out = new Map();
+    for (const e of [...this.kind('follow'), ...this.kind('unfollow')].sort((a, b) => a.createdAt - b.createdAt)) {
+      if (e.author !== Identity.author || !e.tags?.to) continue;
+      out.set(e.tags.to, e.kind === 'follow');
+    }
+    return new Set([...out].filter(([, on]) => on).map(([id]) => id));
+  }
+
+  /// What a viewer has to do to see a post — the same three gates as `CreatorFeedBuilder`.
+  /// A subscribers-only set whose creator has no published plan is left out entirely, because a lock
+  /// we can't put a price on isn't worth showing.
+  gate(set, purchases, subs) {
+    if (set.creatorID === Identity.author) return { kind: 'open' };
+    if (set.subscribersOnly) {
+      const active = subs.get(set.creatorID);
+      if (active && active.expiresAt > Date.now() / 1000) return { kind: 'open' };
+      const plan = this.plan(set.creatorID);
+      return plan ? { kind: 'subscribe', priceMinor: plan.priceMinor, currency: plan.currency, title: plan.title } : null;
+    }
+    if (purchases.has(set.id)) return { kind: 'open' };
+    if (!set.priceMinor) return { kind: 'open' };
+    return { kind: 'buy', priceMinor: set.priceMinor, currency: set.currency };
+  }
+
+  /// The feed: every post from every creator this browser knows, newest first, each with its gate.
+  feed() {
+    const purchases = this.purchases(), subs = this.subscriptions();
+    const out = [];
+    for (const s of this.sets(null)) {
+      const gate = this.gate(s, purchases, subs);
+      if (!gate) continue;
+      out.push({ ...s, gate, creatorName: s.creatorName || this.name(s.creatorID) });
+    }
+    return out.sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  /// The photos inside a set, if this browser holds the key. Returns null when it doesn't —
+  /// which is the honest answer, not an error.
+  async items(set) {
+    const raw = Keys.load('set.' + set.id);
+    if (!raw || !set.sealedItems) return null;
+    try {
+      const key = await Keys.importRaw(raw);
+      const items = JSON.parse(await Keys.open(key, set.sealedItems));
+      return items.map(i => ({ ...i, url: i.media ? 'data:' + (i.kind === 'video' ? 'video/mp4' : 'image/jpeg') + ';base64,' + i.media : null }));
+    } catch { return null; }
+  }
 }
+
+/// Prices, one place. Minor units in, the creator's currency out.
+export const Money = {
+  label(minor, currency = 'INR') {
+    try { return new Intl.NumberFormat(navigator.language, { style: 'currency', currency, maximumFractionDigits: 0 }).format((minor || 0) / 100); }
+    catch { return ((minor || 0) / 100).toFixed(0); }
+  }
+};

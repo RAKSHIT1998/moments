@@ -1,11 +1,17 @@
-import { Identity, Events, Keys, Geo, Relay, Store } from './moment.js';
+import { Identity, Events, Keys, Relay, Store, Money } from './moment.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const img = (b64) => b64 ? `data:image/jpeg;base64,${b64}` : '';
 const store = new Store();
-let relay = null, me = null, myID = '', loc = null;
+let relay = null, me = null, myID = '';
 const relays = () => JSON.parse(localStorage.getItem('moment.relays') || '[]');
+const ago = (t) => {
+  const s = Math.max(0, Date.now() / 1000 - t);
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  if (s < 86400) return `${Math.round(s / 3600)}h`;
+  return `${Math.round(s / 86400)}d`;
+};
+const initials = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
 async function boot() {
   me = await Identity.load(); myID = await me.momentID(); $('#idPill').textContent = myID;
@@ -14,156 +20,304 @@ async function boot() {
   window.addEventListener('hashchange', route); route();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
 function connect() {
   if (relay) return;
   const urls = relays(); if (!urls.length) return;
-  relay = new Relay(urls, (e) => { store.ingest(e); if (['moment', 'now', 'contribution', 'join', 'profile'].includes(e.kind)) rerender(); });
+  relay = new Relay(urls, (e) => {
+    store.ingest(e);
+    if (['vaultSet', 'plan', 'profile', 'vaultBuy', 'subscribe', 'follow', 'unfollow', 'links', 'vaultKey'].includes(e.kind)) schedule();
+  });
   relay.onStatus = () => { const n = relay.connected; $('#relayStatus').textContent = n ? `${n} relay${n > 1 ? 's' : ''}` : 'connecting…'; };
   relay.connect();
-  relay.subscribe('me', { authors: [Identity.author] });
+  // Everything this client needs: who people are, what they sell, and anything addressed to me.
+  relay.subscribe('world', { kinds: ['profile', 'vaultSet', 'plan', 'links'] });
+  relay.subscribe('mine', { authors: [Identity.author] });
+  relay.subscribe('forme', { kinds: ['vaultKey', 'grant'], '#to': [Identity.author] });
   publishProfile();
 }
+
 async function publishProfile() {
   if (!relay) return;
-  const p = { displayName: localStorage.getItem('moment.profile.name') || 'You', handle: '', bio: '', privateAccount: false, momentID: myID, agreePK: Identity.agreePK };
+  const p = {
+    displayName: localStorage.getItem('moment.profile.name') || 'You',
+    handle: localStorage.getItem('moment.profile.handle') || '',
+    bio: localStorage.getItem('moment.profile.bio') || '',
+    privateAccount: false, momentID: myID, agreePK: Identity.agreePK
+  };
   relay.publish(await Events.make('profile', {}, JSON.stringify(p)));
 }
-async function locate() {
-  if (loc) return loc;
-  return new Promise((res) => navigator.geolocation.getCurrentPosition(p => { loc = { lat: p.coords.latitude, lon: p.coords.longitude }; res(loc); }, () => res(null), { timeout: 8000 }));
-}
+
+/// Events arrive in bursts; redraw once per frame rather than once per event.
+let pending = false;
+function schedule() { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; rerender(); }); }
 
 let current = '';
 function route() {
-  const h = location.hash || '#/tonight'; current = h;
+  const h = location.hash || '#/feed'; current = h;
   document.querySelectorAll('nav.tabs a').forEach(a => a.classList.toggle('on', h.startsWith('#/' + a.dataset.tab)));
+  window.scrollTo(0, 0);
   rerender();
 }
+
 async function rerender() {
   const h = current, v = $('#view');
-  if (h.startsWith('#/m/')) return v.innerHTML = await momentPage(h.slice(4));
-  if (h.startsWith('#/now')) return v.innerHTML = nowPage();
-  if (h.startsWith('#/new')) return v.innerHTML = newPage();
-  if (h.startsWith('#/settings')) return v.innerHTML = settingsPage();
-  v.innerHTML = await tonightPage();
+  if (h.startsWith('#/u/')) v.innerHTML = await creatorPage(decodeURIComponent(h.slice(4)));
+  else if (h.startsWith('#/s/')) v.innerHTML = await setPage(decodeURIComponent(h.slice(4)));
+  else if (h.startsWith('#/creators')) v.innerHTML = creatorsPage();
+  else if (h.startsWith('#/unlocked')) v.innerHTML = await unlockedPage();
+  else if (h.startsWith('#/you')) v.innerHTML = youPage();
+  else v.innerHTML = feedPage();
+  wire();
 }
 
-// ---- Tonight: public Moments + NOW in the cells around you ---------------------
-async function tonightPage() {
-  if (!relays().length) return `<div class="banner">Add a relay to see what's happening. Relays are open servers anyone can run — <a href="#/settings">Settings → Relays</a>.</div>` + about();
-  const l = await locate();
-  if (l && relay) relay.subscribe('geo', { kinds: ['moment', 'now'], geo: Geo.cells(l.lat, l.lon, 5) });
-  const moments = [];
-  for (const e of store.kind('moment').reverse()) { if (e.tags.vis !== 'publicAll' && e.tags.vis !== 'subscribers') continue; const m = await store.moment(e.id); if (m) moments.push(m); }
-  const nows = store.nows().filter(x => x.p.activity && x.p.activity !== 'none');
-  let html = `<h1 style="margin:6px 0 14px">Tonight${l ? ' near you' : ''}</h1>`;
-  if (!l) html += `<div class="banner">Allow location to see the Moments and NOW posts around you. Your position never leaves this browser — it only picks which 0.1° cells to ask relays for.</div>`;
-  if (nows.length) html += `<div class="row" style="margin-bottom:14px">${nows.map(x => `<span class="pill">⚡ ${esc(x.p.authorName)} · ${esc(x.p.text || x.p.activity)}</span>`).join('')}</div>`;
-  if (!moments.length) html += `<div class="banner">Nothing yet. ${relay?.connected ? 'When someone near you makes a public Moment, it appears here.' : 'Connecting to relays…'}</div>`;
-  for (const m of moments) html += momentCard(m);
-  return html;
-}
-function momentCard(m) {
-  return `<a class="card" href="#/m/${m.id}" style="display:block;color:inherit;text-decoration:none">
-    ${m.cover ? `<img class="cover" src="${img(m.cover)}" alt="">` : ''}
-    ${m.locked ? `<div class="lock">🔒 <b>For subscribers</b><span class="muted">Open in the app to subscribe</span></div>` : ''}
-    <div class="body"><h2>${esc(m.title)}</h2><div class="muted">${m.isLive ? '<span class="live">● Live</span> · ' : ''}${m.members.length} ${m.members.length === 1 ? 'person' : 'people'}${m.place ? ' · ' + esc(m.place.name) : ''} · ${new Date(m.createdAt * 1000).toLocaleDateString()}</div></div></a>`;
+// ---- Home: the creator feed --------------------------------------------------
+// A column of posts. A locked one shows its cover blurred with the price on it — nothing is teased
+// without naming what it costs.
+function feedPage() {
+  if (!relays().length) return noRelay();
+  const posts = store.feed();
+  if (!posts.length) {
+    return `<div class="empty"><p>Nothing here yet.</p><p class="tiny">This browser has heard from ${relay?.connected || 0} relay(s) and no creator has posted to them. Add another relay under <a class="link" href="#/you">You</a>, or open a creator's link.</p></div>`;
+  }
+  return posts.map(postCard).join('');
 }
 
-// ---- A Moment (public, or private via an invite link with the key in the fragment) ----
-async function momentPage(id) {
-  const [mid, key] = id.split('#');
-  if (key) Keys.save(mid, key.replace(/-/g, '+').replace(/_/g, '/'));
-  if (relay) relay.subscribe('m.' + mid.slice(0, 8), { moments: [mid] });
-  const m = await store.moment(mid);
-  if (!m) return `<div class="banner">Looking for this Moment on your relays… If it was shared by someone nearby, it may only exist on their phone until they're online.</div>`;
-  const joined = (store.byMoment.get(mid) || []).some(e => e.kind === 'join' && e.author === Identity.author) || m.creator === Identity.author;
-  return `<a class="pill" href="#/tonight">← Back</a>
-    <div class="card" style="margin-top:12px">${m.cover ? `<img class="cover" src="${img(m.cover)}" alt="">` : ''}${m.locked ? `<div class="lock">🔒 <b>${m.visibility === 'subscribers' ? 'For subscribers' : 'Private'}</b><span class="muted">${m.visibility === 'subscribers' ? 'Subscribe in the app' : 'You need the invite link with its key'}</span></div>` : ''}
-    <div class="body"><h2>${esc(m.title)}</h2><div class="muted">${esc(m.creatorName)} · ${m.members.length} people${m.place ? ' · ' + esc(m.place.name) : ''}</div>${m.description ? `<p>${esc(m.description)}</p>` : ''}
-    ${!m.locked ? (joined ? `<p class="muted">You're in this Moment.</p>` : `<button class="primary" onclick="window.join('${mid}')">I was there</button>`) : ''}
-    </div></div>
-    ${m.sides.length ? `<h3>Everyone's sides</h3><div class="grid">${m.sides.map(s => s.media ? `<div class="side"><img src="${img(s.media)}" alt=""><span>${esc(s.author)}</span></div>` : `<div class="card body" style="grid-column:1/-1;padding:12px">“${esc(s.caption)}” <span class="muted">— ${esc(s.author)}</span></div>`).join('')}</div>` : (!m.locked ? `<p class="muted">No sides yet.</p>` : '')}
-    ${!m.locked && joined ? sideForm(mid) : ''}
-    <p class="muted" style="margin-top:20px">Open in the app: <code>moment://moment/${mid}</code></p>`;
-}
-function sideForm(mid) {
-  return `<div class="card" style="margin-top:14px"><div class="body"><h3 style="margin-top:0">Add your side</h3>
-    <label>Photo</label><input type="file" id="sidePhoto" accept="image/*"><label>Caption</label><input id="sideCaption" placeholder="What was this?">
-    <button class="primary" style="margin-top:12px" onclick="window.addSide('${mid}')">Add</button></div></div>`;
-}
-window.join = async (mid) => {
-  const m = await store.moment(mid); if (!m || !relay) return;
-  const name = localStorage.getItem('moment.profile.name') || 'You';
-  let content = JSON.stringify({ name }), tags = { moment: mid };
-  if (m.key) { content = await Keys.seal(m.key, content); tags.enc = '1'; }
-  const e = await Events.make('join', tags, content); store.ingest(e); relay.publish(e); rerender();
-};
-window.addSide = async (mid) => {
-  const m = await store.moment(mid); if (!m || !relay) return;
-  const f = $('#sidePhoto').files[0]; const caption = $('#sideCaption').value.trim();
-  const media = f ? await shrink(f, 1280) : null;
-  const body = { kind: media ? 'photo' : 'text', caption, media, mediaKind: media ? 'photo' : null, originalTimestamp: Math.floor(Date.now() / 1000), authorName: localStorage.getItem('moment.profile.name') || 'You' };
-  let content = JSON.stringify(body), tags = { moment: mid };
-  if (m.key) { content = await Keys.seal(m.key, content); tags.enc = '1'; }
-  const e = await Events.make('contribution', tags, content); store.ingest(e); relay.publish(e); rerender();
-};
-async function shrink(file, side) {
-  const bmp = await createImageBitmap(file); const s = Math.min(1, side / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.82).split(',')[1];   // EXIF is dropped by re-encoding
+function postCard(p) {
+  const locked = p.gate.kind !== 'open';
+  const cover = p.cover
+    ? `<img src="${p.cover}" alt="">`
+    : `<div style="width:100%;height:100%;background:linear-gradient(140deg,var(--accent),transparent)"></div>`;
+  const face = p.gate.kind === 'buy'
+    ? `<div class="lockface"><div class="price">${esc(Money.label(p.gate.priceMinor, p.gate.currency))}</div>
+         <button class="buy" data-buy="${esc(p.id)}">Unlock</button>
+         <div class="tiny" style="color:#fff;opacity:.8">${p.itemCount} ${p.isVideo ? 'clip' : 'photo'}${p.itemCount === 1 ? '' : 's'}</div></div>`
+    : p.gate.kind === 'subscribe'
+      ? `<div class="lockface"><div class="price">${esc(Money.label(p.gate.priceMinor, p.gate.currency))}</div>
+           <button class="buy" data-sub="${esc(p.creatorID)}">Subscribe</button>
+           <div class="tiny" style="color:#fff;opacity:.8">Opens every subscribers-only post</div></div>`
+      : '';
+  return `<article class="post">
+    <div class="who">
+      <div class="av">${esc(initials(p.creatorName))}</div>
+      <div><a href="#/u/${encodeURIComponent(p.creatorID)}">${esc(p.creatorName)}</a><div class="when">${ago(p.createdAt)} ago</div></div>
+    </div>
+    <a class="shot ${locked ? 'locked' : ''}" href="#/s/${encodeURIComponent(p.id)}">${cover}${face}</a>
+    <div class="body">
+      <h2>${esc(p.title)}</h2>
+      ${p.blurb ? `<div class="muted">${esc(p.blurb)}</div>` : ''}
+      <div class="tiny" style="margin-top:6px">${p.subscribersOnly ? 'Subscribers' : (p.priceMinor ? esc(Money.label(p.priceMinor, p.currency)) : 'Free')} · ${p.itemCount} ${p.isVideo ? 'clip' : 'photo'}${p.itemCount === 1 ? '' : 's'}</div>
+    </div>
+  </article>`;
 }
 
-// ---- NOW ------------------------------------------------------------------------
-function nowPage() {
-  const nows = store.nows();
-  return `<h1 style="margin:6px 0 14px">NOW</h1>
-    <div class="card"><div class="body"><label>What are you up for?</label><select id="nowAct">${['coffee', 'drinks', 'food', 'drive', 'beach', 'exploring', 'chilling'].map(a => `<option>${a}</option>`).join('')}</select>
-    <label>Say something</label><input id="nowText" placeholder="Anyone out?"><button class="primary amber" style="margin-top:12px" onclick="window.postNow()">Post · gone in 4 hours</button></div></div>
-    ${nows.map(x => `<div class="card"><div class="body"><b>${esc(x.p.authorName)}</b> <span class="muted">${x.p.activity && x.p.activity !== 'none' ? 'is up for ' + esc(x.p.activity) : ''}</span><div>${esc(x.p.text)}</div></div></div>`).join('') || '<p class="muted">Nobody yet.</p>'}`;
+// ---- One post ----------------------------------------------------------------
+async function setPage(id) {
+  const set = store.sets(null).find(s => s.id === id);
+  if (!set) return `<div class="empty">That post hasn't reached this browser.</div>`;
+  const gate = store.gate(set, store.purchases(), store.subscriptions());
+  const name = set.creatorName || store.name(set.creatorID);
+  let inner;
+  if (!gate || gate.kind !== 'open') {
+    inner = `<div class="card">
+      <h3>${gate?.kind === 'subscribe' ? 'Subscribers only' : 'Locked'}</h3>
+      <p class="muted">${gate?.kind === 'subscribe'
+        ? `A subscription to ${esc(name)} opens this and everything else they mark for subscribers.`
+        : `${esc(name)} is selling this set for ${esc(Money.label(set.priceMinor, set.currency))}.`}</p>
+      <button class="primary" ${gate?.kind === 'subscribe' ? `data-sub="${esc(set.creatorID)}"` : `data-buy="${esc(set.id)}"`}>
+        ${gate?.kind === 'subscribe' ? `Subscribe · ${esc(Money.label(gate.priceMinor, gate.currency))}` : `Unlock · ${esc(Money.label(set.priceMinor, set.currency))}`}
+      </button>
+    </div>`;
+  } else {
+    const items = await store.items(set);
+    inner = items === null
+      ? `<div class="card"><h3>You have this, but not the key yet</h3>
+           <p class="muted">The photos are sealed under a key only ${esc(name)}'s device hands out. It arrives the next time their app is online — this page will fill in by itself.</p></div>`
+      : `<div class="grid">${items.map(i => i.url
+          ? (i.kind === 'video' ? `<video src="${i.url}" controls playsinline></video>` : `<img src="${i.url}" alt="${esc(i.caption || '')}">`)
+          : '').join('')}</div>`;
+  }
+  return `<div class="who" style="padding-left:0">
+      <div class="av">${esc(initials(name))}</div>
+      <div><a href="#/u/${encodeURIComponent(set.creatorID)}">${esc(name)}</a><div class="when">${ago(set.createdAt)} ago</div></div>
+    </div>
+    <h1 style="margin:6px 0 2px;font-size:22px">${esc(set.title)}</h1>
+    ${set.blurb ? `<p class="muted" style="margin:0 0 14px">${esc(set.blurb)}</p>` : '<div style="height:12px"></div>'}
+    ${inner}
+    ${captureNote()}`;
 }
-window.postNow = async () => {
-  if (!relay) return alert('Add a relay first.');
-  const l = await locate(); const exp = Math.floor(Date.now() / 1000) + 4 * 3600;
-  const p = { text: $('#nowText').value.trim(), media: null, expiresAt: exp, coarsePlace: null, activity: $('#nowAct').value, place: l ? { id: `here_${Math.round(l.lat * 1000)}_${Math.round(l.lon * 1000)}`, name: 'Nearby', area: '', latitude: l.lat, longitude: l.lon, category: null } : null, authorName: localStorage.getItem('moment.profile.name') || 'You' };
-  const tags = { exp: String(exp), disc: '1' }; if (l) { tags.geo = Geo.cell(l.lat, l.lon); tags.place = p.place.id; }
-  const e = await Events.make('now', tags, JSON.stringify(p)); store.ingest(e); relay.publish(e); rerender();
-};
 
-// ---- Create a public Moment --------------------------------------------------------
-function newPage() {
-  return `<h1 style="margin:6px 0 14px">New Moment</h1><div class="card"><div class="body">
-    <label>Title</label><input id="mTitle" placeholder="Rooftop Friday"><label>Cover photo</label><input type="file" id="mCover" accept="image/*">
-    <label>A line</label><input id="mDesc" placeholder="Optional">
-    <p class="muted">Web Moments are public and carry your approximate cell so people nearby find them. Private (invite-only) Moments are made in the app.</p>
-    <button class="primary" onclick="window.createMoment()">Create</button></div></div>`;
+// ---- A creator -----------------------------------------------------------------
+async function creatorPage(id) {
+  const prof = store.profile(id), plan = store.plan(id), links = store.links(id);
+  const name = prof?.displayName || store.name(id);
+  const sets = store.sets(id);
+  const purchases = store.purchases(), subs = store.subscriptions();
+  const subbed = subs.get(id) && subs.get(id).expiresAt > Date.now() / 1000;
+  const free = sets.filter(s => !s.priceMinor && !s.subscribersOnly).length;
+  const linkRow = links ? Object.entries(links).filter(([, v]) => v).map(([k, v]) =>
+    `<span class="pill">${esc(k)} ${esc(v)}</span>`).join(' ') : '';
+  return `<div class="card">
+      <div class="row" style="gap:12px">
+        <div class="av" style="width:54px;height:54px;font-size:19px">${esc(initials(name))}</div>
+        <div><div style="font-size:19px;font-weight:700">${esc(name)}</div>
+          <div class="tiny"><code>${esc(prof?.momentID || '')}</code></div></div>
+      </div>
+      ${prof?.bio ? `<p class="muted" style="margin:12px 0 0">${esc(prof.bio)}</p>` : ''}
+      <div class="row tiny" style="margin-top:10px">
+        <span>${sets.length} post${sets.length === 1 ? '' : 's'}</span><span>·</span>
+        <span>${free} free</span><span>·</span><span>${sets.length - free} locked</span>
+      </div>
+      ${linkRow ? `<div class="row" style="margin-top:10px">${linkRow}</div>` : ''}
+      ${plan ? `<div style="margin-top:14px">
+        ${subbed
+          ? `<div class="banner">Subscribed. Every subscribers-only post is open until ${new Date(subs.get(id).expiresAt * 1000).toLocaleDateString()}.</div>`
+          : `<button class="primary" data-sub="${esc(id)}">Subscribe · ${esc(Money.label(plan.priceMinor, plan.currency))} / 30 days</button>
+             <p class="tiny" style="margin:8px 0 0">${esc(plan.pitch || plan.title || '')}</p>`}
+      </div>` : ''}
+    </div>
+    ${sets.length ? sets.map(s => {
+      const gate = store.gate(s, purchases, subs);
+      return gate ? postCard({ ...s, gate, creatorName: name }) : '';
+    }).join('') : `<div class="empty">Nothing published yet.</div>`}`;
 }
-window.createMoment = async () => {
-  if (!relay) return alert('Add a relay first.');
-  const l = await locate(); const f = $('#mCover').files[0];
-  const p = { title: $('#mTitle').value.trim() || 'Untitled', description: $('#mDesc').value.trim(), startAt: null, endAt: null, locationName: null, coarsePlace: null, visibility: 'publicAll', templateID: null, remixedFromID: null, isLive: false, cover: f ? await shrink(f, 720) : null, isTeaser: false, place: null, creatorName: localStorage.getItem('moment.profile.name') || 'You' };
-  const tags = { vis: 'publicAll' }; if (l) tags.geo = Geo.cell(l.lat, l.lon);
-  const e = await Events.make('moment', tags, JSON.stringify(p)); store.ingest(e); relay.publish(e); location.hash = '#/m/' + e.id;
-};
 
-// ---- Settings: identity, relays --------------------------------------------------
-function settingsPage() {
-  return `<h1 style="margin:6px 0 14px">You</h1>
-    <div class="card"><div class="body"><div class="muted">Your MOMENT ID</div><h2><code>${myID}</code></h2>
-    <label>Name</label><input id="pName" value="${esc(localStorage.getItem('moment.profile.name') || 'You')}"><button class="primary" style="margin-top:12px" onclick="window.saveName()">Save</button>
-    <p class="muted">Your identity is a key in this browser. Back it up: <button class="pill" onclick="window.exportSeed()">Copy secret</button> · <button class="pill" onclick="window.importSeed()">Restore</button></p></div></div>
-    <div class="card"><div class="body"><h3 style="margin-top:0">Relays</h3>
-    ${relays().map(u => `<div class="row" style="justify-content:space-between;margin-bottom:6px"><code>${esc(u)}</code><button class="pill" onclick="window.removeRelay('${esc(u)}')">Remove</button></div>`).join('') || '<p class="muted">None yet.</p>'}
-    <input id="relayUrl" placeholder="wss://relay.example.org"><button class="primary" style="margin-top:10px" onclick="window.addRelay()">Add relay</button>
-    <p class="muted">Relays are dumb, open servers anyone can run (see <code>relay/</code> in the source). They store signed events and can't read private Moments.</p></div></div>
-    ${about()}`;
+// ---- Creators this browser knows -------------------------------------------------
+function creatorsPage() {
+  if (!relays().length) return noRelay();
+  const ids = store.creators().filter(id => id !== Identity.author);
+  if (!ids.length) return `<div class="empty"><p>No creators yet.</p><p class="tiny">They appear as their posts reach the relays you're on.</p></div>`;
+  const following = store.following();
+  return ids.map(id => {
+    const name = store.name(id), plan = store.plan(id), n = store.sets(id).length;
+    return `<div class="card"><div class="row" style="justify-content:space-between">
+      <a href="#/u/${encodeURIComponent(id)}" style="text-decoration:none;color:inherit" class="row">
+        <div class="av" style="width:40px;height:40px">${esc(initials(name))}</div>
+        <div><div style="font-weight:650">${esc(name)}</div>
+          <div class="tiny">${n} post${n === 1 ? '' : 's'}${plan ? ` · ${esc(Money.label(plan.priceMinor, plan.currency))}/mo` : ''}</div></div>
+      </a>
+      <button class="pill ${following.has(id) ? 'on' : ''}" data-follow="${esc(id)}">${following.has(id) ? 'Following' : 'Follow'}</button>
+    </div></div>`;
+  }).join('');
 }
-function about() { return `<div class="banner">MOMENT Web talks the same protocol as the iPhone app: your identity is an Ed25519 key, every action is a signed event, and private Moments are AES‑GCM sealed with a key that only travels inside the invite link. No account, no server of ours, nothing collected. <a href="../">About MOMENT</a></div>`; }
-window.saveName = () => { localStorage.setItem('moment.profile.name', $('#pName').value.trim() || 'You'); publishProfile(); rerender(); };
-window.addRelay = () => { const u = $('#relayUrl').value.trim(); if (!/^wss?:\/\//.test(u)) return alert('Use ws:// or wss://'); localStorage.setItem('moment.relays', JSON.stringify([...new Set([...relays(), u])])); relay = null; connect(); rerender(); };
-window.removeRelay = (u) => { localStorage.setItem('moment.relays', JSON.stringify(relays().filter(x => x !== u))); location.reload(); };
-window.exportSeed = async () => { await navigator.clipboard.writeText(Identity.exportSeed()); alert('Copied. Keep it somewhere safe — it is your identity.'); };
-window.importSeed = async () => { const s = prompt('Paste your secret'); if (s) { await Identity.importSeed(s.trim()); location.reload(); } };
+
+// ---- What you've paid for --------------------------------------------------------
+async function unlockedPage() {
+  const purchases = store.purchases(), subs = store.subscriptions();
+  const mine = store.sets(null).filter(s => purchases.has(s.id) || (s.subscribersOnly && subs.get(s.creatorID)?.expiresAt > Date.now() / 1000));
+  if (!mine.length) return `<div class="empty"><p>Nothing unlocked yet.</p><p class="tiny">Sets you buy and subscriptions you take stay here, openable on any device that holds your key.</p></div>`;
+  let out = '';
+  for (const s of mine) {
+    const items = await store.items(s);
+    out += `<div class="card"><h3><a class="link" href="#/s/${encodeURIComponent(s.id)}" style="text-decoration:none">${esc(s.title)}</a></h3>
+      <div class="tiny" style="margin-bottom:10px">${esc(s.creatorName || store.name(s.creatorID))}</div>
+      ${items === null
+        ? `<p class="muted">Waiting for the key from ${esc(s.creatorName || 'the creator')}'s device.</p>`
+        : `<div class="grid">${items.slice(0, 6).map(i => i.url ? (i.kind === 'video'
+            ? `<video src="${i.url}" playsinline muted></video>` : `<img src="${i.url}" alt="">`) : '').join('')}</div>`}
+    </div>`;
+  }
+  return out;
+}
+
+// ---- You -------------------------------------------------------------------------
+function youPage() {
+  const list = relays();
+  return `<div class="card">
+      <h3>You</h3>
+      <p class="tiny">This browser is an identity. There is no account and no password — the key below <em>is</em> you, and losing it loses the posts you've unlocked.</p>
+      <label>Name</label>
+      <input id="pname" value="${esc(localStorage.getItem('moment.profile.name') || '')}">
+      <label>Bio</label>
+      <input id="pbio" value="${esc(localStorage.getItem('moment.profile.bio') || '')}">
+      <div style="height:12px"></div>
+      <button class="primary" id="saveProfile">Save</button>
+      <label>Your MOMENT ID</label>
+      <code>${esc(myID)}</code>
+    </div>
+
+    <div class="card">
+      <h3>Relays</h3>
+      <p class="tiny">Open servers that pass signed events along. They can't read what you've paid for — the media is sealed under keys they never see. Run your own if you like.</p>
+      ${list.length ? list.map(u => `<div class="row" style="justify-content:space-between;margin:8px 0">
+          <code>${esc(u)}</code><button class="pill warn" data-delrelay="${esc(u)}">Remove</button></div>`).join('')
+        : '<p class="muted">None yet.</p>'}
+      <label>Add one</label>
+      <input id="relayURL" placeholder="wss://relay.example.com">
+      <div style="height:10px"></div>
+      <button class="ghost" id="addRelay">Add relay</button>
+    </div>
+
+    <div class="card">
+      <h3>Your key</h3>
+      <p class="tiny">Copy this into another browser to be the same person there. Anyone who has it is you — treat it like a password you can never change.</p>
+      <details><summary class="tiny" style="cursor:pointer">Show recovery seed</summary>
+        <code style="display:block;margin-top:8px">${esc(Identity.exportSeed() || '')}</code></details>
+      <label>Restore from a seed</label>
+      <input id="seedIn" placeholder="paste a seed">
+      <div style="height:10px"></div>
+      <button class="ghost" id="restore">Replace this identity</button>
+    </div>
+
+    ${captureNote()}
+
+    <div class="card">
+      <h3>What this web app can't do</h3>
+      <p class="tiny">Posting, selling, calls and chats are in the iPhone app. This is a reader: browse creators, unlock what you've paid for, and keep your identity. It also can't protect paid photos from screenshots the way iOS can — see above.</p>
+    </div>`;
+}
+
+/// Said in every place paid media appears, because the honest answer differs from the app's.
+function captureNote() {
+  return `<div class="banner warn"><strong>Screenshots aren't blocked here.</strong> The iPhone app renders paid photos inside a system layer that comes out blank in screenshots and recordings. A browser has no such layer, so anything you open here can be captured. Creators: this is why the app is the safer place for your work.</div>`;
+}
+
+function noRelay() {
+  return `<div class="banner">Add a relay to see anything. Relays are open servers anyone can run — <a class="link" href="#/you">You → Relays</a>.</div>
+    <div class="card"><h3>What this is</h3>
+      <p class="muted">MOMENT is a creator platform with no company server. Creators post sets — some free, some priced — and keep the keys. This browser speaks the same protocol as the iPhone app: the same signed events, the same sealed media.</p></div>`;
+}
+
+// ---- Actions ---------------------------------------------------------------------
+function wire() {
+  $('#saveProfile')?.addEventListener('click', async () => {
+    localStorage.setItem('moment.profile.name', $('#pname').value.trim() || 'You');
+    localStorage.setItem('moment.profile.bio', $('#pbio').value.trim());
+    await publishProfile(); rerender();
+  });
+  $('#addRelay')?.addEventListener('click', () => {
+    const u = $('#relayURL').value.trim();
+    if (!/^wss?:\/\//.test(u)) return alert('A relay URL starts with wss:// or ws://');
+    const list = relays(); if (!list.includes(u)) list.push(u);
+    localStorage.setItem('moment.relays', JSON.stringify(list));
+    relay = null; connect(); rerender();
+  });
+  document.querySelectorAll('[data-delrelay]').forEach(b => b.addEventListener('click', () => {
+    localStorage.setItem('moment.relays', JSON.stringify(relays().filter(u => u !== b.dataset.delrelay)));
+    location.reload();
+  }));
+  $('#restore')?.addEventListener('click', async () => {
+    const s = $('#seedIn').value.trim(); if (!s) return;
+    if (!confirm('Replace this identity? Anything unlocked under the current key becomes unreachable in this browser.')) return;
+    await Identity.importSeed(s); location.reload();
+  });
+  document.querySelectorAll('[data-follow]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.follow, on = store.following().has(id);
+    relay?.publish(await Events.make(on ? 'unfollow' : 'follow', { to: id, close: '0' }, JSON.stringify({ ok: '1' })));
+    setTimeout(rerender, 120);
+  }));
+  document.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => payWall('set', b.dataset.buy)));
+  document.querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', () => payWall('subscription', b.dataset.sub)));
+}
+
+/// There is no payment processor wired anywhere in MOMENT yet — not in the app and not here.
+/// Saying so is the only honest thing this button can do; pretending to charge would be worse than
+/// not having the button.
+function payWall(what, id) {
+  const name = what === 'set'
+    ? (store.sets(null).find(s => s.id === id)?.title || 'this post')
+    : store.name(id);
+  alert(`Checkout isn't wired up yet.\n\nNothing in MOMENT can take a payment right now — not this browser and not the iPhone app. When it is, this button will charge you for ${name} and the creator's device will hand your key straight to this browser.\n\nIf you've already paid on the app with this same key, the post opens here by itself.`);
+}
 
 boot();

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MOMENT</title>
-<meta name="description" content="One Moment. Everyone's story. The web client of the decentralised MOMENT network.">
+<meta name="description" content="Your work. Your price. The web client of the decentralised MOMENT creator network.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b0b0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,40 +12,70 @@
 <link rel="apple-touch-icon" href="../logo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js" integrity="sha512-/zZ39+w4lQuknmLPKiAujyf/E8ypDzmpP8m2DIWK8W2UahC+hLc9MOB0TLBHy7mDBi3s1EcCd+SjtNvC6b58aQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
-  :root { --bg:#0b0b0f; --fg:#f5f5f7; --muted:#9a9aa3; --glass:rgba(255,255,255,.08); --rim:rgba(255,255,255,.18); --amber:#ff9e3d; --pink:#ff4d7a; --blue:#3a8bff; }
-  :root[data-theme="light"], @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#fafafa; --fg:#111; --muted:#666; --glass:rgba(0,0,0,.05); --rim:rgba(0,0,0,.08); } }
-  * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 -apple-system,system-ui,Inter,sans-serif; padding-bottom:84px }
-  header { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; padding:14px 16px; backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 70%,transparent); border-bottom:1px solid var(--rim) }
-  header b { font-weight:900; letter-spacing:.14em } header .sp { flex:1 } .pill { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--rim); color:var(--fg); font-size:14px; text-decoration:none; cursor:pointer }
-  .pill.on { background:var(--blue); color:#fff; border-color:transparent }
-  main { max-width:720px; margin:0 auto; padding:16px }
-  .card { position:relative; border-radius:22px; overflow:hidden; background:var(--glass); border:1px solid var(--rim); margin:0 0 14px; }
-  .card img.cover { display:block; width:100%; aspect-ratio:4/5; object-fit:cover } .card .body { padding:14px 16px }
-  .card h2 { margin:0 0 4px; font-size:24px } .muted { color:var(--muted); font-size:14px }
-  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap } .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:6px }
-  .grid img { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:12px } .side { position:relative } .side span { position:absolute; left:6px; bottom:6px; font-size:11px; font-weight:600; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.7) }
-  .lock { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; backdrop-filter:blur(20px); background:rgba(0,0,0,.25); color:#fff }
-  nav.tabs { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:space-around; padding:10px 8px calc(10px + env(safe-area-inset-bottom)); backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 75%,transparent); border-top:1px solid var(--rim) }
-  nav.tabs a { color:var(--muted); text-decoration:none; font-size:12px; text-align:center } nav.tabs a.on { color:var(--fg); font-weight:600 }
-  input, textarea, select { width:100%; padding:12px 14px; border-radius:14px; border:1px solid var(--rim); background:var(--glass); color:var(--fg); font:inherit } label { display:block; margin:12px 0 6px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em }
-  button.primary { width:100%; padding:14px; border-radius:14px; border:0; background:var(--blue); color:#fff; font:600 16px inherit; cursor:pointer } button.primary.amber { background:var(--amber) }
+  :root { --bg:#0b0b0f; --fg:#f5f5f7; --muted:#9a9aa3; --glass:rgba(255,255,255,.08); --rim:rgba(255,255,255,.18); --accent:#22b6ff; --danger:#ff4d5e; --ok:#3ddc84; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg:#fafafa; --fg:#111; --muted:#666; --glass:rgba(0,0,0,.05); --rim:rgba(0,0,0,.10); }
+  }
+  :root[data-theme="light"] { --bg:#fafafa; --fg:#111; --muted:#666; --glass:rgba(0,0,0,.05); --rim:rgba(0,0,0,.10); }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 -apple-system,system-ui,Inter,sans-serif; padding-bottom:84px; -webkit-font-smoothing:antialiased }
+  header { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; padding:14px 16px; backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 70%,transparent); border-bottom:1px solid var(--rim) }
+  header b { font-weight:900; letter-spacing:.14em; font-size:15px } header .sp { flex:1 }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--rim); color:var(--fg); font-size:13px; text-decoration:none; cursor:pointer }
+  .pill.on { background:var(--accent); color:#00121c; border-color:transparent; font-weight:600 }
+  .pill.warn { color:var(--danger) }
+  main { max-width:620px; margin:0 auto; padding:16px }
+
+  /* A post: cover, then who and what and the price. A locked one is blurred with its price on it. */
+  .post { border-radius:20px; overflow:hidden; background:var(--glass); border:1px solid var(--rim); margin:0 0 16px }
+  .who { display:flex; align-items:center; gap:10px; padding:12px 14px }
+  .who .av { width:34px; height:34px; border-radius:50%; background:var(--accent); color:#00121c; display:grid; place-items:center; font-weight:700; font-size:14px; flex:none; overflow:hidden }
+  .who .av img { width:100%; height:100%; object-fit:cover }
+  .who a { color:inherit; text-decoration:none; font-weight:600; font-size:15px }
+  .who .when { color:var(--muted); font-size:13px }
+  .shot { position:relative; display:block; width:100%; aspect-ratio:4/5; background:#00000030 }
+  .shot img, .shot video { display:block; width:100%; height:100%; object-fit:cover }
+  .shot.locked img { filter:blur(26px); transform:scale(1.1) }
+  .lockface { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#fff; text-shadow:0 1px 8px rgba(0,0,0,.6) }
+  .lockface .price { font-size:26px; font-weight:800 }
+  .buy { padding:12px 22px; border-radius:999px; border:0; background:var(--accent); color:#00121c; font:700 15px inherit; cursor:pointer }
+  .body { padding:12px 14px }
+  .body h2 { margin:0 0 3px; font-size:17px; font-weight:650 }
+  .muted { color:var(--muted); font-size:14px }
+  .tiny { font-size:12px; color:var(--muted) }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:6px }
+  .grid img, .grid video { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:12px; display:block }
+
+  .card { border-radius:18px; background:var(--glass); border:1px solid var(--rim); padding:16px; margin:0 0 14px }
+  .card h3 { margin:0 0 6px; font-size:17px }
+  input, textarea, select { width:100%; padding:12px 14px; border-radius:14px; border:1px solid var(--rim); background:var(--glass); color:var(--fg); font:inherit }
+  label { display:block; margin:14px 0 6px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em }
+  button.primary { width:100%; padding:14px; border-radius:14px; border:0; background:var(--accent); color:#00121c; font:700 16px inherit; cursor:pointer }
+  button.ghost { width:100%; padding:13px; border-radius:14px; border:1px solid var(--rim); background:transparent; color:var(--fg); font:600 15px inherit; cursor:pointer }
   .banner { padding:12px 14px; border-radius:14px; background:var(--glass); border:1px solid var(--rim); margin-bottom:14px; font-size:14px }
-  .live { color:#ff5a5a; font-weight:700 } code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px }
-  .hidden { display:none }
+  .banner.warn { border-color:color-mix(in srgb,var(--danger) 40%,transparent) }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; word-break:break-all }
+  nav.tabs { position:fixed; left:0; right:0; bottom:0; z-index:5; display:flex; justify-content:space-around; padding:10px 8px calc(10px + env(safe-area-inset-bottom)); backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 78%,transparent); border-top:1px solid var(--rim) }
+  nav.tabs a { color:var(--muted); text-decoration:none; font-size:12px; text-align:center; padding:2px 10px }
+  nav.tabs a.on { color:var(--fg); font-weight:650 }
+  .empty { text-align:center; padding:48px 20px; color:var(--muted) }
+  .banner-top { display:block; width:100%; height:120px; object-fit:cover; border-radius:16px 16px 0 0 }
+  a.link { color:var(--accent) }
 </style>
 </head>
 <body>
 <header>
-  <img src="../logo.png" alt="" width="26" height="26"><b>MOMENT</b><span class="sp"></span>
+  <img src="../logo.png" alt="" width="24" height="24"><b>MOMENT</b><span class="sp"></span>
   <span id="relayStatus" class="pill muted">no relay</span>
-  <a class="pill" href="#/settings" id="idPill">…</a>
+  <a class="pill" href="#/you" id="idPill">…</a>
 </header>
 <main id="view"></main>
 <nav class="tabs">
-  <a href="#/tonight" data-tab="tonight">Tonight</a>
-  <a href="#/now" data-tab="now">NOW</a>
-  <a href="#/new" data-tab="new">Create</a>
-  <a href="#/settings" data-tab="settings">You</a>
+  <a href="#/feed" data-tab="feed">Home</a>
+  <a href="#/creators" data-tab="creators">Creators</a>
+  <a href="#/unlocked" data-tab="unlocked">Unlocked</a>
+  <a href="#/you" data-tab="you">You</a>
 </nav>
 <script type="module" src="app.js"></script>
 </body>
