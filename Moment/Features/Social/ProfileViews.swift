@@ -27,22 +27,23 @@ struct SocialProfileView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MSpacing.l) {
+                banner
                 header
-                banner.padding(.horizontal, -MSpacing.page).padding(.top, -MSpacing.s)
-                if !isMe { relationshipCard }
                 if isMe { AccountBanner(); UploadBanner() }
-                Picker("Section", selection: $section) { Text("Moments").tag(0); Text("Places").tag(1); Text("People").tag(2) }
+                if !isMe { relationshipCard }
+                Picker("Section", selection: $section) { Text(isMe ? "Shop" : "Posts").tag(0); Text("Moments").tag(1); Text("Places").tag(2); Text("People").tag(3) }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("profileSections")
                 switch section {
-                case 0: momentsTab
-                case 1: placesTab
+                case 0: shopTab
+                case 1: momentsTab
+                case 2: placesTab
                 default: peopleTab
                 }
             }
             .padding(.horizontal, MSpacing.page)
             .padding(.top, MSpacing.s)
-            .padding(.bottom, 80)
+            .padding(.bottom, 90)
         }
         .background(MColor.background)
         .navigationTitle(user?.displayName ?? "Profile")
@@ -75,9 +76,11 @@ struct SocialProfileView: View {
         .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims(); await env.social.refreshCreator(); await env.social.refreshStorefront() } else { await env.social.loadCreatorPlan(userID); await env.social.loadStorefront(userID) } }
         .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
         .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
+        .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: resolvedID) }
+        .sheet(isPresented: $showAsk) { AskSheet(creatorID: resolvedID, creatorName: user?.displayName ?? "them") }
         .fullScreenCover(isPresented: $showMemories) { PrivateMemoryHubView() }
         .sheet(isPresented: $showSettings) { NavigationStack { SettingsView().socialDestinations() } }
-        .navigationDestination(item: $openConversation) { id in ConversationView(conversationID: id) }
+        .navigationDestination(item: $openConversation) { id in ChatView(conversationID: id) }
         .modifier(SocialErrorAlert())
     }
 
@@ -85,84 +88,67 @@ struct SocialProfileView: View {
 
     private var peopleCount: Int { Set(moments.flatMap(\.memberIDs)).subtracting([resolvedID]).count }
     private var placeCount: Int { Set(moments.compactMap { $0.place?.id ?? $0.coarsePlace }).count }
+    private var sets: [VaultSet] { env.social.sets(of: resolvedID).filter { $0.visible } }
+    private var plan: CreatorPlan? { env.social.plan(for: resolvedID) }
+    private var links: CreatorLinks { env.social.links(of: resolvedID) }
 
-    /// Nothing uploaded for this: the banner is the creator's own newest free cover.
+    /// Nothing uploaded for this: the banner is the creator's own newest free cover, else a Moment of theirs.
     private var bannerRef: MediaRef? {
-        env.social.sets(of: resolvedID).first(where: { $0.isFree })?.cover
-            ?? env.social.sets(of: resolvedID).first?.cover
-            ?? moments.first?.coverRef
+        sets.first(where: { $0.isFree })?.cover ?? sets.first?.cover ?? moments.first?.coverRef
     }
 
-    @ViewBuilder private var banner: some View {
-        if let bannerRef {
-            SocialImage(ref: bannerRef).frame(height: 132).frame(maxWidth: .infinity).clipped()
-                .overlay(LinearGradient(colors: [.clear, MColor.background.opacity(0.85)], startPoint: .center, endPoint: .bottom))
-                .accessibilityHidden(true)
+    /// Banner with the avatar sitting on its edge — the shape people expect from a creator page.
+    private var banner: some View {
+        ZStack(alignment: .bottomLeading) {
+            Group {
+                if let bannerRef { SocialImage(ref: bannerRef) }
+                else { LinearGradient(colors: [MColor.accent.opacity(0.55), MColor.accent.opacity(0.12)], startPoint: .topLeading, endPoint: .bottomTrailing) }
+            }
+            .frame(height: 148).frame(maxWidth: .infinity).clipped()
+            .overlay(LinearGradient(colors: [.clear, MColor.background], startPoint: .center, endPoint: .bottom))
+
+            ZStack {
+                if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 84, height: 84).clipShape(Circle()) }
+                else { PersonAvatar(name: user?.displayName ?? "?", size: 84) }
+            }
+            .overlay(Circle().strokeBorder(MColor.background, lineWidth: 4))
+            .offset(x: MSpacing.page, y: 30)
         }
+        .padding(.horizontal, -MSpacing.page)
+        .padding(.top, -MSpacing.s)
+        .padding(.bottom, 32)
+        .accessibilityHidden(true)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
-            HStack(alignment: .center, spacing: MSpacing.xl) {
-                ZStack {
-                    if let ref = user?.avatarRef { SocialImage(ref: ref).frame(width: 88, height: 88).clipShape(Circle()) }
-                    else { PersonAvatar(name: user?.displayName ?? "?", size: 88) }
-                }
-                .overlay(Circle().strokeBorder(MColor.separator, lineWidth: 0.5))
-                HStack(spacing: 0) {
-                    Button { section = 0 } label: { stat("\(moments.count)", "Moments") }.buttonStyle(.plain)
-                    Button { section = 2 } label: { stat("\(peopleCount)", "People") }.buttonStyle(.plain)
-                    Button { section = 1 } label: { stat("\(placeCount)", "Places") }.buttonStyle(.plain)
-                }
-            }
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(user?.displayName ?? "…").font(.subheadline.weight(.semibold))
+                    Text(user?.displayName ?? "…").font(.title3.weight(.bold))
                     if user?.publicKey != nil { Image(systemName: "checkmark.seal.fill").font(.caption).foregroundStyle(MColor.accent).accessibilityLabel("Signed identity") }
                 }
-                if let id = isMe ? env.identity.momentID : user?.momentID { Text(id).font(.system(.caption, design: .monospaced)).foregroundStyle(MColor.textSecondary) }
-                if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.subheadline) }
+                HStack(spacing: 8) {
+                    if let h = user?.handle, !h.isEmpty { Text("@\(h)").font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
+                    if let id = isMe ? env.identity.momentID : user?.momentID { Text(id).font(.system(.caption2, design: .monospaced)).foregroundStyle(MColor.textTertiary) }
+                }
+                if let bio = user?.bio, !bio.isEmpty { Text(bio).font(MFont.subheadline).padding(.top, 2) }
                 else if isMe { Button("Add a line about you") { showEdit = true }.font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
             }
-            if isMe {
-                HStack(spacing: MSpacing.s) {
-                    Button { showEdit = true } label: { Text("Edit profile") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("editProfile")
-                    NavigationLink(value: SocialRoute.invite) { Text("Invite friends") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("inviteFriends")
-                    NavigationLink(value: SocialRoute.passport) { Image(systemName: "book.closed").frame(width: 44) }.buttonStyle(ProfileButtonStyle()).accessibilityLabel("Passport").accessibilityIdentifier("passportLink")
-                }
-                NavigationLink(value: SocialRoute.earn) {
+
+            stats
+
+            if !links.all.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: MSpacing.s) {
-                        Image(systemName: "crown.fill").foregroundStyle(.orange)
-                        if let plan = env.social.myPlan { Text("\(env.social.activeSubscriberCount) \(env.social.activeSubscriberCount == 1 ? "subscriber" : "subscribers") · \(plan.title)") } else { Text("Earn from your Moments") }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                        ForEach(links.all, id: \.url) { label, handle, url in
+                            Link(destination: url) { HStack(spacing: 5) { Image(systemName: "link"); Text(handle) }.font(MFont.caption).padding(.horizontal, 10).padding(.vertical, 6) }
+                                .glassPill().accessibilityIdentifier("link-\(label)")
+                        }
                     }
-                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
                 }
-                .buttonStyle(.plain).glass(radius: 12, tint: .orange).accessibilityIdentifier("earnLink")
-                NavigationLink(value: SocialRoute.meet) {
-                    HStack(spacing: MSpacing.s) {
-                        Image(systemName: "heart.fill").foregroundStyle(.pink)
-                        Text(env.social.myDating == nil ? "Meet people you've crossed paths with" : "Meet · \(env.social.likesReceived.count) \(env.social.likesReceived.count == 1 ? "like" : "likes")")
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
-                    }
-                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
-                }
-                .buttonStyle(.plain).glass(radius: 12, tint: .pink).accessibilityIdentifier("meetProfileLink")
-                NavigationLink(value: SocialRoute.studio) {
-                    HStack(spacing: MSpacing.s) {
-                        Image(systemName: "bag.fill").foregroundStyle(.orange)
-                        Text(env.social.mySets.isEmpty ? "Sell your photos and your time" : "Studio · \(env.social.mySets.count) \(env.social.mySets.count == 1 ? "set" : "sets")")
-                        Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
-                    }
-                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
-                }
-                .buttonStyle(.plain).glass(radius: 12, tint: .orange).accessibilityIdentifier("studioLink")
             }
+
+            if isMe { myActions } else { theirActions }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("profileHeader")
@@ -170,15 +156,108 @@ struct SocialProfileView: View {
     }
     @State private var showEdit = false
     @State private var showSubscribe = false
+    @State private var showAsk = false
 
-    private func stat(_ value: String, _ label: String) -> some View {
-        VStack(spacing: 0) { Text(value).font(.headline.weight(.semibold)).monospacedDigit(); Text(label).font(MFont.caption).foregroundStyle(MColor.textPrimary) }
-            .frame(maxWidth: .infinity)
+    /// Three numbers that mean something here: who pays, what's for sale, what you were part of.
+    private var stats: some View {
+        HStack(spacing: 0) {
+            stat(isMe ? "\(env.social.activeSubscriberCount)" : "\(sets.count)", isMe ? "Subscribers" : "Sets")
+            stat("\(moments.count)", "Moments")
+            stat("\(peopleCount)", "People")
+        }
     }
 
-    // MARK: Tabs
+    private var myActions: some View {
+        VStack(spacing: MSpacing.s) {
+            HStack(spacing: MSpacing.s) {
+                Button { showEdit = true } label: { Text("Edit profile") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("editProfile")
+                Button { Task { await shareProfile() } } label: { Text("Share profile") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("shareProfile")
+                NavigationLink(value: SocialRoute.passport) { Image(systemName: "book.closed").frame(width: 44) }
+                    .buttonStyle(ProfileButtonStyle()).accessibilityLabel("Passport").accessibilityIdentifier("passportLink")
+            }
+            NavigationLink(value: SocialRoute.studio) {
+                HStack(spacing: MSpacing.m) {
+                    Image(systemName: "chart.line.uptrend.xyaxis").font(.headline)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(env.social.isCreator ? "Creator mode" : "Start earning").font(.subheadline.weight(.semibold))
+                        Text(env.social.isCreator
+                             ? env.social.storefrontEarnings.formatted(.currency(code: "INR").precision(.fractionLength(0))) + " this month"
+                             : "Sell sets, subscriptions and your time")
+                            .font(MFont.caption).foregroundStyle(.white.opacity(0.85))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.footnote)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, MSpacing.l).padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(LinearGradient(colors: [MColor.accent, MColor.accent.opacity(0.78)], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain).accessibilityIdentifier("studioLink")
+        }
+    }
 
-    /// Moments: pinned, then the grid. Collections and the year live here as quiet rows.
+    private var theirActions: some View {
+        VStack(spacing: MSpacing.s) {
+            if let plan {
+                Button { if !env.social.isSubscribed(to: resolvedID) { showSubscribe = true } } label: {
+                    VStack(spacing: 2) {
+                        Text(env.social.isSubscribed(to: resolvedID) ? "SUBSCRIBED" : "SUBSCRIBE · \(plan.priceLabel())")
+                            .font(.subheadline.weight(.bold))
+                        if !env.social.isSubscribed(to: resolvedID) { Text(plan.title).font(MFont.caption).opacity(0.9) }
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    .foregroundStyle(.white)
+                    .background(env.social.isSubscribed(to: resolvedID) ? AnyShapeStyle(MColor.textTertiary) : AnyShapeStyle(LinearGradient(colors: [MColor.accent, MColor.accent.opacity(0.78)], startPoint: .top, endPoint: .bottom)), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain).disabled(env.social.isSubscribed(to: resolvedID)).accessibilityIdentifier("subscribeBox")
+            }
+            HStack(spacing: MSpacing.s) {
+                Button { Task { if let c = await env.social.conversation(with: resolvedID) { openConversation = c.id } } } label: { Text("Message") }
+                    .buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("messageButton")
+                Button { showAsk = true } label: { Text("Ask") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("askButton")
+                Button { Task { await env.social.follow(resolvedID) } } label: { Text(env.social.isFollowing(resolvedID) ? "Following" : "Follow") }
+                    .buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("followToggle")
+            }
+        }
+    }
+
+    private func shareProfile() async {
+        shareItems = ["\(env.social.displayName) on MOMENT", URL(string: "https://moment.social/u/\(env.identity.momentID)")!]
+        showShare = true
+    }
+
+    private func stat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 0) {
+            Text(value).font(.headline.weight(.bold)).monospacedDigit()
+            Text(label).font(MFont.caption).foregroundStyle(MColor.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// What they sell, in a grid. For me it's also the way in to publishing more.
+    private var shopTab: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            if sets.isEmpty {
+                VStack(alignment: .leading, spacing: MSpacing.s) {
+                    Text(isMe ? "Nothing for sale yet." : "Nothing for sale yet.").font(MFont.headline)
+                    Text(isMe ? "A free set is how people find you; a paid one is how you earn." : "Follow them — new sets show up in your feed.")
+                        .font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                    if isMe { NavigationLink(value: SocialRoute.studio) { Text("Open Creator mode").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()) }
+                }
+                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: MSpacing.s)], spacing: MSpacing.s) {
+                    ForEach(sets) { s in SetTile(set: s) { showSubscribe = false } }
+                }
+            }
+            if !env.social.offers(of: resolvedID).filter(\.active).isEmpty || plan != nil {
+                NavigationLink(value: SocialRoute.storefront(resolvedID)) { Text(isMe ? "See your shop" : "See everything").frame(maxWidth: .infinity) }
+                    .buttonStyle(SecondaryButtonStyle()).accessibilityIdentifier("shopLink")
+            }
+        }
+    }
+
     private var momentsTab: some View {
         let shown = isMe && !query.isBlank ? env.social.search(moments: query) : moments
         return VStack(alignment: .leading, spacing: MSpacing.l) {
@@ -343,98 +422,27 @@ struct SocialProfileView: View {
         }
     }
 
-    private var relationshipCard: some View {
+    /// What you two have in common — not a follow button, that's in the header now.
+    @ViewBuilder private var relationshipCard: some View {
         let shared = env.social.moments(with: userID)
-        return VStack(alignment: .leading, spacing: MSpacing.m) {
-            HStack(spacing: MSpacing.s) {
-                if env.social.isFollowing(userID) {
-                    Button(env.social.isClose(userID) ? "Close friend ★" : "Following") { Task { await env.social.follow(userID, close: !env.social.isClose(userID)) } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("followToggle")
-                    Button("Unfollow") { Task { await env.social.unfollow(userID) } }.buttonStyle(ChipButtonStyle())
-                } else {
-                    Button(user?.isPrivateAccount == true ? "Request to follow" : "Follow") { Task { await env.social.follow(userID) } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("followToggle")
-                }
-                Button { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } } label: { Label("Message", systemImage: "bubble") }.buttonStyle(ChipButtonStyle()).accessibilityIdentifier("messageButton")
-            }
-            if !env.social.sets(of: userID).isEmpty || !env.social.offers(of: userID).filter(\.active).isEmpty {
-                NavigationLink(value: SocialRoute.storefront(userID)) {
-                    HStack(spacing: MSpacing.m) {
-                        Image(systemName: "bag.fill").foregroundStyle(.orange)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Shop").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                            Text("\(env.social.sets(of: userID).count) sets\(env.social.offers(of: userID).filter(\.active).isEmpty ? "" : " · books time")").font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                        }
-                        Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+        if !shared.isEmpty {
+            NavigationLink(value: SocialRoute.friendship(userID)) {
+                HStack(spacing: MSpacing.m) {
+                    AvatarStack(names: [env.social.displayName, user?.displayName ?? ""], size: 34)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("You + \(user?.displayName.split(separator: " ").first.map(String.init) ?? "them")").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                        Text("\(shared.count) \(shared.count == 1 ? "Moment" : "Moments") together").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                     }
-                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
-                }
-                .buttonStyle(.plain).glass(radius: 14, tint: .orange).accessibilityIdentifier("shopLink")
-            }
-            if !env.social.links(of: userID).all.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: MSpacing.s) {
-                        ForEach(env.social.links(of: userID).all, id: \.url) { label, handle, url in
-                            Link(destination: url) { HStack(spacing: 5) { Image(systemName: "link"); Text(handle) }.font(MFont.caption).padding(.horizontal, 10).padding(.vertical, 6) }.glassPill()
-                        }
-                    }
-                }
-            }
-            if let plan = env.social.plan(for: userID) {
-                VStack(alignment: .leading, spacing: MSpacing.m) {
-                    HStack {
-                        Text("SUBSCRIPTION").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-                        Spacer()
-                        Text("\(plan.priceLabel()) / 30 days").font(.subheadline.weight(.bold)).foregroundStyle(MColor.textPrimary)
-                    }
-                    Text(plan.title).font(MFont.headline)
-                    if !plan.pitch.isEmpty { Text(plan.pitch).font(MFont.subheadline).foregroundStyle(MColor.textSecondary) }
-                    ForEach(plan.perks.prefix(3), id: \.self) { Label($0, systemImage: "checkmark").font(MFont.footnote).foregroundStyle(MColor.textSecondary) }
-                    Button {
-                        if env.social.isSubscribed(to: userID) { } else { showSubscribe = true }
-                    } label: {
-                        Text(env.social.isSubscribed(to: userID) ? "SUBSCRIBED" : "SUBSCRIBE").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(env.social.isSubscribed(to: userID))
-                    .accessibilityIdentifier("subscribeBox")
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
                 }
                 .padding(MSpacing.l)
-                .background(MColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MColor.accent.opacity(0.4), lineWidth: 1))
-                .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: userID) }
-                Button { if !env.social.isSubscribed(to: userID) { showSubscribe = true } } label: {
-                    HStack(spacing: MSpacing.m) {
-                        Image(systemName: env.social.isSubscribed(to: userID) ? "checkmark.seal.fill" : "crown.fill").foregroundStyle(.orange)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(env.social.isSubscribed(to: userID) ? "Subscribed" : "Subscribe · \(plan.priceLabel()) / 30 days").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                            Text(plan.title).font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                        }
-                        Spacer()
-                        if !env.social.isSubscribed(to: userID) { Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary) }
-                    }
-                    .padding(.horizontal, MSpacing.l).padding(.vertical, 10)
-                }
-                .buttonStyle(.plain).glass(radius: 14, tint: .orange)
-                .accessibilityIdentifier("subscribeLink")
-                .opacity(0).frame(height: 0)   // kept for tests that tap it; the box above is the real control
             }
-            if !shared.isEmpty {
-                NavigationLink(value: SocialRoute.friendship(userID)) {
-                    HStack(spacing: MSpacing.m) {
-                        AvatarStack(names: [env.social.displayName, user?.displayName ?? ""], size: 36)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("You + \(user?.displayName.split(separator: " ").first.map(String.init) ?? "them")").font(MFont.headline).foregroundStyle(MColor.textPrimary)
-                            Text("\(shared.count) \(shared.count == 1 ? "Moment" : "Moments") together · since \(shared.last?.dateLabel ?? "")").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(MColor.textTertiary)
-                    }
-                    .momentCard()
-                }
-                .buttonStyle(PressScaleStyle())
-                .accessibilityIdentifier("friendshipLink")
-            }
+            .buttonStyle(.plain).glass(radius: 16)
+            .accessibilityIdentifier("friendshipLink")
         }
     }
+
 
     private var featuredRow: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {

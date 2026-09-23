@@ -23,6 +23,7 @@ struct MomentPageView: View {
     @State private var showQR = false
     @State private var revealed = false
     @State private var showSubscribe = false
+    @State private var commentError: String?
     @State private var mergeCandidate: SocialMoment?
     @State private var showDetails = false
     @State private var showLiveCamera = false
@@ -431,11 +432,24 @@ struct MomentPageView: View {
                         .background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
                         .accessibilityIdentifier("commentField")
                     Button {
-                        let t = commentText; commentText = ""
-                        Task { if await env.social.comment(momentID: m.id, text: t) { env.toast("Posted.") } else { commentText = t } }
+                        let t = commentText; commentText = ""; commentError = nil
+                        Task {
+                            if await env.social.comment(momentID: m.id, text: t) { env.toast("Posted.") }
+                            else {
+                                // Say why, here, next to the thing that was refused — a global alert
+                                // competes with the ones the parent views own and can end up invisible.
+                                commentText = t
+                                commentError = env.social.lastError ?? "That can't be posted."
+                                env.social.clearError()
+                            }
+                        }
                     } label: { Image(systemName: "arrow.up.circle.fill").font(.title2) }
                         .disabled(commentText.isBlank)
                         .accessibilityLabel("Post comment").accessibilityIdentifier("postComment")
+                }
+                if let commentError {
+                    Text(commentError).font(MFont.footnote).foregroundStyle(MColor.danger)
+                        .padding(.top, 2).accessibilityIdentifier("commentError")
                 }
             }
         }

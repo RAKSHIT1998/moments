@@ -8,7 +8,7 @@ import CryptoKit
 /// carry ciphertext: relays and strangers store bytes they cannot read.
 struct SignedEvent: Codable, Sendable, Equatable, Identifiable, Hashable {
     enum Kind: String, Codable, Sendable, CaseIterable {
-        case profile, moment, momentUpdate, join, leave, contribution, comment, reaction, now, nowJoin, follow, unfollow, report, claim, group, delete, plan, subscribe, grant, tip, seen, dating, like, vaultSet, vaultBuy, vaultKey, offer, booking, links
+        case profile, moment, momentUpdate, join, leave, contribution, comment, reaction, now, nowJoin, follow, unfollow, report, claim, group, delete, plan, subscribe, grant, tip, seen, vaultSet, vaultBuy, vaultKey, offer, booking, links
     }
     var id: String              // hex SHA-256 of the canonical form
     var kind: Kind

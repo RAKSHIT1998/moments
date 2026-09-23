@@ -41,9 +41,6 @@ actor InMemoryBackend: SocialBackend {
     var offers: [String: BookingOffer] = [:]
     var bookings: [Booking] = []
     var links: [String: CreatorLinks] = [:]
-    var datingProfiles: [String: DatingProfile] = [:]
-    var likes: [DatingLike] = []
-    var passes: [String: Set<String>] = [:]
     var typingHandler: (@Sendable (String, String) -> Void)?
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
@@ -448,21 +445,6 @@ actor InMemoryBackend: SocialBackend {
     func creatorLinks(for userID: String) async throws -> CreatorLinks { try gate(); return links[userID] ?? CreatorLinks() }
     func saveCreatorLinks(_ l: CreatorLinks) async throws { try gate(); links[me.id] = l }
 
-    // MARK: Meet
-    func datingProfile(for userID: String) async throws -> DatingProfile? { try gate(); return datingProfiles[userID] }
-    func saveDatingProfile(_ p: DatingProfile) async throws -> DatingProfile { try gate(); var x = p; x.userID = me.id; x.displayName = me.displayName; x.updatedAt = .now; datingProfiles[me.id] = x; return x }
-    func removeDatingProfile() async throws { try gate(); datingProfiles[me.id] = nil }
-    func datingCandidates() async throws -> [DatingProfile] { try gate(); return datingProfiles.values.filter { $0.userID != me.id && !blocked.contains($0.userID) } }
-    func like(userID: String, note: String, promptQuestion: String?) async throws -> DatingLike {
-        try gate(); guard datingProfiles[userID] != nil, datingProfiles[me.id] != nil else { throw SocialError.notAllowed }
-        let l = DatingLike(id: "like_\(UUID().uuidString)", fromID: me.id, fromName: me.displayName, toID: userID, note: note, promptQuestion: promptQuestion, createdAt: .now)
-        likes.removeAll { $0.fromID == me.id && $0.toID == userID }; likes.append(l); return l
-    }
-    func pass(userID: String) async throws { try gate(); passes[me.id, default: []].insert(userID) }
-    func passedUserIDs() async throws -> [String] { try gate(); return Array(passes[me.id] ?? []) }
-    func likesReceived() async throws -> [DatingLike] { try gate(); return likes.filter { $0.toID == me.id && !blocked.contains($0.fromID) } }
-    func likesSent() async throws -> [DatingLike] { try gate(); return likes.filter { $0.fromID == me.id } }
-
     func markSeen(conversationID: String, lastMessageID: String) async throws { try gate(); seenByConversation[conversationID, default: [:]][me.id] = lastMessageID }
     func seen(conversationID: String) async throws -> [String: String] { try gate(); return seenByConversation[conversationID] ?? [:] }
     func setTyping(conversationID: String, typing: Bool) async {
@@ -632,13 +614,6 @@ actor InMemoryBackend: SocialBackend {
         moments["m_bastian"]!.memberIDs.append("u_kabir"); moments["m_bastian"]!.memberNames.append("Kabir Rao")
         add("m_mira_bastian", creator: "u_mira", title: "Bastian, Thursday", desc: "", daysAgo: 3, members: ["u_mira"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.3, blue: 0.5, alpha: 1), cover: "demo_56", contribs: [("u_mira", .photo, "Us", 0, "demo_56")])
         add("m_kabir_bastian", creator: "u_kabir", title: "Bastian, again", desc: "", daysAgo: 4, members: ["u_kabir"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.3, green: 0.3, blue: 0.45, alpha: 1), cover: "demo_195", contribs: [("u_kabir", .photo, "Late", 0, "demo_195")])
-        func dp(_ id: String, _ name: String, _ year: Int, _ g: DatingProfile.Gender, _ seeking: [DatingProfile.Gender], _ intent: DatingProfile.Intent, _ prompts: [(String, String)], _ photos: [String], _ bio: String) {
-            datingProfiles[id] = DatingProfile(userID: id, displayName: name, birthYear: year, gender: g, seeking: seeking, intent: intent, prompts: prompts.map { DatingProfile.Prompt(question: $0.0, answer: $0.1) }, photos: photos.map { MediaRef(kind: .photo, localRef: nil, remoteID: $0) }, bio: bio, hideFromKnown: false, overlapOnly: true, updatedAt: .now.adding(days: -3))
-        }
-        dp("u_mira", "Mira Shah", 1998, .woman, [.man, .nonBinary], .dates, [("The place I always end up", "Versova, 6:40pm, every Friday. Bring nothing."), ("Best thing I ate this month", "The tonkotsu at Kokoro. 18 hours, apparently."), ("You should join me at", "Sunday 6am, Marine Drive. Sea's flat, city's asleep.")], ["c_m_sunset_7_0", "c_m_marine_1"], "Runs on chai.")
-        dp("u_kabir", "Kabir Rao", 1996, .man, [.woman], .relationship, [("The night I'd relive", "Bastian, that Saturday. Nobody wanted to leave."), ("A ritual I never skip", "Last light. Every Friday since March.")], ["c_m_kabir_bastian_0", "c_m_bastian_1"], "Sunsets, mostly.")
-        dp("u_anaya", "Anaya Rao", 1999, .woman, [.man], .notSure, [("My go-to Friday", "Coffee after the run, then whatever happens.")], ["c_m_marine_1"], "")
-        dp("u_dev", "Dev Patel", 1995, .man, [.woman, .man, .nonBinary], .friends, [("I'm weirdly good at", "Pacing. 21k, no walking.")], ["c_m_run_0", "c_m_run_1"], "Runs. Talks about running.")
         func set(_ id: String, _ creator: String, _ title: String, _ blurb: String, _ price: Int, _ cover: String, _ photos: [String], video: Bool = false) {
             mediaBlobs["vc_\(id)"] = DemoPhotos.data(cover)
             vaultSets[id] = VaultSet(id: id, creatorID: creator, creatorName: users[creator]?.displayName ?? creator, title: title, blurb: blurb, priceMinor: price, currency: "INR", cover: MediaRef(kind: .photo, localRef: nil, remoteID: "vc_\(id)"), itemCount: photos.count, isVideo: video, createdAt: .now.adding(days: -Int.random(in: 1...20)), visible: true)
@@ -655,7 +630,6 @@ actor InMemoryBackend: SocialBackend {
         bookings = [Booking(id: "bk_demo_ask", offerID: "", creatorID: me.id, creatorName: me.displayName, buyerID: "u_dev", buyerName: "Dev Patel", kind: .photo, minutes: 0, amountMinor: 0, currency: "INR", startsAt: .now.adding(days: 2), status: .asked, note: "A shot of the pier at 6:40 — the one you didn't post?", rail: .web, reference: nil, roomID: "", createdAt: .now.addingTimeInterval(-5400))]
         links["u_public"] = CreatorLinks(instagram: "sunsetsociety", x: "", tiktok: "sunsetsociety", youtube: "", website: "sunsetsociety.example")
         links["u_sarah"] = CreatorLinks(instagram: "sarahkimeats", x: "sarahkimeats", tiktok: "", youtube: "", website: "")
-        likes = [DatingLike(id: "like_mira", fromID: "u_mira", fromName: "Mira Shah", toID: me.id, note: "You were at Versova last Friday too — the one with the birds?", promptQuestion: nil, createdAt: .now.addingTimeInterval(-3600))]
         tipsList = [CreatorTip(id: "tip_1", fromID: "u_dev", fromName: "Dev Patel", creatorID: "u_sarah", momentID: "m_cafe", amount: .medium, note: "that broth 🙏", createdAt: .now.adding(days: -2), transactionID: nil)]
         // Real video sides: reels play these, the cuts use the photos.
         func videoSide(_ momentID: String, _ author: String, _ caption: String, _ minutes: Int) {

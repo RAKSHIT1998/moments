@@ -146,6 +146,16 @@
         }
       }
     },
+    "%@ of %@ this month" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ this month"
+          }
+        }
+      }
+    },
     "%@ says you were there" : {
 
     },
@@ -251,6 +261,9 @@
           }
         }
       }
+    },
+    "%@/month" : {
+
     },
     "%@%@" : {
       "localizations" : {
@@ -459,6 +472,9 @@
     "%lld Moments together" : {
 
     },
+    "%lld months" : {
+
+    },
     "%lld new Moment%@" : {
       "localizations" : {
         "en" : {
@@ -553,6 +569,9 @@
     "%lld/6 chosen" : {
 
     },
+    "%lld%% off" : {
+
+    },
     "%lld× · %@" : {
       "localizations" : {
         "en" : {
@@ -600,6 +619,9 @@
 
     },
     "A fingerprint of a key that lives only in this iPhone's Keychain. Everything you create is signed with it, so people can tell it's really yours — without any server." : {
+
+    },
+    "A GOAL (OPTIONAL)" : {
 
     },
     "A group is a private space for the people you keep making Moments with." : {
@@ -767,6 +789,9 @@
     "Also block this person" : {
 
     },
+    "Amount" : {
+
+    },
     "Analytics" : {
 
     },
@@ -837,6 +862,9 @@
     "At the right time" : {
 
     },
+    "Attach a photo" : {
+
+    },
     "Automatic" : {
 
     },
@@ -883,6 +911,9 @@
 
     },
     "Born" : {
+
+    },
+    "BUNDLES" : {
 
     },
     "Business" : {
@@ -938,6 +969,9 @@
 
     },
     "Chats" : {
+
+    },
+    "Choose a photo" : {
 
     },
     "Choose from your library" : {
@@ -1157,6 +1191,9 @@
 
     },
     "Drop in photos from a trip or a night out and MOMENT turns them into a story you can send to the people who were there." : {
+
+    },
+    "Each person gets it in their own chat — nobody sees anyone else." : {
 
     },
     "Earn" : {
@@ -1699,6 +1736,9 @@
     "Location is off" : {
 
     },
+    "Lock it behind a price" : {
+
+    },
     "Lock MOMENT with %@" : {
 
     },
@@ -1823,7 +1863,20 @@
     "Message" : {
 
     },
+    "Message %lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Message %1$lld %2$@"
+          }
+        }
+      }
+    },
     "Message a friend, or open your group's chat. Every chat is encrypted between the people in it — no server reads it." : {
+
+    },
+    "Message all subscribers" : {
 
     },
     "Message me" : {
@@ -2323,6 +2376,9 @@
     "People must be approved to follow you and see Moments set to Friends." : {
 
     },
+    "People who commit for longer churn less. 0% means that length isn't offered." : {
+
+    },
     "People you know" : {
 
     },
@@ -2351,6 +2407,9 @@
 
     },
     "Photo added" : {
+
+    },
+    "Photo attached" : {
 
     },
     "Photos" : {
@@ -2666,6 +2725,9 @@
     "Save backup file" : {
 
     },
+    "SAVE BY COMMITTING" : {
+
+    },
     "Save key" : {
 
     },
@@ -2694,6 +2756,9 @@
 
     },
     "Say something real (optional)" : {
+
+    },
+    "Say something with it" : {
 
     },
     "Say what you want. They'll name a price for it — you pay only if you accept." : {
@@ -2777,6 +2842,9 @@
     "Send %@" : {
 
     },
+    "Send a locked photo" : {
+
+    },
     "Send as a Moment" : {
 
     },
@@ -2789,7 +2857,16 @@
     "Send like" : {
 
     },
+    "Send locked" : {
+
+    },
     "Send price" : {
+
+    },
+    "Send to everyone" : {
+
+    },
+    "Sent to %lld." : {
 
     },
     "Sent. They'll see it on their Earn page." : {
@@ -2910,6 +2987,9 @@
 
     },
     "Show Upcoming Plans" : {
+
+    },
+    "Shown on your profile with the real total tipped this month. Nothing is padded." : {
 
     },
     "Shown on your profile. We don't check them — they're yours to claim." : {
@@ -3115,6 +3195,9 @@
     "They get an invite and can add their side. You can also share a link after." : {
 
     },
+    "They see a locked tile with the price. Screenshots of it come out blank on iPhone, and every view carries their MOMENT ID." : {
+
+    },
     "Things I owe people" : {
 
     },
@@ -3134,6 +3217,9 @@
 
     },
     "THIS MONTH" : {
+
+    },
+    "This month, across subscriptions, sets, requests and tips." : {
 
     },
     "This permanently deletes your MOMENT memories and stored media from this device. There is no hidden copy." : {
@@ -3185,6 +3271,9 @@
 
     },
     "Tonight" : {
+
+    },
+    "TOP SUPPORTERS" : {
 
     },
     "Transcribed on this iPhone" : {
@@ -3403,6 +3492,9 @@
     "What do you want to remember?" : {
 
     },
+    "What do you want to say?" : {
+
+    },
     "What happened on this day, in other years." : {
 
     },
@@ -3431,6 +3523,9 @@
 
     },
     "What to remember" : {
+
+    },
+    "What you're saving for" : {
 
     },
     "What's happening right now?" : {
@@ -3467,6 +3562,9 @@
 
     },
     "Where (city, optional)" : {
+
+    },
+    "WHERE IT CAME FROM" : {
 
     },
     "Where?" : {

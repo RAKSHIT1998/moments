@@ -243,38 +243,6 @@ final class DecentralizedReceiptsTests: XCTestCase {
     }
 }
 
-final class DecentralizedMeetTests: XCTestCase {
-    func testLikesAreSealedToTheRecipient() async throws {
-        let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-meet-\(UUID().uuidString)")
-        func phone(_ n: String) -> (DecentralizedBackend, EventStore) {
-            let store = EventStore(directory: dir.appending(path: n))
-            return (DecentralizedBackend(key: Curve25519.Signing.PrivateKey(), agreement: Curve25519.KeyAgreement.PrivateKey(), media: MediaStore(directory: dir.appending(path: "m-\(n)")), store: store, keys: MomentKeys(namespace: "t.\(n).\(UUID().uuidString)")), store)
-        }
-        let (alice, aStore) = phone("a"), (bob, bStore) = phone("b"), (eve, eStore) = phone("e")
-        for (p, n) in [(alice, "Alice"), (bob, "Bob"), (eve, "Eve")] { _ = try await p.updateProfile(displayName: n, handle: n.lowercased(), bio: "", avatar: nil) }
-        func sync(_ from: EventStore, _ to: EventStore) async { for e in await from.get(Array(await from.ids())) { await to.ingest(e) } }
-        await sync(aStore, bStore); await sync(bStore, aStore); await sync(aStore, eStore); await sync(bStore, eStore)
-        let bobID = await bob.myID
-        _ = try await bob.saveDatingProfile(DatingProfile(userID: "", displayName: "", birthYear: 1996, gender: .man, seeking: [.woman], intent: .dates, prompts: [.init(question: "q", answer: "a")], photos: [], bio: "", hideFromKnown: false, overlapOnly: false, updatedAt: .now))
-        await sync(bStore, aStore)
-        let candidates = try await alice.datingCandidates()
-        XCTAssertEqual(candidates.map(\.userID), [bobID])
-        _ = try await alice.like(userID: bobID, note: "coffee?", promptQuestion: "q")
-        await sync(aStore, bStore); await sync(aStore, eStore)
-        let received = try await bob.likesReceived()
-        XCTAssertEqual(received.map(\.note), ["coffee?"]); XCTAssertEqual(received.first?.fromName, "Alice")
-        let eveSees = try await eve.likesReceived()
-        XCTAssertTrue(eveSees.isEmpty)
-        let raw = await eStore.all(.like)
-        XCTAssertEqual(raw.count, 1); XCTAssertFalse(raw[0].content.contains("coffee"), "the note is sealed; Eve holds ciphertext")
-        // Withdrawing the profile removes Bob from everyone's stack.
-        try await bob.removeDatingProfile()
-        await sync(bStore, aStore)
-        let after = try await alice.datingCandidates()
-        XCTAssertTrue(after.isEmpty)
-    }
-}
-
 final class DecentralizedStorefrontTests: XCTestCase {
     func testPaidSetIsCiphertextUntilTheCreatorHandsOverTheKey() async throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "mesh-shop-\(UUID().uuidString)")

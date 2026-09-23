@@ -50,13 +50,9 @@ Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the ap
 
 **Only a Moment made by everyone can do these** (`MomentMechanics.swift`): *Same second* pairs two people's photos taken within 20 s; *Fill the gap* finds ≥45‑minute holes in the timeline and lets a member add to them or ask a witness (the question lands in their chat with the Moment attached); *Rituals* link weekly Moments with the same title into a series with a streak and next date.
 
-## Meet (dating through real overlap)
-
-Not a stack of strangers. Opt in (18+) and you only appear to people you've **actually crossed paths with**: same Moment, same venue this month, same ritual, or out right now nearby (`MeetRanker.overlaps`). Every card leads with the overlap ("Both at Bastian this month"), then Hinge‑style prompts; photos are the person's own sides from their Moments — nothing uploaded just for this. Like with a comment on a prompt or photo; mutual likes become a match (deterministic id on both phones) and open a chat whose first line is the reason you're talking. Preferences apply both ways; *hide from people I know* keeps you out of the stacks of anyone you follow or who follows you; *overlap only* is the default and either side can insist on it. Leaving removes your profile everywhere. On the mesh a `dating` event carries the opted‑in profile and each `like` is sealed to the one person it's for (`SealedForPeer`), so relays and bystanders never learn who likes whom — tested in `DecentralizedMeetTests`.
-
 ## Home: Feed and Moments
 
-Home has two sides, switchable from the header and remembered: **Feed** — a creator‑platform column of posts from people you follow or pay, where a locked post shows its cover blurred with *Unlock for ₹X* or *Subscribe · ₹X* on it and nothing is teased without naming the price — and **Moments**, the immersive stack of nights. Reels, NOW, scan and activity live in the header on both. `CreatorFeedBuilder` decides each post's gate (`open` / `buy` / `subscribe`) and never shows a lock it can't explain: a subscribers‑only Moment whose creator has no plan loaded is left out rather than shown unopenable.
+Tabs are **Home · Create · Chats · Profile** — no Explore tab and no dating; NOW, Reels, Nearby and Scan live in the Home header. Home has two sides, switchable from the header and remembered: **Feed** — a creator‑platform column of posts from people you follow or pay, where a locked post shows its cover blurred with *Unlock for ₹X* or *Subscribe · ₹X* on it and nothing is teased without naming the price — and **Moments**, the immersive stack of nights. Reels, NOW, scan and activity live in the header on both. `CreatorFeedBuilder` decides each post's gate (`open` / `buy` / `subscribe`) and never shows a lock it can't explain: a subscribers‑only Moment whose creator has no plan loaded is left out rather than shown unopenable.
 
 ## Selling: subscription, bundles, sets, locked messages, requests, tips
 

@@ -90,6 +90,12 @@ This changes the product, not the code:
 
 None of that is in this repo, and none of it should be faked. If you go this way, the order is: processor → age/ID verification vendor → moderation + takedown process → then launch.
 
+## The two screens that matter
+
+**Profile** is a creator page: banner (their newest free cover — nothing extra to upload), avatar on its edge, name, @handle, MOMENT ID, bio, their other handles, three numbers that mean something here (subscribers / Moments / people), then *Subscribe · price* with Message, Ask and Follow under it. Sections: **Shop · Moments · Places · People**.
+
+**Creator mode** (Profile → the blue bar) is the dashboard: this month's number with the split by source and which rail it's quoted on, six one-tap actions (New set · Message all · Subscription · Sell time · Requests · Handles), what's waiting on you, your sets, the time you sell, top supporters, and a link to see your shop the way fans do. Before there's anything to sell it shows three steps instead of an empty dashboard.
+
 ## What's built now
 
 - `VaultSet` / `VaultItem` / `VaultPurchase` — sets, sealed items, proof of purchase.

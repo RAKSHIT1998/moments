@@ -269,90 +269,224 @@ struct StudioView: View {
     @State private var newSet = false
     @State private var editOffer: BookingOffer?
     @State private var showLinks = false
+    @State private var showMass = false
+
+    private var pendingRequests: [Booking] { env.social.myBookings.filter { $0.creatorID == env.social.myID && ($0.status == .asked || $0.status == .requested) } }
+    private var plan: CreatorPlan? { env.social.myPlan }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MSpacing.xl) {
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text("THIS MONTH").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-                    Text(env.social.storefrontEarnings, format: .currency(code: "INR").precision(.fractionLength(0))).font(MFont.hero).monospacedDigit().accessibilityIdentifier("studioEarnings")
-                    Text("\(env.social.mySales.count) \(env.social.mySales.count == 1 ? "sale" : "sales") · \(env.social.activeSubscriberCount) subscribers · \(env.social.myBookings.filter { $0.creatorID == env.social.myID && $0.status == .accepted }.count) booked")
-                        .font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                    Text(env.social.rail == .web
-                         ? "Card checkout: you keep \(Int((1 - CreatorEconomics.platformFee) * 100))% — MOMENT takes \(Int(CreatorEconomics.platformFee * 100))%, your processor takes its own cut."
-                         : "App Store: Apple takes \(Int(CreatorEconomics.appStoreShare * 100))% first, then you keep \(Int(CreatorEconomics.creatorShare * 100))% of what's left. Card checkout is the \(Int((1 - CreatorEconomics.platformFee) * 100))% rail.")
-                        .font(MFont.footnote).foregroundStyle(MColor.textTertiary)
-                }
-                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass(tint: .orange)
-
-                HStack {
-                    Text("SETS").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-                    Spacer()
-                    Button { newSet = true } label: { Label("New set", systemImage: "plus") }.buttonStyle(GlassButtonStyle()).accessibilityIdentifier("newSet")
-                }
-                if env.social.mySets.isEmpty {
-                    Text("Post a free set so people can see what you make, and a paid one for the rest. You set every price.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: MSpacing.m)], spacing: MSpacing.m) {
-                        ForEach(env.social.mySets) { s in
-                            SetTile(set: s) {}
-                                .contextMenu {
-                                    Button("Edit", systemImage: "pencil") { editing = s }
-                                    Button("Delete", systemImage: "trash", role: .destructive) { Task { await env.social.deleteSet(s.id) } }
-                                }
-                        }
-                    }
-                }
-
-                HStack {
-                    Text("TIME YOU SELL").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-                    Spacer()
-                    Button { editOffer = BookingOffer(id: "", creatorID: "", creatorName: "", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "", active: true) } label: { Label("New", systemImage: "plus") }.buttonStyle(GlassButtonStyle()).accessibilityIdentifier("newOffer")
-                }
-                ForEach(env.social.offers(of: env.social.myID)) { o in
-                    Button { editOffer = o } label: {
-                        HStack(spacing: MSpacing.m) {
-                            Image(systemName: o.kind.symbol).foregroundStyle(MColor.accent).frame(width: 26)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(o.minutes > 0 ? "\(o.kind.label) · \(o.minutes) min" : o.kind.label).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                                Text(o.active ? "Live" : "Paused").font(MFont.caption).foregroundStyle(o.active ? MColor.success : MColor.textSecondary)
-                            }
-                            Spacer(); Text(o.priceLabel()).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                        }
-                        .padding(MSpacing.l)
-                    }
-                    .buttonStyle(.plain).glass(radius: 16)
-                }
-
-                NavigationLink(value: SocialRoute.bookings) {
-                    HStack { Image(systemName: "calendar"); Text("Bookings"); Spacer()
-                        let pending = env.social.myBookings.filter { $0.creatorID == env.social.myID && $0.status == .requested }.count
-                        if pending > 0 { Text("\(pending) waiting").font(MFont.caption).padding(.horizontal, 8).padding(.vertical, 4).glassPill(tint: MColor.danger) }
-                        Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
-                    }
-                    .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary).padding(MSpacing.l)
-                }
-                .buttonStyle(.plain).glass(radius: 16).accessibilityIdentifier("bookingsLink")
-
-                Button { showLinks = true } label: {
-                    HStack { Image(systemName: "link"); Text("Your other handles"); Spacer(); Text(env.social.links(of: env.social.myID).all.map(\.label).joined(separator: ", ")).font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1) }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary).padding(MSpacing.l)
-                }
-                .buttonStyle(.plain).glass(radius: 16).accessibilityIdentifier("linksButton")
-
-                NavigationLink(value: SocialRoute.earn) { Text("Subscriptions & tips").frame(maxWidth: .infinity) }.buttonStyle(SecondaryButtonStyle())
+                earnings
+                if !env.social.isCreator { setUp } else { quickActions }
+                if !pendingRequests.isEmpty { requests }
+                sets
+                if env.social.isCreator { time }
+                if !env.social.topSupporters.isEmpty { supporters }
+                footerLinks
             }
-            .padding(MSpacing.page).padding(.bottom, 90)
+            .padding(.horizontal, MSpacing.page)
+            .padding(.top, MSpacing.s)
+            .padding(.bottom, 90)
         }
-        .background(LiquidBackdrop(tint: .orange))
-        .navigationTitle("Studio")
+        .background(MColor.background)
+        .navigationTitle("Creator mode")
         .navigationBarTitleDisplayMode(.inline)
         .task { await env.social.refreshStorefront(); await env.social.refreshCreator() }
         .sheet(isPresented: $newSet) { EditSetSheet(set: nil) }
         .sheet(item: $editing) { s in EditSetSheet(set: s) }
         .sheet(item: $editOffer) { o in EditOfferSheet(offer: o) }
         .sheet(isPresented: $showLinks) { LinksSheet() }
+        .sheet(isPresented: $showMass) { MassMessageSheet() }
         .modifier(SocialErrorAlert())
+    }
+
+    // MARK: The number, and where it came from
+
+    private var earnings: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            Text("THIS MONTH").font(MFont.eyebrow).tracking(1).foregroundStyle(.white.opacity(0.8))
+            Text(env.social.storefrontEarnings, format: .currency(code: "INR").precision(.fractionLength(0)))
+                .font(.system(size: 44, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                .accessibilityIdentifier("studioEarnings")
+            HStack(spacing: MSpacing.l) {
+                metric("\(env.social.activeSubscriberCount)", "subscribers")
+                metric("\(env.social.mySales.count)", "sales")
+                metric("\(env.social.myBookings.filter { $0.creatorID == env.social.myID && $0.status.isPaid }.count)", "requests")
+            }
+            if !env.social.earningsBreakdown.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(env.social.earningsBreakdown, id: \.label) { row in
+                        HStack {
+                            Text(row.label).font(MFont.caption).foregroundStyle(.white.opacity(0.85))
+                            Spacer()
+                            Text(row.amount, format: .currency(code: "INR").precision(.fractionLength(0))).font(.caption.weight(.semibold)).monospacedDigit().foregroundStyle(.white)
+                        }
+                    }
+                }
+                .padding(.top, 2)
+            }
+            Text(env.social.rail == .web
+                 ? "Card checkout: you keep \(Int((1 - CreatorEconomics.platformFee) * 100))%."
+                 : "Through Apple: Apple takes \(Int(CreatorEconomics.appStoreShare * 100))% first. Card checkout is the \(Int((1 - CreatorEconomics.platformFee) * 100))% rail.")
+                .font(.caption2).foregroundStyle(.white.opacity(0.7))
+        }
+        .padding(MSpacing.l)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [MColor.accent, MColor.accent.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+    private func metric(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(value).font(.headline.weight(.bold)).monospacedDigit().foregroundStyle(.white)
+            Text(label).font(.caption2).foregroundStyle(.white.opacity(0.8))
+        }
+    }
+
+    /// Before there's anything to sell, one path forward instead of an empty dashboard.
+    private var setUp: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            Text("Set up in two minutes").font(MFont.title)
+            step(1, "Post a free set", "It's how people find you.") { newSet = true }
+            step(2, "Name your subscription", "One price, 30 days, your call.") { }
+            step(3, "Say what you'll do", "Calls, customs — or let people just ask.") { editOffer = BookingOffer(id: "", creatorID: "", creatorName: "", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "", active: true) }
+            NavigationLink(value: SocialRoute.earn) { Text("Set your subscription").frame(maxWidth: .infinity) }
+                .buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("setUpPlan")
+        }
+        .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+    }
+    private func step(_ n: Int, _ title: String, _ detail: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: MSpacing.m) {
+                Text("\(n)").font(.subheadline.weight(.bold)).foregroundStyle(.white)
+                    .frame(width: 26, height: 26).background(Circle().fill(MColor.accent))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                    Text(detail).font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                }
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Everything a creator does, one tap away
+
+    private var quickActions: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: MSpacing.s)], spacing: MSpacing.s) {
+            action("New set", "plus.rectangle.on.folder", id: "newSet") { newSet = true }
+            action("Message all", "megaphone.fill", id: "massMessage") { showMass = true }
+            action("Subscription", "crown.fill", id: "editPlanLink") { }
+                .overlay { NavigationLink(value: SocialRoute.earn) { Color.clear }.opacity(0.001) }
+            action("Sell time", "video.fill", id: "newOffer") { editOffer = BookingOffer(id: "", creatorID: "", creatorName: "", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "", active: true) }
+            action("Requests", "tray.full.fill", id: "bookingsLink") { }
+                .overlay { NavigationLink(value: SocialRoute.bookings) { Color.clear }.opacity(0.001) }
+            action("Handles", "link", id: "linksButton") { showLinks = true }
+        }
+    }
+    private func action(_ title: String, _ symbol: String, id: String, run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            VStack(spacing: 8) {
+                Image(systemName: symbol).font(.title3).foregroundStyle(MColor.accent)
+                Text(title).font(MFont.caption).foregroundStyle(MColor.textPrimary).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity).padding(.vertical, MSpacing.m)
+        }
+        .buttonStyle(.plain).glass(radius: 16).accessibilityIdentifier(id)
+    }
+
+    private var requests: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            HStack {
+                Text("WAITING ON YOU").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                Spacer()
+                Text("\(pendingRequests.count)").font(MFont.caption).padding(.horizontal, 8).padding(.vertical, 3).glassPill(tint: MColor.danger)
+            }
+            ForEach(pendingRequests.prefix(3)) { b in
+                NavigationLink(value: SocialRoute.bookings) {
+                    HStack(spacing: MSpacing.m) {
+                        AvatarView(userID: b.buyerID, name: b.buyerName, size: 34)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(b.buyerName) · \(b.kind.label.lowercased())").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                            Text(b.status == .asked ? "Wants a price" : "Paid — confirm it").font(MFont.caption).foregroundStyle(b.status == .asked ? MColor.textSecondary : MColor.success)
+                        }
+                        Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                    }
+                    .padding(MSpacing.m)
+                }
+                .buttonStyle(.plain).glass(radius: 14)
+            }
+        }
+    }
+
+    private var sets: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            HStack {
+                Text("YOUR SETS").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                Spacer()
+                Button { newSet = true } label: { Image(systemName: "plus") }.buttonStyle(GlassButtonStyle()).accessibilityLabel("New set")
+            }
+            if env.social.mySets.isEmpty {
+                Text("A free set is how people find you; a paid one is how you earn.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: MSpacing.s)], spacing: MSpacing.s) {
+                    ForEach(env.social.mySets) { s in
+                        SetTile(set: s) {}
+                            .contextMenu {
+                                Button("Edit", systemImage: "pencil") { editing = s }
+                                Button("Delete", systemImage: "trash", role: .destructive) { Task { await env.social.deleteSet(s.id) } }
+                            }
+                    }
+                }
+            }
+        }
+    }
+
+    private var time: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            Text("TIME YOU SELL").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+            if env.social.offers(of: env.social.myID).isEmpty {
+                Text("Nothing listed. People can still ask, and you name the price then.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+            }
+            ForEach(env.social.offers(of: env.social.myID)) { o in
+                Button { editOffer = o } label: {
+                    HStack(spacing: MSpacing.m) {
+                        Image(systemName: o.kind.symbol).foregroundStyle(MColor.accent).frame(width: 24)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(o.minutes > 0 ? "\(o.kind.label) · \(o.minutes) min" : o.kind.label).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                            Text(o.active ? "Live" : "Paused").font(MFont.caption).foregroundStyle(o.active ? MColor.success : MColor.textSecondary)
+                        }
+                        Spacer(); Text(o.priceLabel()).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                    }
+                    .padding(MSpacing.m)
+                }
+                .buttonStyle(.plain).glass(radius: 14)
+            }
+        }
+    }
+
+    private var supporters: some View {
+        VStack(alignment: .leading, spacing: MSpacing.m) {
+            Text("TOP SUPPORTERS").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+            ForEach(env.social.topSupporters, id: \.id) { s in
+                HStack(spacing: MSpacing.m) {
+                    AvatarView(userID: s.id, name: s.name, size: 32)
+                    Text(s.name).font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text(s.amount, format: .currency(code: "INR").precision(.fractionLength(0))).font(.subheadline.weight(.semibold)).monospacedDigit()
+                }
+            }
+            Text("This month, across subscriptions, sets, requests and tips.").font(.caption2).foregroundStyle(MColor.textTertiary)
+        }
+        .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+    }
+
+    private var footerLinks: some View {
+        VStack(spacing: MSpacing.s) {
+            NavigationLink(value: SocialRoute.storefront(env.social.myID)) { Text("See your shop the way fans do").frame(maxWidth: .infinity) }
+                .buttonStyle(SecondaryButtonStyle()).accessibilityIdentifier("previewShop")
+            NavigationLink(value: SocialRoute.earn) { Text("Subscription, bundles, goal & payouts").frame(maxWidth: .infinity) }
+                .buttonStyle(SecondaryButtonStyle())
+        }
     }
 }
 

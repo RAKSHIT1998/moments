@@ -38,6 +38,7 @@ struct SocialHomeView: View {
                 Spacer()
                 NavigationLink(value: SocialRoute.reels(nil)) { Image(systemName: "play.rectangle.fill").font(.title3) }.accessibilityIdentifier("reelsLink")
                 NavigationLink(value: SocialRoute.now) { Glyph(.now, size: 20) }.accessibilityLabel("Now").accessibilityIdentifier("nowLink")
+                NavigationLink(value: SocialRoute.nearby) { Glyph(.nearby, size: 20) }.accessibilityLabel("Nearby").accessibilityIdentifier("nearbyLink")
                 Button { showScanner = true } label: { Glyph(.scan, size: 20) }.accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
                 NavigationLink(value: SocialRoute.inbox) {
                     Glyph(.activity, size: 20).overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 2, y: -2) } }
@@ -92,19 +93,15 @@ enum SocialRoute: Hashable {
     case map
     case passport
     case earn
-    case meet
     case storefront(String)
     case vaultSet(String)
     case studio
     case bookings
     case reels(String?)
-    case meetSetup
-    case meetLikes
     case subscriptions
     case scan
     case inbox
     case messages
-    case discover
     case now
     case nearby
     case nearbyMap

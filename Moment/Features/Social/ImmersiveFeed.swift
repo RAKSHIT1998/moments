@@ -214,6 +214,8 @@ struct ImmersiveFeedView: View {
                     .glass(radius: 17).accessibilityIdentifier("reelsLink")
                 NavigationLink(value: SocialRoute.now) { Glyph(.now, size: 18).foregroundStyle(.white).frame(width: 34, height: 34) }
                     .glass(radius: 17).accessibilityLabel("Now").accessibilityIdentifier("nowLink")
+                NavigationLink(value: SocialRoute.nearby) { Glyph(.nearby, size: 18).foregroundStyle(.white).frame(width: 34, height: 34) }
+                    .glass(radius: 17).accessibilityLabel("Nearby").accessibilityIdentifier("nearbyLink")
                 Button { showScanner = true } label: { Glyph(.scan, size: 18).foregroundStyle(.white).frame(width: 34, height: 34) }
                     .glass(radius: 17).accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
                 NavigationLink(value: SocialRoute.inbox) {

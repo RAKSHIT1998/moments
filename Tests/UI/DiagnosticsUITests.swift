@@ -6,6 +6,8 @@ final class DiagnosticsUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-uitest", "-reset", "-demo"]
         app.launch()
+        let moments = app.buttons["Moments"].firstMatch
+        if moments.waitForExistence(timeout: 20), !moments.isSelected { moments.tap(); sleep(1) }
         XCTAssertTrue(app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 30))
         let card = app.otherElements["feedMoment-m_goa"].firstMatch
         print("DIAG-CARD-START\n\(card.debugDescription)\nDIAG-CARD-END")

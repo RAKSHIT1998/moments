@@ -976,50 +976,6 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         Booking(id: r.recordID.recordName, offerID: r["offerID"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", buyerID: r["buyerID"] as? String ?? "", buyerName: r["buyerName"] as? String ?? "", kind: BookingOffer.Kind(rawValue: r["kind"] as? String ?? "") ?? .videoCall, minutes: r["minutes"] as? Int ?? 15, amountMinor: r["amountMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", startsAt: r["startsAt"] as? Date ?? .now, status: Booking.Status(rawValue: r["status"] as? String ?? "") ?? .requested, note: r["note"] as? String ?? "", rail: PaymentRail(rawValue: r["rail"] as? String ?? "") ?? .none, reference: r["reference"] as? String, roomID: r["roomID"] as? String ?? "", createdAt: r.creationDate ?? .now)
     }
 
-    // MARK: - Meet (public DB: opted-in profiles; likes are records only the two people query)
-    func datingProfile(for userID: String) async throws -> DatingProfile? {
-        guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "dating_\(userID)")) else { return nil }
-        return Self.dating(from: r)
-    }
-    func saveDatingProfile(_ p: DatingProfile) async throws -> DatingProfile {
-        let me = try await currentUser()
-        let id = CKRecord.ID(recordName: "dating_\(me.id)")
-        let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "DatingProfile", recordID: id)
-        r["userID"] = me.id; r["displayName"] = me.displayName; r["birthYear"] = p.birthYear; r["gender"] = p.gender.rawValue; r["seeking"] = p.seeking.map(\.rawValue); r["intent"] = p.intent.rawValue
-        r["prompts"] = try JSONEncoder().encode(p.prompts); r["photoIDs"] = p.photos.compactMap(\.remoteID); r["bio"] = p.bio; r["hideFromKnown"] = p.hideFromKnown ? 1 : 0; r["overlapOnly"] = p.overlapOnly ? 1 : 0
-        return Self.dating(from: try await save(r, in: publicDB))
-    }
-    func removeDatingProfile() async throws { let me = try await currentUser(); _ = try? await publicDB.deleteRecord(withID: CKRecord.ID(recordName: "dating_\(me.id)")) }
-    func datingCandidates() async throws -> [DatingProfile] {
-        let me = try await currentUser()
-        let q = CKQuery(recordType: "DatingProfile", predicate: NSPredicate(value: true)); q.sortDescriptors = [NSSortDescriptor(key: "modificationDate", ascending: false)]
-        return try await query(q, in: publicDB, limit: 300).map(Self.dating(from:)).filter { $0.userID != me.id }
-    }
-    func like(userID: String, note: String, promptQuestion: String?) async throws -> DatingLike {
-        let me = try await currentUser()
-        let r = CKRecord(recordType: "DatingLike", recordID: CKRecord.ID(recordName: "dlike_\(me.id)_\(userID)"))
-        r["fromID"] = me.id; r["fromName"] = me.displayName; r["toID"] = userID; r["note"] = note; r["promptQuestion"] = promptQuestion
-        let saved = try await save(r, in: publicDB)
-        return DatingLike(id: saved.recordID.recordName, fromID: me.id, fromName: me.displayName, toID: userID, note: note, promptQuestion: promptQuestion, createdAt: saved.creationDate ?? .now)
-    }
-    func pass(userID: String) async throws { var p = Set(UserDefaults.standard.stringArray(forKey: "meet.passed") ?? []); p.insert(userID); UserDefaults.standard.set(Array(p), forKey: "meet.passed") }
-    func passedUserIDs() async throws -> [String] { UserDefaults.standard.stringArray(forKey: "meet.passed") ?? [] }
-    func likesReceived() async throws -> [DatingLike] {
-        let me = try await currentUser()
-        return try await query(CKQuery(recordType: "DatingLike", predicate: NSPredicate(format: "toID == %@", me.id)), in: publicDB, limit: 200).map(Self.like(from:))
-    }
-    func likesSent() async throws -> [DatingLike] {
-        let me = try await currentUser()
-        return try await query(CKQuery(recordType: "DatingLike", predicate: NSPredicate(format: "fromID == %@", me.id)), in: publicDB, limit: 200).map(Self.like(from:))
-    }
-    static func dating(from r: CKRecord) -> DatingProfile {
-        let prompts = (r["prompts"] as? Data).flatMap { try? JSONDecoder().decode([DatingProfile.Prompt].self, from: $0) } ?? []
-        return DatingProfile(userID: r["userID"] as? String ?? "", displayName: r["displayName"] as? String ?? "", birthYear: r["birthYear"] as? Int ?? 2000, gender: DatingProfile.Gender(rawValue: r["gender"] as? String ?? "") ?? .nonBinary, seeking: (r["seeking"] as? [String] ?? []).compactMap(DatingProfile.Gender.init(rawValue:)), intent: DatingProfile.Intent(rawValue: r["intent"] as? String ?? "") ?? .notSure, prompts: prompts, photos: (r["photoIDs"] as? [String] ?? []).map { MediaRef(kind: .photo, localRef: nil, remoteID: $0) }, bio: r["bio"] as? String ?? "", hideFromKnown: (r["hideFromKnown"] as? Int ?? 0) == 1, overlapOnly: (r["overlapOnly"] as? Int ?? 1) == 1, updatedAt: r.modificationDate ?? .now)
-    }
-    static func like(from r: CKRecord) -> DatingLike {
-        DatingLike(id: r.recordID.recordName, fromID: r["fromID"] as? String ?? "", fromName: r["fromName"] as? String ?? "", toID: r["toID"] as? String ?? "", note: r["note"] as? String ?? "", promptQuestion: r["promptQuestion"] as? String, createdAt: r.creationDate ?? .now)
-    }
-
     func markSeen(conversationID: String, lastMessageID: String) async throws {
         let me = try await currentUser()
         let (conv, db) = try await anyRecord(name: conversationID, type: "Conversation")
