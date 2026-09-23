@@ -160,7 +160,7 @@ actor DecentralizedBackend: SocialBackend {
         return out
     }
     func buyVaultSet(id: String, rail: PaymentRail, reference: String?) async throws -> VaultPurchase {
-        guard let e = await store.all(.vaultSet).last(where: { $0.tags["set"] == id }), let set = e.payload(Payloads.Vault.self)?.set, e.author != myID else { throw SocialError.notAllowed }
+        guard let e = await store.all(.vaultSet).last(where: { $0.tags["set"] == id }), let set = e.payload(Payloads.Vault.self)?.set, e.author != myID, !set.subscribersOnly else { throw SocialError.notAllowed }
         let me = try await currentUser()
         let ev = try await emit(.vaultBuy, tags: ["set": id, "to": e.author], payload: Payloads.Buy(amountMinor: set.priceMinor, currency: set.currency, rail: (set.isFree ? PaymentRail.none : rail).rawValue, reference: reference, name: me.displayName))
         // Ask relays for the key the creator will seal back to me.
@@ -177,7 +177,27 @@ actor DecentralizedBackend: SocialBackend {
     func vaultSales() async throws -> [VaultPurchase] {
         let sales = await store.all(.vaultBuy).filter { $0.tags["to"] == myID && !localBlocked.contains($0.author) }.compactMap(purchase(from:))
         await handOutKeys(for: sales)
+        await handOutSubscriberKeys()
         return sales.sorted { $0.createdAt > $1.createdAt }
+    }
+    /// Subscriber-only sets have no purchase behind them, so the key goes to everyone whose subscription
+    /// is live — and stops going out the moment it lapses.
+    private func handOutSubscriberKeys() async {
+        let mySets = (try? await vaultSets(creatorID: myID))?.filter(\.subscribersOnly) ?? []
+        guard !mySets.isEmpty else { return }
+        let live = (try? await subscribersRaw())?.filter(\.isActive) ?? []
+        for set in mySets {
+            let grants = live.map { VaultPurchase(id: "sub_" + $0.id, setID: set.id, creatorID: myID, buyerID: $0.subscriberID, buyerName: $0.subscriberName, amountMinor: 0, currency: set.currency, rail: .none, reference: nil, createdAt: $0.startedAt) }
+            await handOutKeys(for: grants)
+        }
+    }
+    /// Subscriptions without the key hand-out, so the two don't call each other in circles.
+    private func subscribersRaw() async throws -> [CreatorSubscription] {
+        var latest: [String: CreatorSubscription] = [:]
+        for e in await store.all(.subscribe) where e.tags["to"] == myID {
+            if let s = subscription(from: e) { if let prev = latest[s.subscriberID], prev.expiresAt > s.expiresAt { continue }; latest[s.subscriberID] = s }
+        }
+        return Array(latest.values)
     }
     /// The creator's phone releases the set key to whoever paid. Sealed to them; nobody else can use it.
     private func handOutKeys(for sales: [VaultPurchase]) async {

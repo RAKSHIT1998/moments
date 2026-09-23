@@ -124,7 +124,7 @@ struct InviteFriendsView: View {
             VStack(alignment: .leading, spacing: MSpacing.xl) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Invite your people").displayStyle()
-                    Text("MOMENT is only good with the people you actually see. Every Moment you share is an invite; this is the direct one.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                    Text("Every post you share carries a link back to your page. This is the direct one.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                 }
                 HStack {
                     Spacer()
@@ -143,23 +143,22 @@ struct InviteFriendsView: View {
                     Text("Your loop").sectionLabel()
                     HStack(spacing: MSpacing.s) {
                         StatTile(value: "\(env.analytics.count(.inviteSent))", label: "invites sent", symbol: "paperplane")
-                        StatTile(value: "\(env.analytics.sharedMomentsCreated)", label: "Moments shared", symbol: "person.2")
+                        StatTile(value: "\(env.analytics.sharedMomentsCreated)", label: "Posts published", symbol: "square.stack")
                         StatTile(value: "\(env.social.graph.followers.count)", label: "people following you", symbol: "person.crop.circle.badge.plus")
                     }
                     Text("Counted on this phone only. Nothing about your friends is uploaded.").font(MFont.caption).foregroundStyle(MColor.textTertiary)
                 }
                 VStack(alignment: .leading, spacing: MSpacing.s) {
                     Text("What spreads MOMENT").sectionLabel()
-                    loopRow("Start a Moment at anything with more than two people", "The invite link and QR are the product. Every guest becomes a member.")
+                    loopRow("Post one free set a week", "A free cover is how people find you; the locked one next to it is how you earn.")
                     loopRow("Put the QR on the table at your venue", "Claim the place; regulars and their friends fill the page.")
-                    loopRow("Share a Moment Card", "One image with the title, the people and the link — made for group chats.")
+                    loopRow("Put your page link everywhere", "Your bio on every other platform should point here — that traffic is yours, not theirs.")
                 }
             }
             .padding(MSpacing.page).padding(.bottom, 80)
         }
         .background(MColor.background)
         .navigationTitle("Invite").navigationBarTitleDisplayMode(.inline)
-        .task { qr = MomentQR.make(link.absoluteString, tint: .black) }
     }
 
     private func loopRow(_ title: String, _ detail: String) -> some View {

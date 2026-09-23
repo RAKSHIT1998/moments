@@ -103,10 +103,7 @@ struct CreatorPostCard: View {
         }
     }
 
-    private var destination: SocialRoute {
-        if let s = post.setID { return .vaultSet(s) }
-        return .moment(post.momentID ?? "")
-    }
+    private var destination: SocialRoute { .vaultSet(post.setID ?? "") }
 
     @ViewBuilder private var unlockButton: some View {
         switch post.gate {

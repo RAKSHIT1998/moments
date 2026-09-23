@@ -29,10 +29,6 @@ struct RootView: View {
         .fullScreenCover(item: pendingStory) { id in
             NavigationStack { MomentViewerView(storyID: id).momentDestinations() }
         }
-        .fullScreenCover(item: pendingMoment) { boxed in
-            PendingMomentCover(momentID: boxed.id)
-        }
-        .sheet(isPresented: sharedForMoment) { AddSharedToMomentSheet() }
         .alert("Couldn't open that Moment", isPresented: importErrorShown) { Button("OK") {} } message: { Text(env.stories.lastImportError ?? "") }
         .alert("Couldn't join that Moment", isPresented: inviteErrorShown) { Button("OK") {} } message: { Text(env.social.pendingInviteError ?? "") }
     }
@@ -122,18 +118,6 @@ struct CreateSheet: View {
 
 struct BoxedID: Identifiable, Hashable { let id: String }
 
-/// A Moment opened from a link, notification or invite.
-struct PendingMomentCover: View {
-    @Environment(AppEnvironment.self) private var env
-    let momentID: String
-    var body: some View {
-        NavigationStack {
-            MomentPageView(momentID: momentID)
-                .socialDestinations()
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { env.social.pendingMomentID = nil }.accessibilityIdentifier("closeMoment") } }
-        }
-    }
-}
 
 /// Shown over everything while Face ID is required.
 struct LockScreenView: View {

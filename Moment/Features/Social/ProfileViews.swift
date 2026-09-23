@@ -1,8 +1,8 @@
 import SwiftUI
 import PhotosUI
 
-/// Your profile (or someone else's): "Your life in Moments". People, places, shared experiences —
-/// not a follower count contest.
+/// Your profile (or someone else's): a creator page. What's for sale, what a subscription opens,
+/// and how to reach them — nothing else.
 struct SocialProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
@@ -17,10 +17,7 @@ struct SocialProfileView: View {
     /// The Profile tab is built before the session resolves, so an empty id means "me".
     private var isMe: Bool { userID.isEmpty || userID == env.social.myID }
     private var resolvedID: String { userID.isEmpty ? env.social.myID : userID }
-    private var moments: [SocialMoment] { isMe ? env.social.momentsImIn : env.social.moments(with: userID) + publicOnes }
-    private var publicOnes: [SocialMoment] { env.social.moments.values.filter { $0.creatorID == userID && $0.visibility == .publicAll && !$0.memberIDs.contains(env.social.myID) } }
-
-    @State private var section = 0   // Moments · Places · People
+    @State private var section = 0   // Posts · About
     @State private var shareItems: [Any] = []
     @State private var showShare = false
 
@@ -30,15 +27,8 @@ struct SocialProfileView: View {
                 banner
                 header
                 if isMe { AccountBanner(); UploadBanner() }
-                if !isMe { relationshipCard }
-                Picker("Section", selection: $section) { Text("Posts").tag(0); Text("Moments").tag(1); Text("People").tag(3) }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("profileSections")
-                switch section {
-                case 0: shopTab
-                case 1: momentsTab
-                default: peopleTab
-                }
+                sectionPicker
+                sectionContent
             }
             .padding(.horizontal, MSpacing.page)
             .padding(.top, MSpacing.s)
@@ -47,53 +37,67 @@ struct SocialProfileView: View {
         .background(MColor.background)
         .navigationTitle(user?.displayName ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if isMe {
-                    Menu {
-                        Button("Settings", systemImage: "gearshape") { showSettings = true }
-                        NavigationLink(value: SocialRoute.invite) { Label("Invite friends", systemImage: "person.badge.plus") }
-                        NavigationLink(value: SocialRoute.identity) { Label("Identity & recovery", systemImage: "key") }
-                        Button("My private memory", systemImage: "lock") { showMemories = true }
-                        NavigationLink(value: SocialRoute.collections) { Label("Collections", systemImage: "folder") }
-                        NavigationLink(value: SocialRoute.timeMachine) { Label("Time Machine", systemImage: "clock.arrow.circlepath") }
-                        NavigationLink(value: SocialRoute.safety) { Label("Privacy & safety", systemImage: "shield") }
-                    } label: { Image(systemName: "line.3.horizontal") }
-                    .accessibilityLabel("More").accessibilityIdentifier("profileSettings")
-                } else {
-                    Menu {
-                        Button("Message", systemImage: "bubble") { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } }
-                        Divider()
-                        Button(env.social.muted.contains(userID) ? "Unmute" : "Mute", systemImage: "speaker.slash") { Task { await env.social.mute(userID) } }
-                        Button("Report", systemImage: "flag") { showReport = true }
-                        if env.social.blocked.contains(userID) { Button("Unblock", systemImage: "hand.raised.slash") { Task { await env.social.unblock(userID) } } }
-                        else { Button("Block", systemImage: "hand.raised", role: .destructive) { Task { await env.social.block(userID); dismiss() } } }
-                    } label: { Image(systemName: "ellipsis.circle") }.accessibilityIdentifier("profileMenu")
-                }
-            }
-        }
-        .task { user = isMe ? env.social.me : await env.social.user(userID); if isMe { await env.social.refreshClaims(); await env.social.refreshCreator(); await env.social.refreshStorefront() } else { await env.social.loadCreatorPlan(userID); await env.social.loadStorefront(userID) } }
-        .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
-        .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
-        .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: resolvedID) }
-        .sheet(isPresented: $showAsk) { AskSheet(creatorID: resolvedID, creatorName: user?.displayName ?? "them") }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { menu } }
+        .task { await load() }
+        .modifier(ProfileSheets(userID: userID, resolvedID: resolvedID, name: user?.displayName ?? "them", shareItems: shareItems, showReport: $showReport, showShare: $showShare, showSubscribe: $showSubscribe, showAsk: $showAsk))
         .fullScreenCover(isPresented: $showMemories) { PrivateMemoryHubView() }
         .sheet(isPresented: $showSettings) { NavigationStack { SettingsView().socialDestinations() } }
         .navigationDestination(item: $openConversation) { id in ChatView(conversationID: id) }
         .modifier(SocialErrorAlert())
     }
 
+    @ViewBuilder private var menu: some View {
+        if isMe {
+            Menu {
+                Button("Settings", systemImage: "gearshape") { showSettings = true }
+                NavigationLink(value: SocialRoute.studio) { Label("Creator mode", systemImage: "chart.line.uptrend.xyaxis") }
+                NavigationLink(value: SocialRoute.subscriptions) { Label("My subscriptions", systemImage: "heart.text.square") }
+                NavigationLink(value: SocialRoute.invite) { Label("Invite friends", systemImage: "person.badge.plus") }
+                NavigationLink(value: SocialRoute.identity) { Label("Identity & recovery", systemImage: "key") }
+                Button("My private memory", systemImage: "lock") { showMemories = true }
+                NavigationLink(value: SocialRoute.safety) { Label("Privacy & safety", systemImage: "shield") }
+            } label: { Image(systemName: "line.3.horizontal") }
+            .accessibilityLabel("More").accessibilityIdentifier("profileSettings")
+        } else {
+            Menu {
+                Button("Message", systemImage: "bubble") { Task { if let c = await env.social.conversation(with: userID) { openConversation = c.id } } }
+                Divider()
+                Button(env.social.muted.contains(userID) ? "Unmute" : "Mute", systemImage: "speaker.slash") { Task { await env.social.mute(userID) } }
+                Button("Report", systemImage: "flag") { showReport = true }
+                if env.social.blocked.contains(userID) { Button("Unblock", systemImage: "hand.raised.slash") { Task { await env.social.unblock(userID) } } }
+                else { Button("Block", systemImage: "hand.raised", role: .destructive) { Task { await env.social.block(userID); dismiss() } } }
+            } label: { Image(systemName: "ellipsis.circle") }.accessibilityIdentifier("profileMenu")
+        }
+    }
+
+    private var sectionPicker: some View {
+        Picker("Section", selection: $section) { Text("Posts").tag(0); Text("About").tag(3) }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("profileSections")
+    }
+
+    @ViewBuilder private var sectionContent: some View {
+        if section == 0 { shopTab } else { aboutTab }
+    }
+
+    private func load() async {
+        user = isMe ? env.social.me : await env.social.user(userID)
+        if isMe {
+            await env.social.refreshClaims(); await env.social.refreshCreator(); await env.social.refreshStorefront()
+        } else {
+            await env.social.loadCreatorPlan(userID); await env.social.loadStorefront(userID)
+        }
+    }
+
     // MARK: Header
 
-    private var peopleCount: Int { Set(moments.flatMap(\.memberIDs)).subtracting([resolvedID]).count }
-    private var placeCount: Int { Set(moments.compactMap { $0.place?.id ?? $0.coarsePlace }).count }
     private var sets: [VaultSet] { env.social.sets(of: resolvedID).filter { $0.visible } }
     private var plan: CreatorPlan? { env.social.plan(for: resolvedID) }
     private var links: CreatorLinks { env.social.links(of: resolvedID) }
 
-    /// Nothing uploaded for this: the banner is the creator's own newest free cover, else a Moment of theirs.
+    /// Nothing uploaded for this: the banner is the creator's own newest free cover.
     private var bannerRef: MediaRef? {
-        sets.first(where: { $0.isFree })?.cover ?? sets.first?.cover ?? moments.first?.coverRef
+        sets.first(where: { $0.isFree })?.cover ?? sets.first?.cover
     }
 
     /// Banner with the avatar sitting on its edge — the shape people expect from a creator page.
@@ -157,12 +161,19 @@ struct SocialProfileView: View {
     @State private var showSubscribe = false
     @State private var showAsk = false
 
-    /// Three numbers that mean something here: who pays, what's for sale, what you were part of.
+    /// Three numbers that mean something on a creator page. On your own: who pays you, what you've
+    /// posted, who you follow. On someone else's: how much there is, and how much of it is free.
     private var stats: some View {
         HStack(spacing: 0) {
-            stat(isMe ? "\(env.social.activeSubscriberCount)" : "\(sets.count)", isMe ? "Subscribers" : "Sets")
-            stat("\(moments.count)", "Moments")
-            stat("\(peopleCount)", "People")
+            if isMe {
+                stat("\(env.social.activeSubscriberCount)", "Subscribers")
+                stat("\(sets.count)", "Posts")
+                stat("\(env.social.graph.following.count)", "Following")
+            } else {
+                stat("\(sets.count)", "Posts")
+                stat("\(sets.filter(\.isFree).count)", "Free")
+                stat("\(sets.count - sets.filter(\.isFree).count)", "Locked")
+            }
         }
     }
 
@@ -171,8 +182,6 @@ struct SocialProfileView: View {
             HStack(spacing: MSpacing.s) {
                 Button { showEdit = true } label: { Text("Edit profile") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("editProfile")
                 Button { Task { await shareProfile() } } label: { Text("Share profile") }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("shareProfile")
-                NavigationLink(value: SocialRoute.passport) { Image(systemName: "book.closed").frame(width: 44) }
-                    .buttonStyle(ProfileButtonStyle()).accessibilityLabel("Passport").accessibilityIdentifier("passportLink")
             }
             NavigationLink(value: SocialRoute.studio) {
                 HStack(spacing: MSpacing.m) {
@@ -257,226 +266,72 @@ struct SocialProfileView: View {
         }
     }
 
-    private var momentsTab: some View {
-        let shown = isMe && !query.isBlank ? env.social.search(moments: query) : moments
-        return VStack(alignment: .leading, spacing: MSpacing.l) {
-            if isMe, let y = env.social.yearSummary() {
-                NavigationLink(value: SocialRoute.passport) {
-                    HStack(spacing: MSpacing.s) {
-                        Text(String(y.year)).font(.subheadline.weight(.semibold))
-                        Text("\(y.moments) Moments · \(y.people) people · \(y.places) places\(y.topPerson.map { " · mostly with \($0.split(separator: " ").first.map(String.init) ?? $0)" } ?? "")").font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(MColor.textTertiary)
-                    }
-                    .padding(MSpacing.m).background(MColor.fill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-                .buttonStyle(.plain).accessibilityIdentifier("yearCard")
-            }
-            if isMe, !env.social.collections.isEmpty { collectionsStrip }
-            if isMe, !env.social.featured.isEmpty { featuredRow }
-            if isMe, moments.count > 6 {
-                HStack(spacing: MSpacing.s) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(MColor.textTertiary)
-                    TextField("Search your Moments", text: $query).textFieldStyle(.plain).accessibilityIdentifier("momentSearch")
-                }
-                .padding(.horizontal, MSpacing.m).padding(.vertical, 9)
-                .background(MColor.fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            if shown.isEmpty {
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text(isMe ? "No Moments yet" : (user?.isPrivateAccount == true ? "This account is private" : "Nothing to see yet")).font(MFont.title)
-                    Text(isMe ? "Your first one starts here." : (user?.isPrivateAccount == true ? "Follow to see the Moments you're not in." : "Moments you share with \(user?.displayName.split(separator: " ").first.map(String.init) ?? "them") will show here.")).font(MFont.body).foregroundStyle(MColor.textSecondary)
-                    if isMe { NavigationLink(value: SocialRoute.newMoment) { Text("Create Moment").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()) }
-                }
-                .padding(.vertical, MSpacing.l)
-            } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 3), spacing: 2) {
-                    ForEach(shown) { m in
-                        NavigationLink(value: SocialRoute.moment(m.id)) {
-                            SocialImage(ref: m.coverRef).aspectRatio(1, contentMode: .fill).clipped()
-                                .overlay(alignment: .topTrailing) { if m.memberIDs.count > 1 { Image(systemName: "person.2.fill").font(.caption2).foregroundStyle(.white).shadow(radius: 2).padding(6) } }
-                        }
-                        .buttonStyle(.plain).accessibilityLabel(m.title).accessibilityIdentifier("tile-\(m.id)")
-                    }
-                }
-                .padding(.horizontal, -MSpacing.page)
-            }
-        }
-    }
-
-    private var collectionsStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: MSpacing.m) {
-                ForEach(env.social.collections) { c in
-                    NavigationLink(value: SocialRoute.collection(c.id)) {
-                        VStack(spacing: 6) {
-                            ZStack {
-                                Circle().fill(MColor.surfaceSecondary).frame(width: 64, height: 64)
-                                if let first = env.social.moments(in: c).first { SocialImage(ref: first.coverRef).frame(width: 64, height: 64).clipShape(Circle()) }
-                                Text(c.emoji).font(.title3).shadow(radius: 2)
-                            }
-                            .overlay(Circle().strokeBorder(MColor.separator, lineWidth: 0.5))
-                            Text(c.title).font(MFont.caption).foregroundStyle(MColor.textPrimary).lineLimit(1)
-                        }
-                        .frame(width: 72)
-                    }
-                    .buttonStyle(.plain)
-                }
-                NavigationLink(value: SocialRoute.collections) {
-                    VStack(spacing: 6) {
-                        ZStack { Circle().strokeBorder(MColor.separator, style: StrokeStyle(lineWidth: 1, dash: [4, 4])).frame(width: 64, height: 64); Image(systemName: "plus").foregroundStyle(MColor.textPrimary) }
-                        Text("New").font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                    }
-                    .frame(width: 72)
-                }
-                .buttonStyle(.plain).accessibilityIdentifier("collectionsLink")
-            }
-        }
-    }
-
-    /// Places: where life happened — your venues with visit counts, then map and passport.
-    private var peopleTab: some View {
+    /// ABOUT — who this is, what the subscription opens, and the controls that belong to you.
+    private var aboutTab: some View {
         VStack(alignment: .leading, spacing: MSpacing.l) {
+            if let plan {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isMe ? "Your subscription" : "Subscription").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
+                    Text(plan.priceLabel()).font(.title3.weight(.bold))
+                    Text("Opens every subscribers-only post for 30 days. \(sets.filter(\.subscribersOnly).count) right now.")
+                        .font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    ForEach(plan.perks, id: \.self) { p in
+                        Label(p, systemImage: "checkmark").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                    }
+                }
+                .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
+                .accessibilityIdentifier("aboutPlan")
+            }
+
+            if let created = user?.createdAt {
+                Label("Here since \(created.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
+                    .font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            }
+
             if isMe {
                 HStack(spacing: MSpacing.s) {
-                    NavigationLink(value: SocialRoute.groups) { Label("Groups", systemImage: "person.3").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("groupsLink")
-                    NavigationLink(value: SocialRoute.followers(resolvedID, false)) { Label("Following", systemImage: "person.2").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle())
+                    NavigationLink(value: SocialRoute.followers(resolvedID, false)) { Label("Following", systemImage: "person.2").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("followingLink")
+                    NavigationLink(value: SocialRoute.subscriptions) { Label("Subscriptions", systemImage: "heart.text.square").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("subscriptionsLink")
                     NavigationLink(value: SocialRoute.safety) { Image(systemName: "shield").frame(width: 44) }.buttonStyle(ProfileButtonStyle()).accessibilityLabel("Privacy & safety").accessibilityIdentifier("safetyLink")
                 }
-            }
-            // Ranked by shared Moments: the people you actually spend time with.
-            var counts: [String: (String, Int)] = [:]
-            let _ = moments.forEach { m in for (id, n) in zip(m.memberIDs, m.memberNames) where id != resolvedID { counts[id] = (n, (counts[id]?.1 ?? 0) + 1) } }
-            let together = counts.map { (id: $0.key, name: $0.value.0, shared: $0.value.1) }.sorted { $0.shared > $1.shared }
-            if together.isEmpty {
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text("Find your people").font(MFont.title)
-                    Text("Make a Moment with someone and they show up here.").font(MFont.body).foregroundStyle(MColor.textSecondary)
-                }
-                .padding(.vertical, MSpacing.l)
-            }
-            ForEach(together, id: \.id) { p in
-                HStack(spacing: MSpacing.m) {
-                    NavigationLink(value: SocialRoute.profile(p.id)) { AvatarView(userID: p.id, name: p.name, size: 44) }.buttonStyle(.plain)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(p.name).font(.subheadline.weight(.semibold))
-                        Text("\(p.shared) \(p.shared == 1 ? "Moment" : "Moments") together").font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                    }
-                    Spacer()
-                    if isMe {
-                        if env.social.isFollowing(p.id) { NavigationLink(value: SocialRoute.friendship(p.id)) { Text("You + \(p.name.split(separator: " ").first.map(String.init) ?? "")") }.buttonStyle(ChipButtonStyle()) }
-                        else { Button("Follow") { Task { await env.social.follow(p.id); Haptics.selection() } }.buttonStyle(ChipButtonStyle(prominent: true)).accessibilityIdentifier("suggestFollow-\(p.id)") }
-                    }
-                }
-            }
-            if isMe {
+
                 Button { showMemories = true } label: {
                     HStack(spacing: MSpacing.m) {
                         Image(systemName: "lock").frame(width: 44, height: 44).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         VStack(alignment: .leading, spacing: 1) {
                             Text("My private memory").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                            Text("Screenshots, promises, plans — on this iPhone only. \(env.storage.memoryCount) memories.").font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1)
+                            Text("Screenshots, promises, plans — on this iPhone only. \(env.storage.memoryCount) saved.").font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1)
                         }
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption).foregroundStyle(MColor.textTertiary)
                     }
-                    .padding(.top, MSpacing.s)
                 }
                 .buttonStyle(.plain).accessibilityIdentifier("myMemories")
+
+                Text("Your posts live on your own storage. Buyers get a key, not a copy from us — so nobody, including us, can take this page down.")
+                    .font(MFont.caption).foregroundStyle(MColor.textTertiary)
             }
         }
-    }
-
-    /// What you two have in common — not a follow button, that's in the header now.
-    @ViewBuilder private var relationshipCard: some View {
-        let shared = env.social.moments(with: userID)
-        if !shared.isEmpty {
-            NavigationLink(value: SocialRoute.friendship(userID)) {
-                HStack(spacing: MSpacing.m) {
-                    AvatarStack(names: [env.social.displayName, user?.displayName ?? ""], size: 34)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("You + \(user?.displayName.split(separator: " ").first.map(String.init) ?? "them")").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                        Text("\(shared.count) \(shared.count == 1 ? "Moment" : "Moments") together").font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
-                }
-                .padding(MSpacing.l)
-            }
-            .buttonStyle(.plain).glass(radius: 16)
-            .accessibilityIdentifier("friendshipLink")
-        }
-    }
-
-
-    private var featuredRow: some View {
-        VStack(alignment: .leading, spacing: MSpacing.s) {
-            Text("Pinned").sectionLabel()
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: MSpacing.s) {
-                    ForEach(env.social.featured) { m in
-                        NavigationLink(value: SocialRoute.moment(m.id)) { MomentTile(moment: m).frame(width: 200, height: 200) }.buttonStyle(PressScaleStyle())
-                    }
-                }
-            }
-        }
-        .accessibilityIdentifier("featuredRow")
     }
 
 }
 
-/// "You + Rahul": everything the two of you were part of.
-struct FriendshipPageView: View {
-    @Environment(AppEnvironment.self) private var env
+/// The profile's sheets, lifted out so the body stays small enough for the type checker.
+private struct ProfileSheets: ViewModifier {
     let userID: String
-    @State private var user: SocialUser?
-    var body: some View {
-        let shared = env.social.moments(with: userID)
-        let places = Set(shared.compactMap(\.coarsePlace))
-        ScrollView {
-            VStack(alignment: .leading, spacing: MSpacing.xl) {
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    AvatarStack(names: [env.social.displayName, user?.displayName ?? ""], size: 56)
-                    Text("You + \(user?.displayName ?? "")").displayStyle()
-                    Text("\(shared.count) Moments · \(places.count) places · since \(shared.last.map { ($0.startAt ?? $0.createdAt).formatted(.dateTime.month(.wide).year()) } ?? "")").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                }
-                HStack(spacing: MSpacing.s) {
-                    StatTile(value: "\(shared.count)", label: "Moments", symbol: "rectangle.stack")
-                    StatTile(value: "\(places.count)", label: "places", symbol: "mappin")
-                    StatTile(value: "\(shared.reduce(0) { $0 + $1.mediaCount })", label: "photos", symbol: "photo")
-                }
-                // OUR STORY: the chain, oldest first — first Moment together at the top.
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text("OUR STORY").font(MFont.eyebrow).tracking(1).foregroundStyle(MColor.textSecondary)
-                    ForEach(Array(shared.reversed().enumerated()), id: \.element.id) { i, m in
-                        HStack(alignment: .top, spacing: MSpacing.m) {
-                            VStack(spacing: 0) {
-                                Circle().fill(i == 0 ? MColor.accent : MColor.fill).frame(width: 10, height: 10)
-                                Rectangle().fill(MColor.separator).frame(width: 1).frame(maxHeight: .infinity)
-                            }
-                            NavigationLink(value: SocialRoute.moment(m.id)) {
-                                HStack(spacing: MSpacing.m) {
-                                    SocialImage(ref: m.coverRef).frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: MRadius.chip, style: .continuous))
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(i == 0 ? "First Moment together" : m.dateLabel).font(MFont.caption).foregroundStyle(i == 0 ? MColor.accent : MColor.textSecondary)
-                                        Text(m.title).font(MFont.headline).foregroundStyle(MColor.textPrimary).lineLimit(1)
-                                        if let p = m.coarsePlace { Text(p).font(MFont.footnote).foregroundStyle(MColor.textSecondary) }
-                                    }
-                                    Spacer()
-                                }
-                                .padding(.bottom, MSpacing.m)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-            .padding(MSpacing.l)
-        }
-        .background(MColor.background)
-        .navigationBarTitleDisplayMode(.inline)
-        .task { user = await env.social.user(userID) }
+    let resolvedID: String
+    let name: String
+    let shareItems: [Any]
+    @Binding var showReport: Bool
+    @Binding var showShare: Bool
+    @Binding var showSubscribe: Bool
+    @Binding var showAsk: Bool
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showReport) { ReportSheet(userID: userID) }
+            .sheet(isPresented: $showShare) { ShareSheet(items: shareItems) }
+            .sheet(isPresented: $showSubscribe) { SubscribeSheet(creatorID: resolvedID) }
+            .sheet(isPresented: $showAsk) { AskSheet(creatorID: resolvedID, creatorName: name) }
     }
 }
 
@@ -541,23 +396,18 @@ struct SafetySettingsView: View {
         Form {
             Section {
                 Toggle("Private account", isOn: $s.privateAccount).accessibilityIdentifier("privateAccount")
-                Text("People must be approved to follow you and see Moments set to Friends.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                Text("People must be approved before they can follow you or see anything you post to followers.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             Section("Who can…") {
-                Picker("Add me to Moments", selection: $s.whoCanAddMeToMoments) { ForEach(SafetySettings.Audience.allCases, id: \.self) { Text($0.label).tag($0) } }
-                Picker("Comment on my Moments", selection: $s.whoCanComment) { ForEach(SafetySettings.Audience.allCases, id: \.self) { Text($0.label).tag($0) } }
+                Picker("Comment on my posts", selection: $s.whoCanComment) { ForEach(SafetySettings.Audience.allCases, id: \.self) { Text($0.label).tag($0) } }
                 Picker("Message me", selection: $s.whoCanMessage) { ForEach(SafetySettings.Audience.allCases, id: \.self) { Text($0.label).tag($0) } }
                 Picker("Mention me", selection: $s.whoCanMention) { ForEach(SafetySettings.Audience.allCases, id: \.self) { Text($0.label).tag($0) } }
-            }
-            Section("Discover") {
-                Toggle("Show my NOW to people nearby", isOn: $s.allowDiscoverByLocation)
-                Text("Only NOW posts where you picked a venue. Your phone's location is never stored or shared — the venue is.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
             Section {
                 NavigationLink(value: SocialRoute.blockedUsers) { Label("Blocked people (\(env.social.blocked.count))", systemImage: "hand.raised") }
             }
             Section("Your data") {
-                Text("Shared Moments live in your iCloud (private database) and in the iCloud of people you share with. Leaving a Moment removes your access; deleting one you created removes it for everyone.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                Text("What you post lives in your own iCloud (private database) and, once someone buys or subscribes, in theirs. Deleting a post stops new keys going out; copies people already opened are theirs.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             }
         }
         .navigationTitle("Privacy & safety")

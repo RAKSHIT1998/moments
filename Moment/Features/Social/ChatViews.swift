@@ -27,20 +27,25 @@ struct ChatsView: View {
                         }
                         .padding(MSpacing.xl).frame(maxWidth: .infinity).glass().padding(.top, MSpacing.xl)
                     }
-                    if !env.social.groups.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: MSpacing.s) {
-                                ForEach(env.social.groups) { g in
-                                    Button { Task { if let c = await env.social.groupConversation(g) { open = c } } } label: {
-                                        HStack(spacing: 6) { Text(g.emoji); Text(g.name).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary) }
-                                            .padding(.horizontal, 14).padding(.vertical, 9)
-                                    }
-                                    .buttonStyle(.plain).glassPill()
-                                    .accessibilityIdentifier("groupChat-\(g.id)")
-                                }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: MSpacing.s) {
+                            NavigationLink(value: SocialRoute.groups) {
+                                HStack(spacing: 6) { Image(systemName: "person.3"); Text("Groups").font(.subheadline.weight(.semibold)) }
+                                    .foregroundStyle(MColor.textPrimary)
+                                    .padding(.horizontal, 14).padding(.vertical, 9)
                             }
-                            .padding(.horizontal, MSpacing.page).padding(.vertical, 4)
+                            .buttonStyle(.plain).glassPill()
+                            .accessibilityIdentifier("groupsLink")
+                            ForEach(env.social.groups) { g in
+                                Button { Task { if let c = await env.social.groupConversation(g) { open = c } } } label: {
+                                    HStack(spacing: 6) { Text(g.emoji); Text(g.name).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary) }
+                                        .padding(.horizontal, 14).padding(.vertical, 9)
+                                }
+                                .buttonStyle(.plain).glassPill()
+                                .accessibilityIdentifier("groupChat-\(g.id)")
+                            }
                         }
+                        .padding(.horizontal, MSpacing.page).padding(.vertical, 4)
                     }
                     ForEach(list) { c in
                         Button { open = c } label: { row(c) }.buttonStyle(.plain)
@@ -270,13 +275,13 @@ struct ChatView: View {
                         ForEach(Dictionary(grouping: reactions, by: \.authorID).compactMap { $0.value.last }, id: \.id) { r in Text(r.text).font(.caption) }
                     }
                     .padding(.horizontal, 8).padding(.vertical, 3).glassPill().offset(y: -4)
+                    .accessibilityIdentifier("reactions-\(m.id)")
                 }
                 Text(m.createdAt.formatted(date: .omitted, time: .shortened)).font(.system(size: 10)).foregroundStyle(MColor.textTertiary).padding(.horizontal, 6)
             }
             .contextMenu {
                 Button("Reply", systemImage: "arrowshape.turn.up.left") { replyTo = m; focused = true }
                 Button("React", systemImage: "face.smiling") { reactTarget = m }
-                if let momentID = m.momentID { NavigationLink(value: SocialRoute.moment(momentID)) { Label("Open Moment", systemImage: "rectangle.stack") } }
                 if !m.text.isEmpty { Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = m.text } }
             }
             .onLongPressGesture(minimumDuration: 0.35) { reactTarget = m; Haptics.saved() }
@@ -285,24 +290,17 @@ struct ChatView: View {
     }
     private struct GlassIf: ViewModifier { var enabled: Bool; func body(content: Content) -> some View { if enabled { content.glass(radius: 20) } else { content } } }
 
+    /// A post shared into a chat opens the set it points at.
     private func momentCard(_ id: String) -> some View {
-        NavigationLink(value: SocialRoute.moment(id)) {
-            VStack(alignment: .leading, spacing: 0) {
-                if let moment = env.social.moments[id] {
-                    SocialImage(ref: moment.coverRef).frame(width: 230, height: 150).clipped()
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(moment.title).font(MFont.headline).foregroundStyle(MColor.textPrimary)
-                        Text("\(moment.memberIDs.count) people · \(moment.dateLabel)").font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                    }
-                    .padding(MSpacing.s)
-                } else {
-                    Label("A Moment", systemImage: "rectangle.stack").padding(MSpacing.m)
-                }
+        NavigationLink(value: SocialRoute.vaultSet(id)) {
+            HStack(spacing: MSpacing.s) {
+                Image(systemName: "photo.stack").foregroundStyle(MColor.accent)
+                Text("A post").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
             }
-            .glass(radius: 18)
+            .padding(MSpacing.m)
+            .glass(radius: 16)
         }
         .buttonStyle(.plain)
-        .task { if env.social.moments[id] == nil { _ = await env.social.loadMoment(id) } }
     }
 
     private func reactionPicker(for m: DirectMessage) -> some View {

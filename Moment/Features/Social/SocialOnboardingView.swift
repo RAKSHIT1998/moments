@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Three screens, then your name, then your first Moment. No permission prompts until needed.
+/// Three screens, then your name. No permission prompts until needed.
 struct SocialOnboardingView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -8,14 +8,14 @@ struct SocialOnboardingView: View {
     @State private var name = ""
     @State private var handle = ""
     @State private var saving = false
-    @State private var showFirstMoment = false
+    @State private var showDone = false
     @State private var showIdentity = false
     @FocusState private var nameFocused: Bool
 
     private let pages: [(title: String, body: String, symbol: String)] = [
-        ("This is where life happens.", "Not what you posted. What happened — with the people who were there.", "camera"),
-        ("One Moment.\nEveryone's story.", "You start it. They add their side. One memory, every angle.", "square.stack"),
-        ("Let's make your first one.", "A few photos is enough. We'll suggest the rest.", "plus")
+        ("Get paid for your\nown work.", "Post what you want, price what you want. We take 10% — the rest is yours.", "crown"),
+        ("You hold the keys.", "Your posts live on your storage. Buyers get a key, not a copy from us. Nobody can deplatform you.", "lock.shield"),
+        ("Follow, subscribe, ask.", "One price opens a creator's subscribers-only posts. Want something specific? Ask, and they name their price.", "person.2")
     ]
 
     var body: some View {
@@ -51,12 +51,20 @@ struct SocialOnboardingView: View {
             }
         }
         .fullScreenCover(isPresented: $showIdentity) {
-            ZStack { AmbientBackdrop().ignoresSafeArea(); IdentityOnboardingStep { showIdentity = false; showFirstMoment = true } }
+            ZStack { AmbientBackdrop().ignoresSafeArea(); IdentityOnboardingStep { showIdentity = false; showDone = true } }
         }
-        .fullScreenCover(isPresented: $showFirstMoment) {
+        .fullScreenCover(isPresented: $showDone) {
+            // After the identity step there's nothing to build yet — the feed is where you start.
             NavigationStack {
-                NewMomentView { _ in finish() }
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Skip") { finish() }.accessibilityIdentifier("onboardingSkip") } }
+                VStack(spacing: MSpacing.l) {
+                    Spacer()
+                    Text("You're set up.").font(MFont.hero)
+                    Text("Follow a creator, or open Creator mode and post your first set.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary).multilineTextAlignment(.center)
+                    Button("Start looking") { finish() }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("onboardingSkip")
+                    Spacer()
+                }
+                .padding(MSpacing.page)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Skip") { finish() } } }
             }
         }
     }
@@ -73,9 +81,9 @@ struct SocialOnboardingView: View {
                 HStack { Text("@").foregroundStyle(MColor.textTertiary); TextField("handle", text: $handle).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("onboardingHandle") }
                     .font(.title3).padding(MSpacing.l).background(MColor.surface, in: RoundedRectangle(cornerRadius: MRadius.control, style: .continuous))
             }
-            Text(env.social.accountStatus == .available ? "Your profile is stored in your iCloud. Only people you share with see your Moments." : "Sign in to iCloud on this iPhone to share Moments with people. You can still make private ones.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+            Text(env.social.accountStatus == .available ? "Your profile is stored in your own iCloud. Only what you publish is public." : "Sign in to iCloud on this iPhone to follow creators and publish your own posts.").font(MFont.footnote).foregroundStyle(MColor.textSecondary)
             Spacer()
-            Button(saving ? "Saving…" : "Make your first Moment") {
+            Button(saving ? "Saving…" : "Create my account") {
                 Task {
                     saving = true
                     env.settings.displayName = name.trimmed
@@ -92,7 +100,7 @@ struct SocialOnboardingView: View {
     }
 
     private func finish() {
-        showFirstMoment = false
+        showDone = false
         env.settings.onboardingCompleted = true
         Task { await env.social.start() }
     }

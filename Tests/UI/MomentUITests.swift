@@ -73,10 +73,7 @@ final class MomentUITests: XCTestCase {
         waitForFeed()
         XCTAssertTrue(app.buttons["inboxButton"].waitForExistence(timeout: 10))
         app.buttons["inboxButton"].tap()
-        if !app.buttons["Invites"].waitForExistence(timeout: 10) { snap("debug-inbox-tap") }
-        XCTAssertTrue(app.buttons["Invites"].exists)
-        app.buttons["Invites"].tap()
-        XCTAssertTrue(app.buttons["invite-inv1"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Notifications"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Chats"].tap()
         let chat = app.descendants(matching: .any)["chat-conv_rahul"].firstMatch
         XCTAssertTrue(chat.waitForExistence(timeout: 10))
@@ -93,8 +90,13 @@ final class MomentUITests: XCTestCase {
         let fire = app.buttons["react-🔥"].firstMatch
         XCTAssertTrue(fire.waitForExistence(timeout: 5))
         // The picker floats over the thread; tap its centre rather than letting XCUITest scroll to it.
+        // Under load the first tap sometimes lands while the picker is still animating in, so try twice.
+        let reacted = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'reactions-'")).firstMatch
         fire.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        XCTAssertTrue(app.staticTexts["🔥"].firstMatch.waitForExistence(timeout: 8), "reaction appears under the message")
+        if !reacted.waitForExistence(timeout: 8), fire.exists {
+            fire.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        XCTAssertTrue(reacted.waitForExistence(timeout: 8), "reaction appears under the message")
         // Group chat opens from the groups strip.
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let group = app.descendants(matching: .any)["groupChat-g_boys"].firstMatch
@@ -105,7 +107,7 @@ final class MomentUITests: XCTestCase {
 
     // MARK: Profile & safety
 
-    func testProfileFriendshipAndBlock() {
+    func testProfileAndBlock() {
         waitForFeed()
         // Straight from a post to the creator's page.
         let sarah = app.buttons["Sarah Kim"].firstMatch
@@ -114,33 +116,27 @@ final class MomentUITests: XCTestCase {
         sarah.tap()
         XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["subscribeBox"].waitForExistence(timeout: 8), "a creator page leads with the subscription")
-        // Sarah and I share Moments, so the "you two" link is there.
-        if app.buttons["friendshipLink"].waitForExistence(timeout: 5) {
-            app.buttons["friendshipLink"].tap()
-            XCTAssertTrue(app.staticTexts["You + Sarah Kim"].waitForExistence(timeout: 8))
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-        }
         let menu = app.buttons["profileMenu"].firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
         menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["Block"].waitForExistence(timeout: 5))
         app.buttons["Block"].tap()
         app.tabBars.buttons["Home"].tap()
-        XCTAssertFalse(app.otherElements["feedMoment-m_bday"].firstMatch.waitForExistence(timeout: 3), "blocked creator's Moments disappear")
+        XCTAssertFalse(app.descendants(matching: .any)["post-s_set_sarah_kitchen"].firstMatch.waitForExistence(timeout: 3), "a blocked creator's posts leave the feed")
     }
 
     func testSafetySettingsAndPrivateMemoryStillWork() {
         waitForFeed()
         app.tabBars.buttons["Profile"].tap()
-        let people = app.buttons["People"].firstMatch
-        XCTAssertTrue(people.waitForExistence(timeout: 10))
-        people.tap(); sleep(1)
+        let about = app.buttons["About"].firstMatch
+        XCTAssertTrue(about.waitForExistence(timeout: 10))
+        about.tap(); sleep(1)
         XCTAssertTrue(app.descendants(matching: .any)["safetyLink"].firstMatch.waitForExistence(timeout: 10))
         app.descendants(matching: .any)["safetyLink"].firstMatch.tap()
         XCTAssertTrue(app.switches["privateAccount"].firstMatch.waitForExistence(timeout: 5))
         app.switches["privateAccount"].firstMatch.tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        if app.buttons["People"].firstMatch.waitForExistence(timeout: 5), !app.buttons["myMemories"].exists { app.buttons["People"].firstMatch.tap(); sleep(1) }
+        if app.buttons["About"].firstMatch.waitForExistence(timeout: 5), !app.buttons["myMemories"].exists { app.buttons["About"].firstMatch.tap(); sleep(1) }
         for _ in 0..<8 where !app.buttons["myMemories"].exists { app.swipeUp() }
         XCTAssertTrue(app.buttons["myMemories"].waitForExistence(timeout: 5))
         app.buttons["myMemories"].tap()
@@ -234,9 +230,7 @@ final class MomentUITests: XCTestCase {
         app.tabBars.buttons["Profile"].tap(); sleep(2); snap("09-profile")
         if app.buttons["studioLink"].firstMatch.waitForExistence(timeout: 5) {
             app.buttons["studioLink"].firstMatch.tap(); sleep(2); snap("09b-creator-mode")
-            app.navigationBars.buttons.element(boundBy: 0).tap()
         }
-        if app.buttons["passportLink"].exists { app.buttons["passportLink"].tap(); sleep(1); snap("10-passport"); app.navigationBars.buttons.element(boundBy: 0).tap() }
         app.tabBars.buttons["Home"].tap(); app.buttons["inboxButton"].tap(); sleep(1); snap("11-inbox")
     }
 

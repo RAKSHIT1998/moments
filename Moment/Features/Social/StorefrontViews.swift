@@ -137,7 +137,7 @@ struct SetTile: View {
             LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 2) {
                 Text(set.title).font(.subheadline.weight(.semibold)).foregroundStyle(.white).lineLimit(2)
-                Text(unlocked ? (set.isFree ? "Free · \(set.itemCount)" : "Yours · \(set.itemCount)") : set.priceLabel()).font(.caption2).foregroundStyle(.white.opacity(0.85))
+                Text(unlocked ? (set.isFree ? "Free · \(set.itemCount)" : "Yours · \(set.itemCount)") : (set.subscribersOnly ? "Subscribers" : set.priceLabel())).font(.caption2).foregroundStyle(.white.opacity(0.85))
             }
             .padding(MSpacing.s)
         }
@@ -191,6 +191,10 @@ struct BuySetSheet: View {
             if done {
                 Label("Unlocked.", systemImage: "checkmark.seal.fill").font(MFont.headline)
                 Button("See it") { dismiss() }.buttonStyle(PrimaryButtonStyle())
+            } else if set.subscribersOnly {
+                NavigationLink(value: SocialRoute.profile(set.creatorID)) { Text("Subscribe to open this").frame(maxWidth: .infinity) }
+                    .buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("goSubscribe")
+                Text("This one comes with \(set.creatorName)'s subscription rather than a separate price.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
             } else {
                 Button {
                     if env.social.rail == .web, let base = URL(string: env.settings.checkoutBaseURL), !env.settings.checkoutBaseURL.isBlank {
@@ -498,7 +502,8 @@ struct EditSetSheet: View {
     @State private var title = ""
     @State private var blurb = ""
     @State private var price = ""
-    @State private var free = false
+    enum Access: Hashable { case free, subscribers, price }
+    @State private var access: Access = .free
     @State private var picker: [PhotosPickerItem] = []
     @State private var picked: [MediaRef] = []
     @State private var loading = false
@@ -521,10 +526,19 @@ struct EditSetSheet: View {
                     TextField("A line about it", text: $blurb, axis: .vertical).lineLimit(1...3)
                 }
                 Section {
-                    Toggle("Free", isOn: $free).accessibilityIdentifier("setFree")
-                    if !free { TextField("Price (₹)", text: $price).keyboardType(.numberPad).accessibilityIdentifier("setPrice") }
+                    Picker("Who can open it", selection: $access) {
+                        Text("Free").tag(Access.free)
+                        Text("Subscribers").tag(Access.subscribers)
+                        Text("One-off price").tag(Access.price)
+                    }
+                    .pickerStyle(.segmented).accessibilityIdentifier("setAccess")
+                    if access == .price { TextField("Price (₹)", text: $price).keyboardType(.numberPad).accessibilityIdentifier("setPrice") }
                 } footer: {
-                    Text(free ? "Free sets are how people find you." : "You keep \(Int((1 - CreatorEconomics.platformFee) * 100))% on card checkout. The photos stay on your storage — buyers get a key.")
+                    switch access {
+                    case .free: Text("Free sets are how people find you.")
+                    case .subscribers: Text("Anyone whose subscription is live opens this — that's what they're paying for. It stops opening the day they lapse.")
+                    case .price: Text("Bought once, kept. You keep \(Int((1 - CreatorEconomics.platformFee) * 100))% on card checkout, and the photos stay on your storage — buyers get a key.")
+                    }
                 }
                 Section {
                     Button { save() } label: { Text(set == nil ? "Publish set" : "Save").frame(maxWidth: .infinity) }
@@ -534,7 +548,7 @@ struct EditSetSheet: View {
             .scrollContentBackground(.hidden).background(LiquidBackdrop(tint: .orange))
             .navigationTitle(set == nil ? "New set" : "Edit set")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-            .onAppear { if let s = set { title = s.title; blurb = s.blurb; free = s.isFree; price = s.isFree ? "" : String(s.priceMinor / 100); Task { await env.social.loadItems(s.id); picked = env.social.items(s.id).compactMap(\.media) } } }
+            .onAppear { if let s = set { title = s.title; blurb = s.blurb; access = s.subscribersOnly ? .subscribers : (s.isFree ? .free : .price); price = s.priceMinor > 0 ? String(s.priceMinor / 100) : ""; Task { await env.social.loadItems(s.id); picked = env.social.items(s.id).compactMap(\.media) } } }
             .onChange(of: picker) { _, items in Task { await load(items) } }
         }
     }
@@ -549,9 +563,9 @@ struct EditSetSheet: View {
         picked = refs
     }
     private func save() {
-        let minor = free ? 0 : max(0, (Int(price.filter(\.isNumber)) ?? 0) * 100)
+        let minor = access == .price ? max(0, (Int(price.filter(\.isNumber)) ?? 0) * 100) : 0
         var s = set ?? VaultSet(id: "", creatorID: "", creatorName: "", title: "", blurb: "", priceMinor: 0, currency: "INR", cover: nil, itemCount: 0, isVideo: false, createdAt: .now, visible: true)
-        s.title = title.trimmed; s.blurb = blurb.trimmed; s.priceMinor = minor
+        s.title = title.trimmed; s.blurb = blurb.trimmed; s.priceMinor = minor; s.subscribersOnly = access == .subscribers
         // A video post needs a still to show before it plays and while it's locked.
         s.isVideo = picked.contains { $0.kind == .video }
         s.cover = picked.first { $0.kind == .photo } ?? picked.first

@@ -4,10 +4,7 @@ import Foundation
 /// Moment. Locked cards say exactly what opens them and at what price. Nothing is hidden to tease;
 /// the price is always on the lock.
 struct CreatorPost: Identifiable, Sendable, Equatable {
-    enum Source: Sendable, Equatable {
-        case set(VaultSet)
-        case moment(SocialMoment)
-    }
+    enum Source: Sendable, Equatable { case set(VaultSet) }
     /// What the viewer has to do to see it.
     enum Gate: Sendable, Equatable {
         case open                       // free, or already theirs
@@ -27,7 +24,8 @@ struct CreatorPost: Identifiable, Sendable, Equatable {
     var source: Source
     var isLocked: Bool { gate != .open }
     var setID: String? { if case .set(let s) = source { return s.id }; return nil }
-    var momentID: String? { if case .moment(let m) = source { return m.id }; return nil }
+    /// Kept so a tip can name what it's for; posts are sets now, so there is no Moment behind them.
+    var momentID: String? { nil }
     func priceLabel(_ locale: Locale = .current) -> String? {
         switch gate {
         case .open: return nil
@@ -38,23 +36,21 @@ struct CreatorPost: Identifiable, Sendable, Equatable {
 }
 
 enum CreatorFeedBuilder {
-    /// Everything the viewer can see or buy from creators they follow or already pay, newest first.
-    /// A set you've bought, or a Moment you subscribe to, shows open — the feed is also your library.
-    static func build(sets: [VaultSet], moments: [SocialMoment], plans: [String: CreatorPlan], purchases: Set<String>, subscribedTo: Set<String>, me: String, blocked: Set<String> = []) -> [CreatorPost] {
+    /// Every post the viewer can see or buy from creators they know, newest first. What they've paid for
+    /// shows open, so the feed is also their library.
+    static func build(sets: [VaultSet], plans: [String: CreatorPlan], purchases: Set<String>, subscribedTo: Set<String>, me: String, blocked: Set<String> = []) -> [CreatorPost] {
         var out: [CreatorPost] = []
         for s in sets where s.visible && !blocked.contains(s.creatorID) {
             let mine = s.creatorID == me
-            let gate: CreatorPost.Gate = (mine || s.isFree || purchases.contains(s.id)) ? .open : .buy(priceMinor: s.priceMinor, currency: s.currency)
-            out.append(CreatorPost(id: "s_" + s.id, creatorID: s.creatorID, creatorName: s.creatorName, title: s.title, blurb: s.blurb, cover: s.cover, itemCount: s.itemCount, isVideo: s.isVideo, createdAt: s.createdAt, gate: gate, source: .set(s)))
-        }
-        for m in moments where m.visibility == .subscribers && !blocked.contains(m.creatorID) {
-            let mine = m.creatorID == me
-            let open = mine || subscribedTo.contains(m.creatorID) || !m.isLocked
             let gate: CreatorPost.Gate
-            if open { gate = .open }
-            else if let plan = plans[m.creatorID] { gate = .subscribe(tier: plan.tier, title: plan.title) }
-            else { continue }   // a lock we can't explain isn't shown at all
-            out.append(CreatorPost(id: "m_" + m.id, creatorID: m.creatorID, creatorName: m.creatorName, title: m.title, blurb: m.description, cover: m.coverRef, itemCount: m.mediaCount, isVideo: false, createdAt: m.createdAt, gate: gate, source: .moment(m)))
+            if mine || s.isFree || purchases.contains(s.id) { gate = .open }
+            else if s.subscribersOnly {
+                if subscribedTo.contains(s.creatorID) { gate = .open }
+                else if let plan = plans[s.creatorID] { gate = .subscribe(tier: plan.tier, title: plan.title) }
+                else { continue }   // a lock we can't explain isn't shown at all
+            }
+            else { gate = .buy(priceMinor: s.priceMinor, currency: s.currency) }
+            out.append(CreatorPost(id: "s_" + s.id, creatorID: s.creatorID, creatorName: s.creatorName, title: s.title, blurb: s.blurb, cover: s.cover, itemCount: s.itemCount, isVideo: s.isVideo, createdAt: s.createdAt, gate: gate, source: .set(s)))
         }
         return out.sorted { $0.createdAt > $1.createdAt }
     }

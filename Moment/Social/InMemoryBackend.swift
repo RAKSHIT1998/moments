@@ -387,6 +387,7 @@ actor InMemoryBackend: SocialBackend {
     func saveVaultSet(_ set: VaultSet, items: [VaultItem], media: [String: Data]) async throws -> VaultSet {
         try gate()
         var x = set; x.creatorID = me.id; x.creatorName = me.displayName; x.itemCount = items.count
+        if x.subscribersOnly { x.priceMinor = 0 }
         if x.id.isEmpty { x.id = "set_\(UUID().uuidString)" }
         for (k, d) in media { mediaBlobs[k] = d }
         vaultSets[x.id] = x
@@ -398,11 +399,12 @@ actor InMemoryBackend: SocialBackend {
         try gate(); guard let set = vaultSets[setID] else { throw SocialError.notFound }
         let mine = set.creatorID == me.id
         let bought = purchases.contains { $0.setID == setID && $0.buyerID == me.id }
-        guard mine || set.isFree || bought else { throw SocialError.notAllowed }
+        let subscribed = subs.contains { $0.subscriberID == me.id && $0.creatorID == set.creatorID && $0.isActive }
+        guard mine || set.isFree || bought || (set.subscribersOnly && subscribed) else { throw SocialError.notAllowed }
         return vaultItemsBySet[setID] ?? []
     }
     func buyVaultSet(id: String, rail: PaymentRail, reference: String?) async throws -> VaultPurchase {
-        try gate(); guard let set = vaultSets[id], set.creatorID != me.id else { throw SocialError.notAllowed }
+        try gate(); guard let set = vaultSets[id], set.creatorID != me.id, !set.subscribersOnly else { throw SocialError.notAllowed }
         if let existing = purchases.first(where: { $0.setID == id && $0.buyerID == me.id }) { return existing }
         let p = VaultPurchase(id: "buy_\(UUID().uuidString)", setID: id, creatorID: set.creatorID, buyerID: me.id, buyerName: me.displayName, amountMinor: set.priceMinor, currency: set.currency, rail: set.isFree ? .none : rail, reference: reference, createdAt: .now)
         purchases.append(p); return p
@@ -592,9 +594,7 @@ actor InMemoryBackend: SocialBackend {
         add("m_sunset", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: 0, members: ["u_public"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), cover: "demo_270", isLive: true, contribs: [("u_public", .photo, "6:41pm", 0, "demo_110"), ("u_public", .photo, "6:52pm", 11, "demo_173"), ("u_public", .photo, "7:03pm", 22, "demo_213")])
         for (i, w) in [7, 14, 21].enumerated() {
             add("m_sunset_\(w)", creator: "u_public", title: "Last light, Versova", desc: "Every Friday. Bring nothing.", daysAgo: w, members: ["u_public", i == 0 ? "u_rahul" : "u_dev"], place: "Versova", vis: .publicAll, color: UIColor(red: 0.9, green: 0.35, blue: 0.4, alpha: 1), cover: ["demo_213", "demo_110", "demo_173"][i], contribs: [("u_public", .photo, "Last light", 0, ["demo_213", "demo_110", "demo_173"][i])])
-            moments["m_sunset_\(w)"]!.templateID = Rituals.templateID
         }
-        moments["m_sunset"]!.templateID = Rituals.templateID
         add("m_cafe", creator: "u_sarah", title: "Ramen night", desc: "The tonkotsu. That's the review.", daysAgo: 3, members: ["u_sarah", "u_dev"], place: "Lower Parel", vis: .publicAll, color: UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), cover: "demo_312", contribs: [("u_sarah", .photo, "Tonkotsu", 0, "demo_312"), ("u_dev", .photo, "Gyoza", 15, "demo_292")])
         add("m_bastian", creator: "u_public", title: "Bastian, Saturday", desc: "Public table. Tag your night.", daysAgo: 1, members: ["u_public", "u_rahul"], place: "Bandra", vis: .publicAll, color: UIColor(red: 0.35, green: 0.35, blue: 0.5, alpha: 1), cover: "demo_223", contribs: [("u_public", .photo, "Bar", 0, "demo_195"), ("u_rahul", .photo, "Cocktails", 40, "demo_113")])
         add("m_oldgoa", creator: me.id, title: "Goa '25", desc: "The first one.", daysAgo: 365, members: [me.id, "u_rahul"], place: "Goa", vis: .group, color: UIColor(red: 0.2, green: 0.45, blue: 0.8, alpha: 1), cover: "demo_92", contribs: [(me.id, .photo, "Anjuna", 0, "demo_200"), ("u_rahul", .photo, "Same beach", 30, "demo_215")])
@@ -623,7 +623,8 @@ actor InMemoryBackend: SocialBackend {
             }
         }
         set("set_sunsets_free", "u_public", "Versova, the free set", "Three frames from last Friday. The rest is in the paid set.", 0, "demo_270", ["demo_270", "demo_213", "demo_110"])
-        set("set_sunsets_raw", "u_public", "The raw Friday", "Every frame, full resolution, before the edit.", 49900, "demo_173", ["demo_173", "demo_176", "demo_195", "demo_154"])
+        set("set_sunsets_raw", "u_public", "The raw Friday", "Every frame, full resolution, before the edit.", 0, "demo_173", ["demo_173", "demo_176", "demo_195", "demo_154"])
+        vaultSets["set_sunsets_raw"]!.subscribersOnly = true
         set("set_sarah_kitchen", "u_sarah", "Kitchen, close up", "Eighteen hours of broth in twelve photos.", 19900, "demo_312", ["demo_312", "demo_292", "demo_225"])
         // A video post, free, so the reels feed has something real in it.
         if let clip = DemoPhotos.data("demo_clip", ext: "mp4") {

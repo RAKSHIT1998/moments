@@ -16,7 +16,7 @@ git clone … && cd relay && npm install
 DATA=/var/lib/moment/events.jsonl RETAIN_DAYS=365 PORT=7447 node server.js   # run under systemd/pm2
 ```
 Put Caddy in front for TLS: `relay.moment.social { reverse_proxy localhost:7447 }` → `wss://relay.moment.social`.
-Then set `NetworkMode.defaultRelays` in `Moment/Services/SettingsStore.swift` to `["wss://relay.moment.social"]` so fresh installs have one relay out of the box (they can add more; you can run more). The relay stores signed events only; it cannot read private Moments, likes, or chats. Retention and abuse: `RETAIN_DAYS`, plus `report` events arrive here — read them.
+Then set `NetworkMode.defaultRelays` in `Moment/Services/SettingsStore.swift` to `["wss://relay.moment.social"]` so fresh installs have one relay out of the box (they can add more; you can run more). The relay stores signed events only; it cannot read paid sets, likes, or chats. Retention and abuse: `RETAIN_DAYS`, plus `report` events arrive here — read them.
 
 ## 2. Website + web app (day 2)
 `web/` is static. Deploy on Vercel (project already connected): root = `web`. Check:
@@ -32,11 +32,11 @@ Then set `NetworkMode.defaultRelays` in `Moment/Services/SettingsStore.swift` to
    - `creator.30d.t1` / `t2` / `t3` — **non‑renewing subscriptions** (₹199 / ₹499 / ₹999 tiers)
    - `creator.tip.small` / `medium` / `large` — **consumables**
    Each needs a display name, description and a review screenshot. Submit them *with* the first build.
-3. **Age rating**: Meet (dating) and user‑generated content push this to **17+**. Answer "Unrestricted Web Access: No", "Mature/Suggestive: Infrequent", and mark the dating features. Meet is opt‑in and 18+ in‑app, which is what reviewers look for.
+3. **Age rating**: user‑generated content and paid creator content push this to **17+**. Answer "Unrestricted Web Access: No", "Mature/Suggestive: Infrequent". Adult content is out of scope for an App Store listing — see `CREATOR-PLATFORM.md`.
 4. **App Privacy** (the nutrition label). Honest answers given the code: *Data not collected* for everything **except** purchases (Apple handles them) and, if you keep the optional local analytics, "Analytics — not linked to you, on‑device". Location is used but never sent to you — still declare "Location: used for app functionality, not linked". Photos: user content, not collected by you. No tracking.
-5. **Review notes** (this is what gets a UGC + dating + payments app through first time):
+5. **Review notes** (this is what gets a UGC + payments app through first time):
    - Demo account: none needed — use *Settings → Sample data* (DEBUG only, so instead ship a TestFlight build with `-demo` semantics or record a 60‑s video walkthrough and attach it).
-   - Point to: block/report on every profile and Moment; content moderation on comments (`ContentModeration`); Meet is opt‑in, 18+, mutual‑match only; creators' payouts are handled off‑platform (explain the 30‑day non‑renewing products and that Apple's cut is taken); no external payment links.
+   - Point to: block/report on every profile and post; content moderation on comments (`ContentModeration`); creators' payouts are handled off‑platform (explain the 30‑day non‑renewing products and that Apple's cut is taken); no external payment links.
    - Explain the decentralised model in two sentences so "where is your server?" doesn't stall review.
 
 ## 4. Build, TestFlight, submit (day 3–7)
@@ -56,12 +56,12 @@ xcrun altool --upload-app -f build/export/MOMENT.ipa -t ios -u <apple id> -p <ap
 Apple pays you ~30–45 days after month end. `Earn` shows creators 80 % of net. You need a monthly job: export App Store Connect *Sales and Trends* for the `creator.*` products, join with the `plan` records' `payoutHint` (UPI/PayPal/IBAN) and the subscription/tip records (which carry transaction ids), pay out, keep the ledger. Start manual (spreadsheet), automate later. Say the 80 % and the timing in `web/privacy.html`/terms.
 
 ## 6. Android
-Today: **MOMENT Web** at `moment.social/app` — install to home screen, it runs as a PWA (Tonight, NOW, public Moments, invite links). Same keys/protocol, so it interoperates with iPhone users on the same relays.
+Today: **MOMENT Web** at `moment.social/app` — install to home screen, it runs as a PWA (the creator feed, free sets, profile links). Same keys/protocol, so it interoperates with iPhone users on the same relays.
 Play Store listing: wrap the PWA as a **Trusted Web Activity** (Bubblewrap: `npx @bubblewrap/cli init --manifest https://moment.social/app/manifest.webmanifest`) — a real Play listing in a day, no native code. Limits: no Multipeer mesh, no StoreKit (Play Billing needed for creators), no Keychain (keys live in the browser's storage — back up via Settings → Copy secret).
 Native Android (Kotlin/Compose) is the real second product: the protocol (`SignedEvent`, relay frames, AES‑GCM/X25519 sealing, geo cells) is fully specified in `relay/README.md` + `web/app/moment.js` and is small; the UI is the work. Budget 6–10 weeks for parity with the iPhone app.
 
 ## 7. Launch day
-- Seed the relay: create 5–10 real public Moments in your city (Rituals work best — Friday sunset, Sunday run).
+- Seed the relay: get 5–10 real creators posting, each with one free set and one locked one — the free cover is what pulls people in.
 - The growth loop is the **Replay video** share + the QR on the table. Every Replay ends with the invite link; every event host gets a QR.
 - Watch: relay disk/retention, `report` events, App Store review replies, TestFlight crash logs (no third‑party crash SDK by design).
 

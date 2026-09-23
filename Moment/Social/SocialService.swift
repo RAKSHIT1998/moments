@@ -1172,7 +1172,9 @@ final class SocialService {
     func offers(of creatorID: String) -> [BookingOffer] { offersByCreator[creatorID] ?? [] }
     func links(of creatorID: String) -> CreatorLinks { linksByCreator[creatorID] ?? CreatorLinks() }
     func hasBought(_ setID: String) -> Bool { myPurchases.contains { $0.setID == setID } }
-    func isUnlocked(_ set: VaultSet) -> Bool { set.isFree || set.creatorID == myID || hasBought(set.id) }
+    func isUnlocked(_ set: VaultSet) -> Bool {
+        set.isFree || set.creatorID == myID || hasBought(set.id) || (set.subscribersOnly && isSubscribed(to: set.creatorID))
+    }
     func loadItems(_ setID: String) async { itemsBySet[setID] = (try? await backend.vaultItems(setID: setID)) ?? [] }
     func items(_ setID: String) -> [VaultItem] { itemsBySet[setID] ?? [] }
 
@@ -1264,7 +1266,7 @@ final class SocialService {
         let sets = ids.flatMap { setsByCreator[$0] ?? [] }
         var plans: [String: CreatorPlan] = [:]
         for id in ids { if let p = creatorPlans[id] { plans[id] = p } }
-        creatorFeed = CreatorFeedBuilder.build(sets: sets, moments: Array(moments.values), plans: plans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked)
+        creatorFeed = CreatorFeedBuilder.build(sets: sets, plans: plans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked)
     }
 
     // MARK: - Reels
@@ -1296,26 +1298,6 @@ final class SocialService {
         reels = ReelBuilder.build(sets: sets, items: { [weak self] in self?.items($0) ?? [] }, plans: creatorPlans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked, seen: seenReels)
     }
     func markReelSeen(_ id: String) { seenReels.insert(id) }
-
-    // MARK: - Replay video
-
-    private(set) var exportingReplay = false
-    /// Renders the Moment as a vertical video ready for the share sheet. Everything in it is real: the sides in
-    /// order, who added them, when. The end card carries the invite link so whoever sees it can join.
-    func exportReplay(momentID: String) async -> URL? {
-        guard let m = moments[momentID] else { return nil }
-        exportingReplay = true; defer { exportingReplay = false }
-        let all = allContributions(momentID).filter { $0.uploadState == .uploaded }.sorted { ($0.originalTimestamp ?? $0.createdAt) < ($1.originalTimestamp ?? $1.createdAt) }
-        var beats: [ReplayExporter.Beat] = []
-        for c in all {
-            if c.kind == .text { beats.append(.init(image: nil, note: c.caption, author: c.authorName, time: c.originalTimestamp ?? c.createdAt)) }
-            else if c.kind == .photo, let img = await image(for: c.media) { beats.append(.init(image: img, note: nil, author: c.authorName, time: c.originalTimestamp ?? c.createdAt)) }
-        }
-        let link = (await shareLink(momentID: momentID))?.absoluteString ?? "moment://moment/\(momentID)"
-        let subtitle = "\(m.memberIDs.count) \(m.memberIDs.count == 1 ? "person" : "people") · \(m.dateLabel)" + (m.coarsePlace.map { " · \($0)" } ?? "")
-        do { let url = try await ReplayExporter.export(title: m.title, subtitle: subtitle, beats: beats, inviteLine: link); analytics.track(.replayExported); return url }
-        catch { lastError = error.localizedDescription; return nil }
-    }
 
     // MARK: - Media
 

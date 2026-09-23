@@ -118,7 +118,7 @@ struct CreatorEarnView: View {
             VStack(alignment: .leading, spacing: MSpacing.m) {
                 Text("SUBSCRIBERS").font(MFont.eyebrow).foregroundStyle(MColor.textSecondary).tracking(1)
                 if env.social.subscribers.isEmpty {
-                    Text("Nobody yet. Share a subscribers-only Moment — the locked preview does the selling.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                    Text("Nobody yet. Post a subscribers-only set — the locked cover does the selling.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                 } else {
                     ForEach(env.social.subscribers) { s in
                         HStack(spacing: MSpacing.m) {
@@ -152,11 +152,10 @@ struct CreatorEarnView: View {
                 }
                 .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
             }
-            NavigationLink(value: SocialRoute.newMoment) { Label("New subscribers-only Moment", systemImage: "crown") }.buttonStyle(PrimaryButtonStyle(tint: .orange))
             Button("Stop selling", role: .destructive) { confirmRemove = true }.font(MFont.footnote).frame(maxWidth: .infinity)
                 .confirmationDialog("Stop selling?", isPresented: $confirmRemove) {
                     Button("Stop selling", role: .destructive) { Task { await env.social.removePlan() } }
-                } message: { Text("Current subscribers keep what they already have until it expires. New Moments can't be sold until you set up a plan again.") }
+                } message: { Text("Current subscribers keep what they already have until it expires. New posts can't be sold until you set up a plan again.") }
         }
     }
 
@@ -164,7 +163,7 @@ struct CreatorEarnView: View {
         VStack(alignment: .leading, spacing: MSpacing.xl) {
             VStack(alignment: .leading, spacing: MSpacing.s) {
                 Text(plan == nil ? "Sell what you make" : "Your plan").font(MFont.title)
-                Text("Subscribers pay for 30 days at a time and see every Moment you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                Text("Subscribers pay for 30 days at a time and see every post you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
             }
             VStack(alignment: .leading, spacing: MSpacing.m) {
                 TextField("Name it — “The raw frames”", text: $title).font(MFont.headline).accessibilityIdentifier("planTitle")

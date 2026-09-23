@@ -41,42 +41,18 @@ struct SocialHomeView: View {
     }
 }
 
-/// "Your first one starts here."
-struct EmptyMoments: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: MSpacing.m) {
-            Text("No Moments yet").font(MFont.title)
-            Text("Your first one starts here.").font(MFont.body).foregroundStyle(MColor.textSecondary)
-            NavigationLink(value: SocialRoute.newMoment) { Text("Create Moment").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle(tint: MColor.accent))
-        }
-        .padding(.vertical, MSpacing.l)
-        .accessibilityIdentifier("emptyFeed")
-    }
-}
-
 // MARK: - Routes
 
 enum SocialRoute: Hashable {
-    case moment(String)
-    case newMoment
-    case addSide(String)
     case profile(String)
-    case friendship(String)
     case conversation(String)
-    case editMoment(String)
-    case members(String)
     case safety
     case blockedUsers
     case followers(String, Bool)
     case editProfile
     case myMemories
-    case collections
-    case collection(String)
-    case timeMachine
     case groups
     case group(String)
-    case newMomentForGroup(String)
-    case passport
     case earn
     case storefront(String)
     case vaultSet(String)
@@ -84,10 +60,8 @@ enum SocialRoute: Hashable {
     case bookings
     case reels(String?)
     case subscriptions
-    case scan
     case inbox
     case messages
-    case place(SocialPlace)
     case identity
     case invite
     case network

@@ -387,24 +387,6 @@ final class InMemoryBackendFlowTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(p.people, 3)
     }
 
-    func testStartActivityGivesScannableLinkAndOthersJoinUntilFull() async throws {
-        let (env, backend) = await makeSocial()
-        let started = await env.social.startActivity(title: "", kind: .party, place: "Bandra", openToAnyone: true)
-        let m = try XCTUnwrap(started)
-        XCTAssertTrue(m.isLive)
-        XCTAssertEqual(m.templateID, "activity.party")
-        XCTAssertTrue(m.title.hasSuffix("night"), "default title from the activity kind")
-        let link = try XCTUnwrap(m.shareURL, "QR needs a link the moment the host screen appears")
-        XCTAssertNotNil(MomentQR.make(link.absoluteString))
-        // Someone scans: they accept the link and are in.
-        try await backend.acting(as: "u_dev") { b in _ = try await b.acceptInvite(url: link) }
-        await env.social.loadMoment(m.id)
-        XCTAssertTrue(env.social.moments[m.id]!.memberIDs.contains("u_dev"))
-        // Free tier caps attendees; the seam for charging later.
-        XCTAssertTrue(env.subscriptions.canAdmit(attendees: SubscriptionService.freeEventAttendees - 1))
-        XCTAssertFalse(env.subscriptions.canAdmit(attendees: SubscriptionService.freeEventAttendees))
-    }
-
     func testNearbyIsGeoFilteredAndPlacePagesAggregate() async throws {
         let (env, backend) = await makeSocial()
         // Bandra, Mumbai: the seeded Bastian Moment and Rahul's NOW are within 3 km; Goa is not.
@@ -559,55 +541,6 @@ final class CreatorEconomyTests: XCTestCase {
     }
 }
 
-final class MomentMechanicsTests: XCTestCase {
-    private func side(_ id: String, _ author: String, at: Date, kind: Contribution.Kind = .photo) -> Contribution {
-        Contribution(id: id, momentID: "m", authorID: author, authorName: author, kind: kind, media: kind == .text ? nil : MediaRef(kind: .photo, localRef: "x", remoteID: id), caption: "", createdAt: at, originalTimestamp: at, reactionCounts: [:], commentCount: 0, uploadState: .uploaded)
-    }
-
-    func testSameSecondPairsDifferentPeopleOnly() {
-        let t = Date(timeIntervalSince1970: 1_700_000_000)
-        let sides = [
-            side("a1", "alice", at: t), side("b1", "bob", at: t.addingTimeInterval(3)),      // pair, 3s
-            side("a2", "alice", at: t.addingTimeInterval(5)),                                // alice again: closer to b1 but b1 already used
-            side("a3", "alice", at: t.addingTimeInterval(300)), side("a4", "alice", at: t.addingTimeInterval(302)),   // same person → never a pair
-            side("c1", "cara", at: t.addingTimeInterval(600)), side("b2", "bob", at: t.addingTimeInterval(640)),      // 40s apart → outside window
-            side("t1", "bob", at: t.addingTimeInterval(3), kind: .text)                     // text never pairs
-        ]
-        let pairs = TwinFrames.pairs(sides, window: 20)
-        XCTAssertEqual(pairs.map { [$0.a.id, $0.b.id] }, [["b1", "a2"]], "closest pair wins; a1 is left out because b1 is taken")
-        XCTAssertEqual(pairs.first?.secondsApart, 2)
-    }
-
-    func testGapsFindMissingStretchesAndNameWitnesses() {
-        let t = Date(timeIntervalSince1970: 1_700_000_000)
-        let sides = [side("1", "alice", at: t), side("2", "bob", at: t.addingTimeInterval(20 * 60)), side("3", "cara", at: t.addingTimeInterval(120 * 60)), side("4", "alice", at: t.addingTimeInterval(125 * 60))]
-        let gaps = TimelineGaps.find(sides, minGap: 45 * 60)
-        XCTAssertEqual(gaps.count, 1)
-        XCTAssertEqual(gaps.first?.minutes, 100)
-        XCTAssertEqual(gaps.first?.witnesses, ["bob", "cara"])
-        XCTAssertTrue(TimelineGaps.question(for: gaps[0], momentTitle: "Goa '26").contains("Goa '26"))
-        XCTAssertTrue(TimelineGaps.find([sides[0]]).isEmpty, "one side is not a timeline")
-    }
-
-    func testRitualStreakAndNextDate() {
-        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Kolkata")!
-        let friday = cal.date(from: DateComponents(year: 2026, month: 9, day: 18, hour: 18))!   // a Friday
-        func m(_ weeksAgo: Int) -> SocialMoment {
-            let d = cal.date(byAdding: .weekOfYear, value: -weeksAgo, to: friday)!
-            return SocialMoment(id: "r\(weeksAgo)", creatorID: "c", creatorName: "C", title: "Last light", description: "", coverRef: nil, createdAt: d, startAt: d, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .publicAll, memberIDs: ["c"], memberNames: ["C"], contributionCount: 0, mediaCount: 0, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: false, templateID: Rituals.templateID, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true)
-        }
-        let series = [m(0), m(1), m(2), m(4)]   // missed week 3 → streak is 3
-        let now = cal.date(byAdding: .day, value: 2, to: friday)!   // the Sunday after
-        let s = try! XCTUnwrap(Rituals.summary(of: series[0], in: series + [m(0)].map { var x = $0; x.id = "other"; x.title = "Different"; return x }, now: now, calendar: cal))
-        XCTAssertEqual(s.occurrences, 4)
-        XCTAssertEqual(s.streak, 3)
-        XCTAssertEqual(s.weekday, 6)
-        XCTAssertEqual(cal.component(.weekday, from: s.next), 6)
-        XCTAssertTrue(s.next > now)
-        XCTAssertNil(Rituals.summary(of: { var x = m(0); x.templateID = nil; return x }(), in: [], calendar: cal))
-    }
-}
-
 @MainActor
 final class MessagingTests: XCTestCase {
     func testRepliesReactionsAndGroupChat() async throws {
@@ -637,32 +570,6 @@ final class MessagingTests: XCTestCase {
         // Unread is local: sending marks it read, a newer message from someone else makes it unread.
         env.social.markRead(gc.id)
         XCTAssertFalse(env.social.isUnread(env.social.conversations.first { $0.id == gc.id }!))
-    }
-}
-
-final class ReplayExporterTests: XCTestCase {
-    func testExportsAVerticalVideoWithTitleBeatsAndEndCard() async throws {
-        let img = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 600)).image { ctx in UIColor.orange.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 400, height: 600)) }
-        let t = Date()
-        let beats = [ReplayExporter.Beat(image: img, note: nil, author: "Rahul", time: t), .init(image: nil, note: "we're waking up at 7", author: "Sarah", time: t.addingTimeInterval(600)), .init(image: img, note: nil, author: "You", time: t.addingTimeInterval(1200))]
-        let url = try await ReplayExporter.export(title: "Goa '26", subtitle: "3 people · Goa", beats: beats, inviteLine: "moment://join/abc", options: .init(secondsPerBeat: 1.0, fps: 24, maxSeconds: 60, size: CGSize(width: 540, height: 960)))
-        let asset = AVURLAsset(url: url)
-        let duration = try await asset.load(.duration).seconds
-        XCTAssertEqual(duration, 2.2 + 3 * 1.0 + 2.6, accuracy: 0.2)
-        let tracks = try await asset.loadTracks(withMediaType: .video)
-        let track = try XCTUnwrap(tracks.first)
-        let size = try await track.load(.naturalSize)
-        XCTAssertEqual(size, CGSize(width: 540, height: 960))
-        XCTAssertGreaterThan((try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0, 10_000)
-    }
-
-    func testSixtySecondCapShortensBeatsBeforeDroppingThem() async throws {
-        let img = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 300)).image { ctx in UIColor.blue.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 200, height: 300)) }
-        let beats = (0..<30).map { ReplayExporter.Beat(image: img, note: nil, author: "P\($0)", time: Date().addingTimeInterval(Double($0) * 60)) }
-        let url = try await ReplayExporter.export(title: "Long night", subtitle: "", beats: beats, inviteLine: "x", options: .init(secondsPerBeat: 2.6, fps: 12, maxSeconds: 60, size: CGSize(width: 270, height: 480)))
-        let duration = try await AVURLAsset(url: url).load(.duration).seconds
-        XCTAssertLessThanOrEqual(duration, 60.5)
-        XCTAssertGreaterThan(duration, 50, "all 30 sides fit by shortening each beat, not by dropping them")
     }
 }
 
@@ -784,7 +691,10 @@ final class StorefrontFlowTests: XCTestCase {
         await env.social.loadStorefront("u_public")
         let sets = env.social.sets(of: "u_public")
         let free = try XCTUnwrap(sets.first { $0.isFree && !$0.isVideo })
-        let paid = try XCTUnwrap(sets.first { !$0.isFree && !$0.isVideo })
+        let subscriberSet = try XCTUnwrap(sets.first { $0.subscribersOnly })
+        await env.social.loadStorefront("u_sarah")
+        let paid = try XCTUnwrap(env.social.sets(of: "u_sarah").first { !$0.isFree && !$0.subscribersOnly && !$0.isVideo })
+        XCTAssertFalse(env.social.isUnlocked(subscriberSet), "the subscription hasn't been bought")
         XCTAssertTrue(env.social.isUnlocked(free)); XCTAssertFalse(env.social.isUnlocked(paid))
         // Free set opens for anyone; the paid one refuses.
         await env.social.loadItems(free.id)
@@ -795,11 +705,11 @@ final class StorefrontFlowTests: XCTestCase {
         // Buy it: unlocked, and the sale shows on the creator's side with the right take.
         let ok = await env.social.buySet(paid)
         XCTAssertTrue(ok); XCTAssertTrue(env.social.isUnlocked(paid))
-        XCTAssertEqual(env.social.items(paid.id).count, 4)
+        XCTAssertEqual(env.social.items(paid.id).count, 3)
         var sales: [VaultPurchase] = []
-        try await backend.acting(as: "u_public") { b in sales = try await b.vaultSales() }
-        XCTAssertEqual(sales.map(\.amountMinor), [49900])
-        XCTAssertEqual(CreatorEconomics.creatorTake(sales[0].amountMinor, rail: .web), 449.1, accuracy: 0.01)
+        try await backend.acting(as: "u_sarah") { b in sales = try await b.vaultSales() }
+        XCTAssertEqual(sales.map(\.amountMinor), [19900])
+        XCTAssertEqual(CreatorEconomics.creatorTake(19900, rail: .web), 179.1, accuracy: 0.01)
         // Buying twice doesn't charge twice.
         _ = await env.social.buySet(paid)
         XCTAssertEqual(env.social.myPurchases.filter { $0.setID == paid.id }.count, 1)
@@ -837,36 +747,33 @@ final class StorefrontFlowTests: XCTestCase {
 }
 
 final class CreatorFeedTests: XCTestCase {
-    private func set(_ id: String, _ creator: String, price: Int, visible: Bool = true, at: Date = .now) -> VaultSet {
-        VaultSet(id: id, creatorID: creator, creatorName: creator, title: id, blurb: "", priceMinor: price, currency: "INR", cover: nil, itemCount: 3, isVideo: false, createdAt: at, visible: visible)
-    }
-    private func paidMoment(_ id: String, _ creator: String, locked: Bool, at: Date = .now) -> SocialMoment {
-        var m = SocialMoment(id: id, creatorID: creator, creatorName: creator, title: id, description: "", coverRef: nil, createdAt: at, startAt: at, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .subscribers, memberIDs: [creator], memberNames: [creator], contributionCount: 0, mediaCount: 4, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: false, templateID: nil, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true)
-        m.isLocked = locked
-        return m
+    private func set(_ id: String, _ creator: String, price: Int, subscribersOnly: Bool = false, visible: Bool = true, at: Date = .now) -> VaultSet {
+        VaultSet(id: id, creatorID: creator, creatorName: creator, title: id, blurb: "", priceMinor: price, currency: "INR", cover: nil, itemCount: 3, isVideo: false, createdAt: at, visible: visible, subscribersOnly: subscribersOnly)
     }
 
     func testGatesSayExactlyWhatOpensEachPost() {
         let plan = CreatorPlan(creatorID: "c", creatorName: "C", title: "Inside", pitch: "", priceMinor: 49900, currency: "INR", perks: [], payoutHint: "", createdAt: .now)
         let posts = CreatorFeedBuilder.build(
-            sets: [set("free", "c", price: 0), set("paid", "c", price: 49900), set("bought", "c", price: 19900), set("mine", "me", price: 9900), set("hidden", "c", price: 100, visible: false)],
-            moments: [paidMoment("locked", "c", locked: true), paidMoment("subbed", "d", locked: true)],
-            plans: ["c": plan],
-            purchases: ["bought"], subscribedTo: ["d"], me: "me")
+            sets: [set("free", "c", price: 0), set("paid", "c", price: 49900), set("bought", "c", price: 19900),
+                   set("mine", "me", price: 9900), set("hidden", "c", price: 100, visible: false),
+                   set("subs", "c", price: 0, subscribersOnly: true), set("subbed", "d", price: 0, subscribersOnly: true),
+                   set("orphan", "e", price: 0, subscribersOnly: true)],
+            plans: ["c": plan], purchases: ["bought"], subscribedTo: ["d"], me: "me")
         func gate(_ id: String) -> CreatorPost.Gate? { posts.first { $0.id == id }?.gate }
         XCTAssertEqual(gate("s_free"), .open)
         XCTAssertEqual(gate("s_bought"), .open, "what you've paid for is open — the feed is also your library")
         XCTAssertEqual(gate("s_mine"), .open)
         XCTAssertEqual(gate("s_paid"), .buy(priceMinor: 49900, currency: "INR"))
-        XCTAssertEqual(gate("m_locked"), .subscribe(tier: .t2, title: "Inside"))
-        XCTAssertEqual(gate("m_subbed"), .open)
+        XCTAssertEqual(gate("s_subs"), .subscribe(tier: .t2, title: "Inside"), "the subscription is what opens it")
+        XCTAssertEqual(gate("s_subbed"), .open, "already subscribed to them")
         XCTAssertNil(gate("s_hidden"), "a hidden set isn't in anyone's feed")
+        XCTAssertNil(gate("s_orphan"), "a lock with no plan behind it would be unopenable, so it isn't shown")
         XCTAssertEqual(posts.first { $0.id == "s_paid" }?.priceLabel(Locale(identifier: "en_IN"))?.filter(\.isNumber), "499")
     }
 
     func testFeedIsNewestFirstAndSkipsBlocked() {
         let old = Date().addingTimeInterval(-86400)
-        let posts = CreatorFeedBuilder.build(sets: [set("a", "c", price: 0, at: old), set("b", "c", price: 0), set("x", "blocked", price: 0)], moments: [], plans: [:], purchases: [], subscribedTo: [], me: "me", blocked: ["blocked"])
+        let posts = CreatorFeedBuilder.build(sets: [set("a", "c", price: 0, at: old), set("b", "c", price: 0), set("x", "blocked", price: 0)], plans: [:], purchases: [], subscribedTo: [], me: "me", blocked: ["blocked"])
         XCTAssertEqual(posts.map(\.id), ["s_b", "s_a"])
     }
 
@@ -878,15 +785,15 @@ final class CreatorFeedTests: XCTestCase {
         await env.social.refreshCreatorFeed()
         let feed = env.social.creatorFeed
         XCTAssertTrue(feed.contains { $0.creatorID == "u_public" && !$0.isLocked }, "the free set is open")
-        // Both kinds of lock are in the feed: a set you buy, and a Moment the subscription opens.
-        let paid = try XCTUnwrap(feed.first { $0.creatorID == "u_public" && $0.setID != nil && $0.isLocked })
-        if case .buy(let minor, _) = paid.gate { XCTAssertEqual(minor, 49900) } else { XCTFail("paid set should ask to buy, got \(paid.gate)") }
-        let subOnly = try XCTUnwrap(feed.first { $0.momentID != nil && $0.isLocked })
-        if case .subscribe(let tier, _) = subOnly.gate { XCTAssertEqual(tier, .t2) } else { XCTFail("subscribers-only Moment should ask to subscribe, got \(subOnly.gate)") }
+        // Both kinds of lock are in the feed: one you buy, one the subscription opens.
+        let paid = try XCTUnwrap(feed.first { $0.creatorID == "u_sarah" && $0.isLocked && !$0.isVideo })
+        if case .buy(let minor, _) = paid.gate { XCTAssertEqual(minor, 19900) } else { XCTFail("a priced set should ask to buy, got \(paid.gate)") }
+        let subOnly = try XCTUnwrap(feed.first { $0.creatorID == "u_public" && $0.isLocked })
+        if case .subscribe(let tier, _) = subOnly.gate { XCTAssertEqual(tier, .t2) } else { XCTFail("a subscribers-only set should ask to subscribe, got \(subOnly.gate)") }
         // Buying it opens that card without touching anything else.
-        await env.social.loadStorefront("u_public")
+        await env.social.loadStorefront("u_sarah")
         let setID = try XCTUnwrap(paid.setID)
-        let set = try XCTUnwrap(env.social.sets(of: "u_public").first { $0.id == setID })
+        let set = try XCTUnwrap(env.social.sets(of: "u_sarah").first { $0.id == setID })
         _ = await env.social.buySet(set)
         await env.social.refreshCreatorFeed()
         XCTAssertFalse(try XCTUnwrap(env.social.creatorFeed.first { $0.id == paid.id }).isLocked)

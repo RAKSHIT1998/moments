@@ -448,9 +448,12 @@ struct VaultSet: Codable, Sendable, Equatable, Hashable, Identifiable {
     var isVideo: Bool
     var createdAt: Date
     var visible: Bool
-    var isFree: Bool { priceMinor == 0 }
+    /// Subscribers-only: no separate price, the subscription opens it. This is what a subscription buys.
+    var subscribersOnly: Bool = false
+    var isFree: Bool { priceMinor == 0 && !subscribersOnly }
     func priceLabel(_ locale: Locale = .current) -> String {
-        isFree ? "Free" : (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0)))
+        if subscribersOnly { return "Subscribers" }
+        return isFree ? "Free" : (Double(priceMinor) / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0)))
     }
 }
 

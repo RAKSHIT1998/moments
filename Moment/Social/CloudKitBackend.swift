@@ -851,7 +851,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let r = (try? await publicDB.record(for: CKRecord.ID(recordName: id))) ?? CKRecord(recordType: "VaultSet", recordID: CKRecord.ID(recordName: id))
         if let owner = r["creatorID"] as? String, owner != me.id { throw SocialError.notAllowed }
         r["creatorID"] = me.id; r["creatorName"] = me.displayName; r["title"] = set.title; r["blurb"] = set.blurb
-        r["priceMinor"] = set.priceMinor; r["currency"] = set.currency; r["itemCount"] = items.count; r["isVideo"] = set.isVideo ? 1 : 0; r["visible"] = set.visible ? 1 : 0
+        r["priceMinor"] = set.subscribersOnly ? 0 : set.priceMinor; r["currency"] = set.currency; r["itemCount"] = items.count; r["isVideo"] = set.isVideo ? 1 : 0; r["visible"] = set.visible ? 1 : 0; r["subscribersOnly"] = set.subscribersOnly ? 1 : 0
         if let ref = set.cover, let local = ref.localRef, let d = try? await self.media.load(local), let url = try? Self.tempFile(d, ext: "jpg") { r["cover"] = CKAsset(fileURL: url) }
         let saved = try await save(r, in: publicDB)
         // Items live in the creator's private zone; buyers are added to the set's share when they pay.
@@ -870,7 +870,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let sets = try await vaultSets(creatorID: (try? await publicDB.record(for: CKRecord.ID(recordName: setID)))?["creatorID"] as? String ?? me.id)
         guard let set = sets.first(where: { $0.id == setID }) else { throw SocialError.notFound }
         let bought = try await myPurchases().contains { $0.setID == setID }
-        guard set.creatorID == me.id || set.isFree || bought else { throw SocialError.notAllowed }
+        let subscribed = try await mySubscriptions().contains { $0.creatorID == set.creatorID && $0.isActive }
+        guard set.creatorID == me.id || set.isFree || bought || (set.subscribersOnly && subscribed) else { throw SocialError.notAllowed }
         let q = CKQuery(recordType: "VaultItem", predicate: NSPredicate(format: "setID == %@", setID)); q.sortDescriptors = [NSSortDescriptor(key: "index", ascending: true)]
         var out: [VaultItem] = []
         for db in [privateDB, sharedDB] {
@@ -905,7 +906,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
     static func vaultSet(from r: CKRecord, media: MediaStore) async -> VaultSet {
         var cover: MediaRef? = nil
         if let a = r["cover"] as? CKAsset, let u = a.fileURL, let d = try? Data(contentsOf: u), let local = try? await media.store(d, extension: "jpg") { cover = MediaRef(kind: .photo, localRef: local, remoteID: r.recordID.recordName + "/cover") }
-        return VaultSet(id: r.recordID.recordName, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", blurb: r["blurb"] as? String ?? "", priceMinor: r["priceMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", cover: cover, itemCount: r["itemCount"] as? Int ?? 0, isVideo: (r["isVideo"] as? Int ?? 0) == 1, createdAt: r.creationDate ?? .now, visible: (r["visible"] as? Int ?? 1) == 1)
+        return VaultSet(id: r.recordID.recordName, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", title: r["title"] as? String ?? "", blurb: r["blurb"] as? String ?? "", priceMinor: r["priceMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", cover: cover, itemCount: r["itemCount"] as? Int ?? 0, isVideo: (r["isVideo"] as? Int ?? 0) == 1, createdAt: r.creationDate ?? .now, visible: (r["visible"] as? Int ?? 1) == 1, subscribersOnly: (r["subscribersOnly"] as? Int ?? 0) == 1)
     }
     static func purchase(from r: CKRecord) -> VaultPurchase {
         VaultPurchase(id: r.recordID.recordName, setID: r["setID"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", buyerID: r["buyerID"] as? String ?? "", buyerName: r["buyerName"] as? String ?? "", amountMinor: r["amountMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", rail: PaymentRail(rawValue: r["rail"] as? String ?? "") ?? .none, reference: r["reference"] as? String, createdAt: r.creationDate ?? .now)

@@ -24,7 +24,7 @@ struct NetworkSettingsView: View {
                 }
                 Section {
                     Toggle(isOn: Binding(get: { settings.meshEnabled }, set: { settings.meshEnabled = $0; Task { await env.reloadRelays() } })) { Label("Phone‑to‑phone", systemImage: "iphone.radiowaves.left.and.right") }
-                } footer: { Text("When on, people in the same room get your Moments instantly — even offline. Others only ever see signed events, never your identity beyond your MOMENT ID.") }
+                } footer: { Text("When on, people in the same room get your posts instantly — even offline. Others only ever see signed events, never your identity beyond your MOMENT ID.") }
                 Section {
                     ForEach(settings.relayURLs, id: \.self) { url in
                         HStack { Image(systemName: "antenna.radiowaves.left.and.right").foregroundStyle(MColor.textSecondary); Text(url).font(MFont.body.monospaced()).lineLimit(1).truncationMode(.middle) }

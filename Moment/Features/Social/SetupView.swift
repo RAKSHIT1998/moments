@@ -23,15 +23,15 @@ struct SetupView: View {
                     VStack(alignment: .leading, spacing: MSpacing.s) {
                         Text("SET UP ONCE").font(MFont.eyebrow).tracking(1.5).foregroundStyle(MColor.accent)
                         Text("Make it yours.").displayStyle()
-                        Text("A minute now, then it's just Moments. Skip anything — you can do it later from Settings.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                        Text("A minute now, then you're in. Skip anything — you can do it later from Settings.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     }
                     AccountBanner()
-                    step(done: profileDone, symbol: "person.crop.circle", title: "Your name & photo", detail: "How you appear in the Moments you're part of.", action: "Edit") { showProfile = true }
-                    step(done: notificationsGranted == true, symbol: "bell.badge", title: "Know when your Moments grow", detail: "\"Rahul added 8 photos\" — one alert per Moment, never the photos.", action: notificationsGranted == false ? "Off" : "Allow") {
+                    step(done: profileDone, symbol: "person.crop.circle", title: "Your name & photo", detail: "How you appear on your page and in chats.", action: "Edit") { showProfile = true }
+                    step(done: notificationsGranted == true, symbol: "bell.badge", title: "Know when you get paid", detail: "\"Rahul subscribed\" — sales, tips and asks, never the content.", action: notificationsGranted == false ? "Off" : "Allow") {
                         Task { notificationsGranted = await env.notifications.requestAuthorization() }
                     }
-                    step(done: peopleDone, symbol: "person.2", title: "Find your people", detail: "Follow the friends you make Moments with. Their sides show up next to yours.", action: "Search") { showPeople = true }
-                    step(done: groupDone, symbol: "person.3", title: "Start a group", detail: "The crew, family, work — a private space with its own Moments and chat.", action: "Create") { showGroup = true }
+                    step(done: peopleDone, symbol: "person.2", title: "Find your people", detail: "Follow the creators you want in your feed.", action: "Search") { showPeople = true }
+                    step(done: groupDone, symbol: "person.3", title: "Start a group", detail: "The crew, family, work — one private chat for the people in it.", action: "Create") { showGroup = true }
                     #if DEBUG
                     demoCard
                     #endif
@@ -42,7 +42,6 @@ struct SetupView: View {
             }
             .background(AmbientBackdrop().ignoresSafeArea())
             .sheet(isPresented: $showProfile) { NavigationStack { EditProfileView() } }
-            .sheet(isPresented: $showPeople, onDismiss: { Task { for u in picked { await env.social.follow(u.id) }; picked = [] } }) { PeoplePickerSheet(selected: $picked) }
             .sheet(isPresented: $showGroup) { GroupEditorSheet() }
             .task { await env.social.start(); notificationsGranted = (await env.notifications.authorizationStatus()) == .authorized ? true : nil }
         }

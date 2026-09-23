@@ -119,79 +119,6 @@ struct ReactionPicker: View {
     }
 }
 
-/// A Moment in a list: the photograph, a title, one line of context. Nothing else.
-struct MomentFeedCard: View {
-    @Environment(AppEnvironment.self) private var env
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let moment: SocialMoment
-    var reason: String? = nil
-    @State private var burst: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: MSpacing.m) {
-            ZStack(alignment: .bottomLeading) {
-                SocialImage(ref: moment.coverRef).frame(height: 360).frame(maxWidth: .infinity)
-                    .blur(radius: moment.isTeaser && !moment.memberIDs.contains(env.social.myID) ? 24 : 0)
-                LinearGradient(colors: [.clear, .clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
-                if moment.isLive {
-                    HStack(spacing: 5) { Circle().fill(.white).frame(width: 6, height: 6); Text("Live").font(MFont.caption).foregroundStyle(.white) }
-                        .padding(.horizontal, 10).padding(.vertical, 5).background(.black.opacity(0.35), in: Capsule())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(MSpacing.m)
-                }
-                Text(moment.title).font(MFont.heroSmall).foregroundStyle(.white).lineLimit(2).padding(MSpacing.l)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: MRadius.card, style: .continuous))
-            .contentShape(Rectangle())
-            .onTapGesture(count: 2) {
-                Haptics.saved(); burst = ReactionKind.core.emoji
-                Task { await env.social.react(momentID: moment.id, kind: .core) }
-            }
-            HStack(spacing: MSpacing.s) {
-                AvatarStack(names: moment.memberNames, size: 22, max: 3)
-                Text(metaLine).font(MFont.footnote).foregroundStyle(MColor.textSecondary).lineLimit(1)
-                Spacer()
-                Text("See Moment →").font(.subheadline.weight(.medium)).foregroundStyle(MColor.textPrimary)
-            }
-            .padding(.horizontal, 2)
-        }
-        .reactionBurst($burst)
-        .scrollTransition(.interactive, axis: .vertical) { content, phase in
-            content.opacity(phase.isIdentity ? 1 : 0.85).scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.985)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(moment.title). \(metaLine)")
-        .accessibilityIdentifier("feedMoment-\(moment.id)")
-    }
-
-    private var metaLine: String {
-        var parts: [String] = ["\(moment.memberIDs.count) \(moment.memberIDs.count == 1 ? "person" : "people")"]
-        if let s = moment.startAt, let e = moment.endAt, let d = Calendar.current.dateComponents([.day], from: s, to: e).day, d >= 1 { parts.append("\(d + 1) days") }
-        else { parts.append(moment.dateLabel) }
-        if let p = moment.coarsePlace, !p.isEmpty { parts.append(p) }
-        return parts.joined(separator: " · ")
-    }
-}
-
-/// Small square tile for grids (profile, discover).
-struct MomentTile: View {
-    let moment: SocialMoment
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            SocialImage(ref: moment.coverRef).aspectRatio(1, contentMode: .fill)
-            LinearGradient(colors: [.clear, .clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(moment.title).font(.subheadline.weight(.medium)).foregroundStyle(.white).lineLimit(2)
-                Text("\(moment.memberIDs.count) \(moment.memberIDs.count == 1 ? "person" : "people")").font(.caption2).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
-            }
-            .padding(MSpacing.s)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: MRadius.tile, style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(moment.title)
-        .accessibilityIdentifier("tile-\(moment.id)")
-    }
-}
-
 /// iCloud not signed in / offline / restricted banner.
 struct AccountBanner: View {
     @Environment(AppEnvironment.self) private var env
@@ -221,8 +148,8 @@ struct AccountBanner: View {
     }
     private var message: String {
         switch env.social.accountStatus {
-        case .noAccount: "Shared Moments use your iCloud account. Settings › Apple Account › iCloud."
-        case .offline: "Your Moments are still here. Uploads resume when you're back."
+        case .noAccount: "Publishing and following use your iCloud account. Settings › Apple Account › iCloud."
+        case .offline: "Everything you've unlocked is still here. Uploads resume when you're back."
         case .restricted: "Parental controls or MDM are blocking iCloud for this app."
         default: "Checking your account."
         }
@@ -264,4 +191,48 @@ struct SocialErrorAlert: ViewModifier {
 
 extension SocialService {
     func clearError() { lastError = nil }
+}
+
+/// Report a person or a post. Reports are signed records the creator's side never sees;
+/// on the decentralised network they reach whoever runs the relay you're on.
+struct ReportSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    var userID: String? = nil
+    var setID: String? = nil
+    @State private var reason: UserReport.Reason = .spam
+    @State private var details = ""
+    @State private var sent = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("What's wrong") {
+                    Picker("Reason", selection: $reason) { ForEach(UserReport.Reason.allCases, id: \.self) { Text($0.label).tag($0) } }
+                        .pickerStyle(.inline).labelsHidden()
+                }
+                Section("Anything to add") {
+                    TextField("Optional", text: $details, axis: .vertical).lineLimit(2...5).accessibilityIdentifier("reportDetails")
+                }
+                Section {
+                    Button {
+                        Task {
+                            await env.social.report(userID: userID, momentID: setID, reason: reason, details: details)
+                            sent = true
+                            try? await Task.sleep(for: .seconds(1)); dismiss()
+                        }
+                    } label: { Text(sent ? "Sent" : "Send report").frame(maxWidth: .infinity) }
+                        .disabled(sent).accessibilityIdentifier("sendReport")
+                    if let userID {
+                        Button("Block them too", role: .destructive) { Task { await env.social.block(userID); dismiss() } }
+                    }
+                } footer: {
+                    Text("Blocking hides them from you everywhere, immediately. Reports are read by whoever runs the relay; we hold nothing centrally.")
+                }
+            }
+            .navigationTitle("Report")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
 }
