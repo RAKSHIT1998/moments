@@ -57,6 +57,7 @@ final class AnalyticsService {
         case ppvSent = "ppv_sent"
         case ppvUnlocked = "ppv_unlocked"
         case massMessageSent = "mass_message_sent"
+        case callCompleted = "call_completed"
     }
 
     /// Number of Moments this person made that became shared (someone else was invited).

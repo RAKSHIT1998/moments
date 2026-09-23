@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Home: a stack of nights. One Moment fills the screen, everyone who was there is on it, swipe for the next.
-/// NOW and the stories strip float on top in glass.
+/// Home: the creator feed, with the header over it. A call you can join right now sits above everything,
+/// because it's the one thing on this screen with a deadline.
 struct SocialHomeView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var showNew = false
@@ -9,12 +9,38 @@ struct SocialHomeView: View {
     var body: some View {
         NavigationStack {
             CreatorFeedView()
-                .safeAreaInset(edge: .top) { header }
+                .safeAreaInset(edge: .top) { VStack(spacing: 0) { header; joinBanner } }
                 .toolbar(.hidden, for: .navigationBar)
                 .socialDestinations()
                 .sheet(isPresented: $showNew) { EditSetSheet(set: nil) }
         }
         .modifier(SocialErrorAlert())
+    }
+
+    /// A confirmed call whose window is open. Never shown otherwise — this is not a nag.
+    @ViewBuilder private var joinBanner: some View {
+        if let call = env.social.callReadyToJoin {
+            NavigationLink(value: SocialRoute.call(call.id)) {
+                HStack(spacing: MSpacing.m) {
+                    Image(systemName: call.kind.symbol).font(.headline)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("\(call.kind.label) with \(call.creatorID == env.social.myID ? call.buyerName : call.creatorName)")
+                            .font(.subheadline.weight(.semibold))
+                        Text("\(call.paidMinutes) minutes · starts when you both join").font(MFont.caption).opacity(0.85)
+                    }
+                    Spacer()
+                    Text("Join").font(.caption.weight(.bold))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.white.opacity(0.25), in: Capsule())
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, MSpacing.page).padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(MColor.accent)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("joinCallBanner")
+        }
     }
 
     /// Wordmark, the people you pay, and the two inboxes.
@@ -58,6 +84,7 @@ enum SocialRoute: Hashable {
     case vaultSet(String)
     case studio
     case bookings
+    case call(String)
     case reels(String?)
     case subscriptions
     case inbox

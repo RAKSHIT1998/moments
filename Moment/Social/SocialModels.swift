@@ -498,6 +498,9 @@ struct BookingOffer: Codable, Sendable, Equatable, Hashable, Identifiable {
         }
         /// Only calls need a length; a photo or a custom doesn't.
         var hasDuration: Bool { self == .videoCall || self == .voiceCall || self == .meet }
+        /// Happens inside the app, with a camera or a microphone and a clock.
+        var isCall: Bool { self == .videoCall || self == .voiceCall }
+        var wantsCamera: Bool { self == .videoCall }
     }
     var id: String
     var creatorID: String
@@ -548,6 +551,29 @@ struct Booking: Codable, Sendable, Equatable, Hashable, Identifiable {
     /// Room the two of them join at the time. Empty until accepted.
     var roomID: String
     var createdAt: Date
+    /// When the media actually connected, and when the call ended. Both nil until it happens; these are
+    /// what the receipt is built from, never the scheduled time.
+    var connectedAt: Date? = nil
+    var endedAt: Date? = nil
+    /// Minutes bought mid-call, on top of `minutes`.
+    var extraMinutes: Int = 0
+
+    /// A call (or a meet) the two of them still owe each other time for, so the slot stays blocked.
+    var holdsTime: Bool { kind.hasDuration && (status == .requested || status == .accepted) && endedAt == nil }
+    /// Ready to join: confirmed, has a room, and hasn't already happened.
+    var isJoinable: Bool { status == .accepted && !roomID.isEmpty && endedAt == nil && kind.isCall }
+    /// The window the two of them may join in: from five minutes early until the paid time would be up.
+    func joinWindow(graceMinutes: Int = 5) -> ClosedRange<Date> {
+        let opens = startsAt.addingTimeInterval(-Double(graceMinutes) * 60)
+        let closes = startsAt.addingTimeInterval(Double(max(1, minutes + extraMinutes) + graceMinutes) * 60)
+        return opens...closes
+    }
+    var paidMinutes: Int { minutes + extraMinutes }
+    func totalLabel(_ locale: Locale = .current) -> String {
+        let per = minutes > 0 ? Double(amountMinor) / Double(minutes) : 0
+        let total = Double(amountMinor) + per * Double(extraMinutes)
+        return (total / 100).formatted(.currency(code: currency).locale(locale).precision(.fractionLength(0)))
+    }
 }
 
 /// Where else to find the creator. Shown on their profile, verified only by them saying so.

@@ -27,6 +27,7 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
     private var zoneReady = false
     private var coverCache: [String: String] = [:]
     private var shareURLCache: [String: URL?] = [:]
+    private var callSignalPoller: Task<Void, Never>?
 
     init(media: MediaStore, container: CKContainer = CKContainer(identifier: CloudKitBackend.containerID)) {
         self.container = container
@@ -959,6 +960,68 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         let b = (try? await query(CKQuery(recordType: "Booking", predicate: NSPredicate(format: "creatorID == %@", me.id)), in: publicDB, limit: 200)) ?? []
         return (a + b).map(Self.booking(from:)).sorted { $0.startsAt > $1.startsAt }
     }
+    func availability(for creatorID: String) async throws -> CreatorAvailability {
+        guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "avail_\(creatorID)")), let d = r["json"] as? Data,
+              let a = try? JSONDecoder().decode(CreatorAvailability.self, from: d) else {
+            return CreatorAvailability(creatorID: creatorID, windows: [], acceptingBookings: false)
+        }
+        return a
+    }
+    func saveAvailability(_ availability: CreatorAvailability) async throws {
+        let me = try await currentUser()
+        var a = availability; a.creatorID = me.id
+        let id = CKRecord.ID(recordName: "avail_\(me.id)")
+        let r = (try? await publicDB.record(for: id)) ?? CKRecord(recordType: "CreatorAvailability", recordID: id)
+        r["userID"] = me.id; r["json"] = try JSONEncoder().encode(a)
+        _ = try await save(r, in: publicDB)
+    }
+    func busySlots(creatorID: String) async throws -> [DateInterval] {
+        let rows = (try? await query(CKQuery(recordType: "Booking", predicate: NSPredicate(format: "creatorID == %@", creatorID)), in: publicDB, limit: 200)) ?? []
+        return rows.map(Self.booking(from:)).filter(\.holdsTime).map { DateInterval(start: $0.startsAt, duration: Double(max(1, $0.minutes)) * 60) }
+    }
+    func recordCall(id: String, connectedAt: Date?, endedAt: Date?, extraMinutes: Int) async throws -> Booking {
+        let me = try await currentUser()
+        let r = try await publicDB.record(for: CKRecord.ID(recordName: id))
+        guard r["creatorID"] as? String == me.id || r["buyerID"] as? String == me.id else { throw SocialError.notAllowed }
+        if let connectedAt, r["connectedAt"] == nil { r["connectedAt"] = connectedAt }
+        if let endedAt { r["endedAt"] = endedAt; r["status"] = Booking.Status.done.rawValue }
+        if extraMinutes > 0 { r["extraMinutes"] = max(r["extraMinutes"] as? Int ?? 0, extraMinutes) }
+        return Self.booking(from: try await save(r, in: publicDB))
+    }
+
+    /// CloudKit has no live channel, so a call handshake is a short-lived record the other phone polls
+    /// for. It costs a second or two of setup; the media itself never touches iCloud.
+    func sendCallSignal(_ signal: CallSignal, to peerID: String) async throws {
+        let me = try await currentUser()
+        let r = CKRecord(recordType: "CallSignal", recordID: CKRecord.ID(recordName: "sig_\(UUID().uuidString)"))
+        r["toID"] = peerID; r["fromID"] = me.id; r["bookingID"] = signal.bookingID
+        r["json"] = try JSONEncoder().encode(signal)
+        r["sentAt"] = signal.sentAt
+        _ = try await save(r, in: publicDB)
+    }
+    func onCallSignal(_ handler: @escaping @Sendable (CallSignal, String) -> Void) async {
+        callSignalPoller?.cancel()
+        guard let me = try? await currentUser() else { return }
+        callSignalPoller = Task { [weak self] in
+            var seen = Set<String>()
+            while !Task.isCancelled {
+                if let self {
+                    let since = Date.now.addingTimeInterval(-120)
+                    let p = NSPredicate(format: "toID == %@ AND sentAt > %@", me.id, since as NSDate)
+                    let rows = (try? await self.query(CKQuery(recordType: "CallSignal", predicate: p), in: self.publicDB, limit: 50)) ?? []
+                    for r in rows where !seen.contains(r.recordID.recordName) {
+                        seen.insert(r.recordID.recordName)
+                        guard let d = r["json"] as? Data, let sig = try? JSONDecoder().decode(CallSignal.self, from: d),
+                              let from = r["fromID"] as? String else { continue }
+                        handler(sig, from)
+                        _ = try? await self.publicDB.deleteRecord(withID: r.recordID)
+                    }
+                }
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
     func creatorLinks(for userID: String) async throws -> CreatorLinks {
         guard let r = try? await publicDB.record(for: CKRecord.ID(recordName: "links_\(userID)")), let d = r["json"] as? Data else { return CreatorLinks() }
         return (try? JSONDecoder().decode(CreatorLinks.self, from: d)) ?? CreatorLinks()
@@ -974,7 +1037,8 @@ final class CloudKitBackend: SocialBackend, @unchecked Sendable {
         BookingOffer(id: r.recordID.recordName, creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", kind: BookingOffer.Kind(rawValue: r["kind"] as? String ?? "") ?? .videoCall, minutes: r["minutes"] as? Int ?? 15, priceMinor: r["priceMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", note: r["note"] as? String ?? "", active: (r["active"] as? Int ?? 1) == 1)
     }
     static func booking(from r: CKRecord) -> Booking {
-        Booking(id: r.recordID.recordName, offerID: r["offerID"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", buyerID: r["buyerID"] as? String ?? "", buyerName: r["buyerName"] as? String ?? "", kind: BookingOffer.Kind(rawValue: r["kind"] as? String ?? "") ?? .videoCall, minutes: r["minutes"] as? Int ?? 15, amountMinor: r["amountMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", startsAt: r["startsAt"] as? Date ?? .now, status: Booking.Status(rawValue: r["status"] as? String ?? "") ?? .requested, note: r["note"] as? String ?? "", rail: PaymentRail(rawValue: r["rail"] as? String ?? "") ?? .none, reference: r["reference"] as? String, roomID: r["roomID"] as? String ?? "", createdAt: r.creationDate ?? .now)
+        Booking(id: r.recordID.recordName, offerID: r["offerID"] as? String ?? "", creatorID: r["creatorID"] as? String ?? "", creatorName: r["creatorName"] as? String ?? "", buyerID: r["buyerID"] as? String ?? "", buyerName: r["buyerName"] as? String ?? "", kind: BookingOffer.Kind(rawValue: r["kind"] as? String ?? "") ?? .videoCall, minutes: r["minutes"] as? Int ?? 15, amountMinor: r["amountMinor"] as? Int ?? 0, currency: r["currency"] as? String ?? "INR", startsAt: r["startsAt"] as? Date ?? .now, status: Booking.Status(rawValue: r["status"] as? String ?? "") ?? .requested, note: r["note"] as? String ?? "", rail: PaymentRail(rawValue: r["rail"] as? String ?? "") ?? .none, reference: r["reference"] as? String, roomID: r["roomID"] as? String ?? "", createdAt: r.creationDate ?? .now,
+                connectedAt: r["connectedAt"] as? Date, endedAt: r["endedAt"] as? Date, extraMinutes: r["extraMinutes"] as? Int ?? 0)
     }
 
     func markSeen(conversationID: String, lastMessageID: String) async throws {

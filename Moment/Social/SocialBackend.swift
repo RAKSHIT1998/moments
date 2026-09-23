@@ -128,6 +128,12 @@ protocol SocialBackend: AnyObject, Sendable {
     func myPurchases() async throws -> [VaultPurchase]
     /// Sales of my sets.
     func vaultSales() async throws -> [VaultPurchase]
+    /// When this creator takes calls. An empty/closed one means "not taking bookings".
+    func availability(for creatorID: String) async throws -> CreatorAvailability
+    func saveAvailability(_ availability: CreatorAvailability) async throws
+    /// The creator's booked time as bare intervals — free/busy only. A buyer picking a slot never
+    /// learns who the other bookings are with.
+    func busySlots(creatorID: String) async throws -> [DateInterval]
     func bookingOffers(creatorID: String) async throws -> [BookingOffer]
     func saveBookingOffer(_ offer: BookingOffer) async throws -> BookingOffer
     func deleteBookingOffer(id: String) async throws
@@ -137,6 +143,13 @@ protocol SocialBackend: AnyObject, Sendable {
     func quoteBooking(id: String, amountMinor: Int, currency: String, note: String) async throws -> Booking
     func setBookingStatus(id: String, status: Booking.Status) async throws -> Booking
     func myBookings() async throws -> [Booking]
+    /// Records what actually happened on a call: when it connected, when it ended, minutes added
+    /// mid-call. This is what the receipt and the earnings are built from.
+    func recordCall(id: String, connectedAt: Date?, endedAt: Date?, extraMinutes: Int) async throws -> Booking
+    /// Sends one sealed call-setup message to the other person. Never stored by anything in between.
+    func sendCallSignal(_ signal: CallSignal, to peerID: String) async throws
+    /// Delivers call-setup messages addressed to me, with the sender's id.
+    func onCallSignal(_ handler: @escaping @Sendable (CallSignal, String) -> Void) async
     func creatorLinks(for userID: String) async throws -> CreatorLinks
     func saveCreatorLinks(_ links: CreatorLinks) async throws
     func tip(creatorID: String, momentID: String?, amount: CreatorTip.Amount, note: String, transactionID: String?) async throws -> CreatorTip

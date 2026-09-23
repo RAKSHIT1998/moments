@@ -223,27 +223,52 @@ struct BookSheet: View {
     @Environment(\.dismiss) private var dismiss
     let offer: BookingOffer
     @State private var when = Date().addingTimeInterval(3600)
+    @State private var slot: Date?
     @State private var note = ""
     @State private var sent = false
+    @State private var loadedHours = false
+
+    private var availability: CreatorAvailability? { env.social.availabilityByCreator[offer.creatorID] }
+    /// A call is booked into the creator's hours. A shoot or a custom is a conversation, so it keeps
+    /// the open date picker.
+    private var usesSlots: Bool { offer.kind.hasDuration && (availability?.isOpen ?? false) }
+    private var chosen: Date { usesSlots ? (slot ?? when) : when }
+    private var canSend: Bool { !env.social.busy && (!usesSlots || slot != nil) }
+
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: MSpacing.l) {
             Text(offer.minutes > 0 ? "\(offer.kind.label) · \(offer.minutes) min" : offer.kind.label).font(MFont.title)
             if !offer.note.isEmpty { Text(offer.note).font(MFont.body).foregroundStyle(MColor.textSecondary) }
-            DatePicker("When", selection: $when, in: Date()...).datePickerStyle(.compact)
+            if usesSlots, let a = availability {
+                SlotPicker(slots: env.social.slots(for: offer), creatorZone: a.timeZone, selection: $slot)
+            } else {
+                if offer.kind.hasDuration {
+                    Text("They haven't set hours yet — pick a time and they'll confirm or suggest another.")
+                        .font(MFont.footnote).foregroundStyle(MColor.textSecondary)
+                }
+                DatePicker("When", selection: $when, in: Date()...).datePickerStyle(.compact)
+            }
             TextField("Anything they should know", text: $note, axis: .vertical).lineLimit(2...4).padding(MSpacing.m).glass(radius: 14)
             Spacer(minLength: 0)
             if sent {
                 Label("Requested. They'll confirm.", systemImage: "checkmark.seal.fill").font(MFont.headline)
                 Button("Done") { dismiss() }.buttonStyle(PrimaryButtonStyle())
             } else {
-                Button { Task { if await env.social.requestBooking(offer, startsAt: when, note: note) != nil { sent = true; Haptics.saved() } } } label: {
+                Button { Task { if await env.social.requestBooking(offer, startsAt: chosen, note: note) != nil { sent = true; Haptics.saved() } } } label: {
                     if env.social.busy { ProgressView().tint(.white) } else { Text("Request · \(offer.priceLabel())") }
                 }
-                .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(env.social.busy).accessibilityIdentifier("requestBooking")
-                Text("Nothing is charged until they accept. They can decline; you can cancel.").font(MFont.footnote).foregroundStyle(MColor.textTertiary)
+                .buttonStyle(PrimaryButtonStyle(tint: .orange)).disabled(!canSend).accessibilityIdentifier("requestBooking")
+                Text(offer.kind.isCall
+                     ? "Nothing is charged until they accept. The call happens in MOMENT, and the clock only starts when you're both connected."
+                     : "Nothing is charged until they accept. They can decline; you can cancel.")
+                    .font(MFont.footnote).foregroundStyle(MColor.textTertiary)
             }
         }
-        .padding(MSpacing.page).background(LiquidBackdrop(tint: .orange))
+        .padding(MSpacing.page)
+        }
+        .background(LiquidBackdrop(tint: .orange))
+        .task { if !loadedHours { await env.social.loadAvailability(offer.creatorID); loadedHours = true } }
         .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
         .modifier(SocialErrorAlert())
     }
@@ -275,7 +300,16 @@ struct StudioView: View {
     @State private var showLinks = false
     @State private var showMass = false
 
+    @State private var showHours = false
     private var pendingRequests: [Booking] { env.social.myBookings.filter { $0.creatorID == env.social.myID && ($0.status == .asked || $0.status == .requested) } }
+    /// What the creator's hours amount to, so the row says something true before they tap it.
+    private var hoursSummary: String {
+        let a = env.social.myAvailability
+        guard a.acceptingBookings else { return "Paused — nobody can book a call" }
+        guard !a.windows.isEmpty else { return "Not set — calls can't be booked yet" }
+        let days = Set(a.windows.map(\.weekday)).count
+        return "\(a.windows.count) window\(a.windows.count == 1 ? "" : "s") across \(days) day\(days == 1 ? "" : "s")"
+    }
     private var plan: CreatorPlan? { env.social.myPlan }
 
     var body: some View {
@@ -285,7 +319,7 @@ struct StudioView: View {
                 if !env.social.isCreator { setUp } else { quickActions }
                 if !pendingRequests.isEmpty { requests }
                 sets
-                if env.social.isCreator { time }
+                time
                 if !env.social.topSupporters.isEmpty { supporters }
                 footerLinks
             }
@@ -296,8 +330,9 @@ struct StudioView: View {
         .background(MColor.background)
         .navigationTitle("Creator mode")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await env.social.refreshStorefront(); await env.social.refreshCreator() }
+        .task { await env.social.refreshStorefront(); await env.social.refreshCreator(); await env.social.loadAvailability(env.social.myID) }
         .sheet(isPresented: $newSet) { EditSetSheet(set: nil) }
+        .sheet(isPresented: $showHours) { AvailabilityEditor() }
         .sheet(item: $editing) { s in EditSetSheet(set: s) }
         .sheet(item: $editOffer) { o in EditOfferSheet(offer: o) }
         .sheet(isPresented: $showLinks) { LinksSheet() }
@@ -451,6 +486,18 @@ struct StudioView: View {
             if env.social.offers(of: env.social.myID).isEmpty {
                 Text("Nothing listed. People can still ask, and you name the price then.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
             }
+            Button { showHours = true } label: {
+                HStack(spacing: MSpacing.m) {
+                    Image(systemName: "calendar.badge.clock").foregroundStyle(MColor.accent).frame(width: 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("When you're free").font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
+                        Text(hoursSummary).font(MFont.caption).foregroundStyle(MColor.textSecondary)
+                    }
+                    Spacer(); Image(systemName: "chevron.right").font(.footnote).foregroundStyle(MColor.textTertiary)
+                }
+                .padding(MSpacing.m)
+            }
+            .buttonStyle(.plain).glass(radius: 14).accessibilityIdentifier("availabilityLink")
             ForEach(env.social.offers(of: env.social.myID)) { o in
                 Button { editOffer = o } label: {
                     HStack(spacing: MSpacing.m) {
@@ -656,9 +703,18 @@ struct BookingsView: View {
                                 }
                             } else if b.status == .accepted {
                                 HStack(spacing: MSpacing.s) {
-                                    Text("Room \(b.roomID)").font(.caption.monospaced()).foregroundStyle(MColor.textSecondary)
+                                    if b.isJoinable {
+                                        NavigationLink(value: SocialRoute.call(b.id)) {
+                                            Label(b.joinWindow().contains(.now) ? "Join now" : "Open call", systemImage: b.kind.symbol)
+                                        }
+                                        .buttonStyle(GlassButtonStyle(filled: b.joinWindow().contains(.now)))
+                                        .accessibilityIdentifier("openCall-\(b.id)")
+                                    }
                                     Button("Mark done") { Task { await env.social.setBooking(b.id, .done) } }.buttonStyle(GlassButtonStyle())
                                 }
+                            } else if b.status == .done, b.connectedAt != nil, let ended = b.endedAt, let started = b.connectedAt {
+                                Text("Talked for \(CallClock.label(Int(ended.timeIntervalSince(started)))) · \(b.totalLabel())")
+                                    .font(MFont.caption).foregroundStyle(MColor.textSecondary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -677,6 +733,15 @@ struct BookingsView: View {
                                     .buttonStyle(GlassButtonStyle(filled: true)).accessibilityIdentifier("payQuote-\(b.id)")
                                 Button("No thanks") { Task { await env.social.setBooking(b.id, .declined) } }.buttonStyle(GlassButtonStyle())
                             }
+                        } else if b.isJoinable {
+                            NavigationLink(value: SocialRoute.call(b.id)) {
+                                Label(b.joinWindow().contains(.now) ? "Join now" : "Open call", systemImage: b.kind.symbol)
+                            }
+                            .buttonStyle(GlassButtonStyle(filled: b.joinWindow().contains(.now)))
+                            .accessibilityIdentifier("openCall-\(b.id)")
+                        } else if b.status == .done, let started = b.connectedAt, let ended = b.endedAt {
+                            Text("Talked for \(CallClock.label(Int(ended.timeIntervalSince(started)))) · \(b.totalLabel())")
+                                .font(MFont.caption).foregroundStyle(MColor.textSecondary)
                         }
                     }
                 }

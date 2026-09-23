@@ -23,6 +23,10 @@ settings:
   configs:
     Debug:
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+packages:
+  WebRTC:
+    url: https://github.com/stasel/WebRTC
+    from: "153.0.0"
 targets:
   Moment:
     type: application
@@ -58,6 +62,7 @@ targets:
       - sdk: CryptoKit.framework
       - sdk: LocalAuthentication.framework
       - sdk: EventKit.framework
+      - package: WebRTC
       - sdk: Contacts.framework
       - sdk: ContactsUI.framework
       - sdk: CloudKit.framework

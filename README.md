@@ -20,6 +20,9 @@ Moment/Social/
   UploadQueue.swift       offline-first, disk-persisted queue with backoff
   MediaPipeline.swift     ≤2048px JPEG with EXIF stripped, 1080p H.264 transcode
   SecureMedia.swift       ScreenGuard / SecureLayer / Watermark — paid media is capture-resistant on iOS
+  CallScheduling.swift    CreatorAvailability + CallSlots (bookable times) + CallClock (the paid clock)
+  CallSignaling.swift     CallSignal / CallSignalChannel / IceConfig — the sealed handshake, no media
+  CallEngine.swift        one WebRTC call: peer-to-peer audio+video, the countdown, mute/camera/speaker
 Moment/Features/Social/   Home (creator feed), Reels, set pages and checkout, Studio (creator mode),
                           Profile (Posts · About), Chats (incl. locked messages, voice notes), Notifications,
                           safety (block/mute/report/private), onboarding
@@ -46,6 +49,8 @@ Creators have **one subscription at a price they choose**, which opens every pos
 Paid media is capture-resistant on iOS (screenshots and recordings come out blank) and watermarked with the viewer's MOMENT ID; the creator is told when someone captures. Nothing stops a second camera — the app says so instead of pretending.
 
 Studio shows this month's earnings **with the rail named**, because the take rate differs: on card checkout MOMENT keeps 10%; through Apple IAP, Apple takes 30% first and the creator keeps 80% of the rest (`CreatorEconomics`). A set's window (title, price, cover) is public; its contents are sealed under a per-set key that the creator's phone hands to buyers only — a third device with every byte can open nothing (`DecentralizedStorefrontTests`). A subscription hands the same key to every active subscriber and stops when they lapse. Withdrawing rotates the key.
+
+**Calls.** A creator sets weekly hours in their own time zone (`CreatorAvailability`) and prices a video or voice call by the minute; a buyer picks from the slots that produces and nothing else. The call happens in the app over **WebRTC, peer to peer** — the media never touches a server, and the only thing crossing the relay is a handshake sealed to the other person, because ICE candidates carry IP addresses. The paid clock starts when the two phones actually connect, not when the slot was booked, so neither side loses minutes to the other being late; the last minute is warned, 30 seconds of grace follow, then it hangs up. Time bought mid-call is charged at the booking's own rate. A video call is paid content: blank in screenshots, watermarked with the viewer's ID, and the creator is told if it's captured. Nothing is recorded and there is no server that could record it. MOMENT runs no TURN server, so on the few networks that block direct connections the call fails and says why; a creator can add their own under Settings → Network.
 
 **No payment processor is wired yet.** `buySet(reference:)` records a reference; nothing calls a processor and no payouts run. Full economics, the adult-content constraints and everything still missing before money moves: `CREATOR-PLATFORM.md`. Go-live runbook: `LAUNCH.md`.
 

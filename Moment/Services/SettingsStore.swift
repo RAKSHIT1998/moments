@@ -22,6 +22,9 @@ final class SettingsStore {
         meshEnabled = defaults.object(forKey: "meshEnabled") as? Bool ?? true
         webCheckoutEnabled = defaults.bool(forKey: "webCheckoutEnabled")
         checkoutBaseURL = defaults.string(forKey: "checkoutBaseURL") ?? ""
+        turnURL = defaults.string(forKey: "turnURL") ?? ""
+        turnUsername = defaults.string(forKey: "turnUsername") ?? ""
+        turnCredential = defaults.string(forKey: "turnCredential") ?? ""
         dailyNotificationBudget = defaults.object(forKey: "dailyNotificationBudget") as? Int ?? 2
         lockScreenWidgetAllowed = defaults.bool(forKey: "lockScreenWidgetAllowed")
         analyticsEnabled = defaults.bool(forKey: "analyticsEnabled")
@@ -89,6 +92,11 @@ final class SettingsStore {
     /// out to from the app in storefronts where Apple allows it; off by default.
     var webCheckoutEnabled: Bool { didSet { defaults.set(webCheckoutEnabled, forKey: "webCheckoutEnabled") } }
     var checkoutBaseURL: String { didSet { defaults.set(checkoutBaseURL, forKey: "checkoutBaseURL") } }
+    /// A TURN server of the user's own, for calls on networks that block direct connections. Empty by
+    /// default: MOMENT runs none, so those calls fail honestly rather than routing through a stranger.
+    var turnURL: String { didSet { defaults.set(turnURL, forKey: "turnURL") } }
+    var turnUsername: String { didSet { defaults.set(turnUsername, forKey: "turnUsername") } }
+    var turnCredential: String { didSet { defaults.set(turnCredential, forKey: "turnCredential") } }
     var dailyNotificationBudget: Int { didSet { defaults.set(dailyNotificationBudget, forKey: "dailyNotificationBudget") } }
     var lockScreenWidgetAllowed: Bool { didSet { defaults.set(lockScreenWidgetAllowed, forKey: "lockScreenWidgetAllowed") } }
     var analyticsEnabled: Bool { didSet { defaults.set(analyticsEnabled, forKey: "analyticsEnabled") } }

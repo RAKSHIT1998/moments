@@ -60,6 +60,7 @@
 		40F1522FDBA962384A0B4805 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B165441541528103365A8D56 /* AVFoundation.framework */; };
 		41D030CBA500B17734A2DC5C /* demo_113.jpg in Resources */ = {isa = PBXBuildFile; fileRef = E2E95BE8CE26AF567508593C /* demo_113.jpg */; };
 		42C1836976AD5676DF746A7E /* Plan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD288C66EFC36133628A249 /* Plan.swift */; };
+		4491F7C20C7985EB97EEC8FC /* CallEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FEC8EF7BB18A42063DA8298 /* CallEngine.swift */; };
 		45007FAEE419DF73218CBA4B /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14BDBBEE2F1B036FF6381F89 /* AppEnvironment.swift */; };
 		46300A60AA22C3271F1E1576 /* demo_108.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C4F88226C474FB582A9563B0 /* demo_108.jpg */; };
 		480E5542A3590C161B09E1D6 /* SocialHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6095FF6387263E8433445C6E /* SocialHomeView.swift */; };
@@ -121,15 +122,18 @@
 		8441F13F5F00DB38A5895CA9 /* demo_103.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 30A25FB2E569F6136206AD73 /* demo_103.jpg */; };
 		87EBBF2ABD3801073ABEC314 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CCE6604C8AA23BE9032247 /* Person.swift */; };
 		88A6B9F362D93B01431CF4F2 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6A646F1DE414EA441ADB01 /* AppGroup.swift */; };
+		8B39364832B1574B96968C96 /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = CCDE0D12974633E5565BD4D9 /* WebRTC */; };
 		8C1D419962B265A4151AD993 /* UploadQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7BAE8ACD83B15C7EAD2A5D /* UploadQueue.swift */; };
 		8C390686CDE11A4FF1AC45B6 /* demo_110.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2DA7A29FE0804BF132DB6C23 /* demo_110.jpg */; };
 		8C48BDFA001921C190F8A425 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03EE7A0BC02BAF0519F3FD9F /* Contacts.framework */; };
 		91A3470C495E6AE3A2195936 /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B317B3A7B19EC3A46F0BCC83 /* PeopleView.swift */; };
 		92E2060C773758E5F99FAC9A /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C76A24F401455CDDD4FBD9 /* SpotlightService.swift */; };
+		94CFB478766A64482622AA2D /* CallSignaling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190234801BE19BF6A89CE69D /* CallSignaling.swift */; };
 		961B5290CC4E0CE943747C56 /* CaptureResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5448A08E37BA411D80BA9745 /* CaptureResultView.swift */; };
 		9C177C0A2FE9B5E38C18E5A8 /* StoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944D1321F8D9D86DF3ADEAD7 /* StoryTests.swift */; };
 		9CE595A527E80315B31ACFFE /* SocialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F52E1AA7DA3C0CC26929069 /* SocialTests.swift */; };
 		9FE484EBAD729973D3A30C4E /* MemoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9931D268CC837A42E80DBB72 /* MemoryDetailView.swift */; };
+		A2693F90E8C0E86588912B90 /* CallScheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE25C6319B28880B42EE6BE4 /* CallScheduling.swift */; };
 		A4CB061D7AC3A97A41AD2E4D /* MemoryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D44C102A18992D6104B360 /* MemoryRow.swift */; };
 		A573073C138D305C0B64A9EB /* InMemoryBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4E11F21687C6429BFBF5FE /* InMemoryBackend.swift */; };
 		A67D7671BEAA1849CC435BA2 /* SearchIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79E1C6AE4BB4326FAA6A5E28 /* SearchIndex.swift */; };
@@ -207,6 +211,7 @@
 		ECBE15603743D23D5742EA86 /* PlanIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFC21D1E077E0C4D8E0D5C6 /* PlanIntelligence.swift */; };
 		ECF931247A10D982BC9953BC /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A99C4BE24B47D02F84A2A2E /* CloudKit.framework */; };
 		EF53995642F9A7DF7D73CF08 /* demo_223.jpg in Resources */ = {isa = PBXBuildFile; fileRef = E03C9598D4A24BC32222E0D4 /* demo_223.jpg */; };
+		EF62A22C34B391621265258C /* CallViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF291F702948C7342FABFB72 /* CallViews.swift */; };
 		EFB729D3BCA5EA1D0BD09A93 /* SocialComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7E5EFD2EE7CEB45F74F15A3 /* SocialComponents.swift */; };
 		EFDABBED851392CE6E3DF100 /* MomentEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B562C9FE2609098E83C276D0 /* MomentEditorView.swift */; };
 		F20A35DEE1611BE0E5679398 /* SharedCaptureItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54497CFEEEB3446AC4AA41A5 /* SharedCaptureItem.swift */; };
@@ -214,6 +219,7 @@
 		F6380C89DA9184446A464620 /* MomentsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BFF5C08501233D36B9CC9 /* MomentsHubView.swift */; };
 		F6622EA9DEBD444482E05D3C /* ImportanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A556007B88DC6B38789AADAC /* ImportanceEngine.swift */; };
 		F759C325F929F029365D00F4 /* CreatorFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3C9B10688FA56F7F5665E5 /* CreatorFeed.swift */; };
+		F7BE116AEC5E48B44F1111ED /* AvailabilityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E910A156710B465D511CB9E5 /* AvailabilityViews.swift */; };
 		F943C6E224E8B47999DF2EC5 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6A646F1DE414EA441ADB01 /* AppGroup.swift */; };
 		FAE3D5587634EF1768F8909D /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D5B0733F5386FA454BC8C50 /* ImportService.swift */; };
 		FECE727353FCE24EA2ADBC6D /* DataLifecycleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A6B537367DE45D354ECB22 /* DataLifecycleService.swift */; };
@@ -298,6 +304,7 @@
 		177D9DA627E3FA20C33043F2 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		17CAC5AEC477A5A8F7C6B87C /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		189A91C2DEB446D7707DA1A7 /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialModels.swift; sourceTree = "<group>"; };
+		190234801BE19BF6A89CE69D /* CallSignaling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallSignaling.swift; sourceTree = "<group>"; };
 		1A6AC6EB53583E921BB0BD75 /* avatar_177.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = avatar_177.jpg; sourceTree = "<group>"; };
 		1B396A7FEE5C2AD0E6AE7B48 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		1BE91272873B79E01E2AB1E8 /* ReelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReelsView.swift; sourceTree = "<group>"; };
@@ -377,6 +384,7 @@
 		79E1C6AE4BB4326FAA6A5E28 /* SearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchIndex.swift; sourceTree = "<group>"; };
 		7D4F7FB4AB4D27843673924B /* MemoryEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEditView.swift; sourceTree = "<group>"; };
 		7E5EF22418C4507F57DD33E4 /* IdentityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityViews.swift; sourceTree = "<group>"; };
+		7FEC8EF7BB18A42063DA8298 /* CallEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallEngine.swift; sourceTree = "<group>"; };
 		818CB2BBF158325664F2E158 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		839FD5950DFAF95EF50BAA35 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		85815A1B846A2FB25CB3CCB3 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
@@ -429,6 +437,7 @@
 		BB401EAD089DCDE281C4A403 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		BCABA0FAAB9458BB5815B808 /* MomentShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MomentShareExtension.entitlements; sourceTree = "<group>"; };
 		BD5C4E1628757B967D4EFA41 /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
+		BE25C6319B28880B42EE6BE4 /* CallScheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallScheduling.swift; sourceTree = "<group>"; };
 		BEAD57EA9D1FFD36650CD927 /* demo_117.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_117.jpg; sourceTree = "<group>"; };
 		C4044A98C2B9BD83976C6F03 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		C4F88226C474FB582A9563B0 /* demo_108.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = demo_108.jpg; sourceTree = "<group>"; };
@@ -454,6 +463,7 @@
 		DC9CB43FF9178E3BC3723EA7 /* MomentStory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentStory.swift; sourceTree = "<group>"; };
 		DDAFAA4ABE33475EA7B5BB14 /* SocialBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialBackend.swift; sourceTree = "<group>"; };
 		DEEE9CA21EEB507640D0AACB /* MomentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentApp.swift; sourceTree = "<group>"; };
+		DF291F702948C7342FABFB72 /* CallViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallViews.swift; sourceTree = "<group>"; };
 		DF44887BCBC9EE1A2C37D66D /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		DF8351DC4F38D2FFA323F3E9 /* PhotoMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoMetadata.swift; sourceTree = "<group>"; };
 		E0023DDD1C78FCBCA68BD9C3 /* DocumentScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentScannerView.swift; sourceTree = "<group>"; };
@@ -467,6 +477,7 @@
 		E62AAB569901147E11EDB0C4 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E7B5D8D21EC367B123E20998 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		E8973BB7DC145BE712EBCFD0 /* demo_clip.mp4 */ = {isa = PBXFileReference; path = demo_clip.mp4; sourceTree = "<group>"; };
+		E910A156710B465D511CB9E5 /* AvailabilityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityViews.swift; sourceTree = "<group>"; };
 		EAA3B0DB0F57E54464C67341 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		ED70F3581744EC11FD901E91 /* DiagnosticsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsUITests.swift; sourceTree = "<group>"; };
 		EF696884E35E0BB7D1A69F67 /* RemoteIntelligenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteIntelligenceProvider.swift; sourceTree = "<group>"; };
@@ -512,6 +523,7 @@
 				BBB2D8064D9ADFD65A347BB5 /* CryptoKit.framework in Frameworks */,
 				0285B723C18749CE1F9E0966 /* LocalAuthentication.framework in Frameworks */,
 				C0B43E98B810BFC5EF99DF39 /* EventKit.framework in Frameworks */,
+				8B39364832B1574B96968C96 /* WebRTC in Frameworks */,
 				8C48BDFA001921C190F8A425 /* Contacts.framework in Frameworks */,
 				014447D56B3397F25E80FCFF /* ContactsUI.framework in Frameworks */,
 				ECF931247A10D982BC9953BC /* CloudKit.framework in Frameworks */,
@@ -825,6 +837,9 @@
 			isa = PBXGroup;
 			children = (
 				4DBDAE2367A9D512C9CD361D /* Decentralized */,
+				7FEC8EF7BB18A42063DA8298 /* CallEngine.swift */,
+				BE25C6319B28880B42EE6BE4 /* CallScheduling.swift */,
+				190234801BE19BF6A89CE69D /* CallSignaling.swift */,
 				AF14D5A43B7EE1B3BA53078A /* CloudKitBackend.swift */,
 				4D3C9B10688FA56F7F5665E5 /* CreatorFeed.swift */,
 				DAE17C8090CFD8B9147EE664 /* ImageColor.swift */,
@@ -877,6 +892,8 @@
 		B14C299BF43182DB58BE1677 /* Social */ = {
 			isa = PBXGroup;
 			children = (
+				E910A156710B465D511CB9E5 /* AvailabilityViews.swift */,
+				DF291F702948C7342FABFB72 /* CallViews.swift */,
 				25C73214F55C33504B00EF9E /* ChatViews.swift */,
 				504A0C0A7CC917A1E39DEEE2 /* CreatorFeedView.swift */,
 				C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */,
@@ -1074,6 +1091,7 @@
 			);
 			name = Moment;
 			packageProductDependencies = (
+				CCDE0D12974633E5565BD4D9 /* WebRTC */,
 			);
 			productName = Moment;
 			productReference = E1E8CEDD7465D45713550303 /* Moment.app */;
@@ -1193,6 +1211,9 @@
 			);
 			mainGroup = 496C2DD4F4A2AF5806A0B4F2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2E8D96E17B5BBB406A536F93 /* XCRemoteSwiftPackageReference "WebRTC" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B623A97A9744CB4F418D8ED6 /* Products */;
 			projectDirPath = "";
@@ -1313,8 +1334,13 @@
 				F943C6E224E8B47999DF2EC5 /* AppGroup.swift in Sources */,
 				B1E0421207BBA4561EDCE62F /* AppIntents.swift in Sources */,
 				EBDA10E92379A9A4FF63B8A0 /* AppLockController.swift in Sources */,
+				F7BE116AEC5E48B44F1111ED /* AvailabilityViews.swift in Sources */,
 				C7DE4FF4D0C26E69EEA9CFC0 /* BiometricLock.swift in Sources */,
 				AD344FD1800DF4525759F96C /* CalendarService.swift in Sources */,
+				4491F7C20C7985EB97EEC8FC /* CallEngine.swift in Sources */,
+				A2693F90E8C0E86588912B90 /* CallScheduling.swift in Sources */,
+				94CFB478766A64482622AA2D /* CallSignaling.swift in Sources */,
+				EF62A22C34B391621265258C /* CallViews.swift in Sources */,
 				DDD1A68E384A2AEDBF49F8DD /* CaptureInput.swift in Sources */,
 				961B5290CC4E0CE943747C56 /* CaptureResultView.swift in Sources */,
 				594597866315601C8697C453 /* CaptureSheet.swift in Sources */,
@@ -1858,6 +1884,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2E8D96E17B5BBB406A536F93 /* XCRemoteSwiftPackageReference "WebRTC" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stasel/WebRTC";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 153.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CCDE0D12974633E5565BD4D9 /* WebRTC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2E8D96E17B5BBB406A536F93 /* XCRemoteSwiftPackageReference "WebRTC" */;
+			productName = WebRTC;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 03315C3312CAE6422B20B4BD /* Project object */;
 }

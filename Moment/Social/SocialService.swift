@@ -142,7 +142,10 @@ final class SocialService {
         async let c: () = refreshCollections()
         async let g: () = refreshGroups()
         async let e: () = refreshCreator()
-        _ = await (f, n, i, s, c, g, e)
+        // Bookings come along at launch because a call you can join right now is offered on Home, and
+        // it can't be offered if nothing has loaded it.
+        async let b: () = refreshBookings()
+        _ = await (f, n, i, s, c, g, e, b)
         hasLoadedOnce = true
     }
 
@@ -1252,6 +1255,69 @@ final class SocialService {
         do { let b = try await backend.setBookingStatus(id: id, status: status); myBookings = (try? await backend.myBookings()) ?? []; return b } catch { lastError = error.localizedDescription; return nil }
     }
     func saveLinks(_ l: CreatorLinks) async { try? await backend.saveCreatorLinks(l); linksByCreator[myID] = l }
+
+    // MARK: - Paid calls
+
+    /// When each creator takes calls, cached by id. `myAvailability` is the one the editor writes.
+    private(set) var availabilityByCreator: [String: CreatorAvailability] = [:]
+    private(set) var busyByCreator: [String: [DateInterval]] = [:]
+    var myAvailability: CreatorAvailability { availabilityByCreator[myID] ?? CreatorAvailability(creatorID: myID) }
+
+    /// Just the bookings, without pulling the whole storefront.
+    func refreshBookings() async { myBookings = (try? await backend.myBookings()) ?? [] }
+
+    func loadAvailability(_ creatorID: String) async {
+        availabilityByCreator[creatorID] = (try? await backend.availability(for: creatorID)) ?? CreatorAvailability(creatorID: creatorID, windows: [], acceptingBookings: false)
+        busyByCreator[creatorID] = (try? await backend.busySlots(creatorID: creatorID)) ?? []
+    }
+    func saveAvailability(_ a: CreatorAvailability) async {
+        do { try await backend.saveAvailability(a); availabilityByCreator[myID] = a }
+        catch { lastError = error.localizedDescription }
+    }
+
+    /// The start times a buyer can actually pick for this offer.
+    func slots(for offer: BookingOffer, now: Date = .now) -> [Date] {
+        guard let a = availabilityByCreator[offer.creatorID] else { return [] }
+        let busy = busyByCreator[offer.creatorID] ?? []
+        let taken = busy.map { Booking(id: "", offerID: "", creatorID: offer.creatorID, creatorName: "", buyerID: "", buyerName: "", kind: offer.kind, minutes: max(1, Int($0.duration / 60)), amountMinor: 0, currency: offer.currency, startsAt: $0.start, status: .accepted, note: "", rail: .none, reference: nil, roomID: "", createdAt: $0.start) }
+        return CallSlots.slots(availability: a, minutes: max(1, offer.minutes), taken: taken, now: now)
+    }
+
+    /// Calls that are confirmed and haven't happened yet, soonest first.
+    var upcomingCalls: [Booking] {
+        myBookings.filter { $0.isJoinable && $0.joinWindow().upperBound > .now }.sorted { $0.startsAt < $1.startsAt }
+    }
+    /// The one that can be joined right now, if any.
+    var callReadyToJoin: Booking? {
+        myBookings.first { $0.isJoinable && $0.joinWindow().contains(.now) }
+    }
+
+    /// Records what actually happened on a call, on both phones. The receipt is built from this,
+    /// never from the scheduled time.
+    @discardableResult
+    func recordCall(_ id: String, connectedAt: Date?, endedAt: Date?, extraMinutes: Int = 0) async -> Booking? {
+        do {
+            let b = try await backend.recordCall(id: id, connectedAt: connectedAt, endedAt: endedAt, extraMinutes: extraMinutes)
+            myBookings = (try? await backend.myBookings()) ?? []
+            if endedAt != nil { analytics.track(.callCompleted, category: b.kind.rawValue) }
+            return b
+        } catch { lastError = error.localizedDescription; return nil }
+    }
+
+    /// The channel a `CallEngine` talks through. Backed by whichever backend is live.
+    func callChannel() -> any CallSignalChannel { BackendCallChannel(backend: backend) }
+
+    /// Where calls connect through. Shipped with STUN only; a TURN server is the user's own.
+    var iceConfig: IceConfig {
+        var c = IceConfig()
+        let t = settings.turnURL.trimmed
+        if !t.isEmpty {
+            c.turnURLs = [t]
+            c.turnUsername = settings.turnUsername
+            c.turnCredential = settings.turnCredential
+        }
+        return c
+    }
 
     /// This month, after the platform fee on each rail. Sales and bookings included.
     var storefrontEarnings: Double { CreatorEconomics.creatorEstimate(subscribers, tips: tipsReceived, sales: mySales, bookings: myBookings.filter { $0.creatorID == myID }) }

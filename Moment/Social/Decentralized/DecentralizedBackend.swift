@@ -34,6 +34,9 @@ actor DecentralizedBackend: SocialBackend {
         struct Offer: Codable { var offer: BookingOffer? }
         struct BookingBody: Codable { var booking: Booking }
         struct Links: Codable { var links: CreatorLinks }
+        struct Availability: Codable { var availability: CreatorAvailability }
+        /// The call handshake, sealed to one person. Only `box` travels.
+        struct Sealed: Codable { var box: String }
         struct Moment: Codable { var title: String; var description: String; var startAt: Date?; var endAt: Date?; var locationName: String?; var coarsePlace: String?; var visibility: String; var templateID: String?; var remixedFromID: String?; var isLive: Bool; var cover: String?; var isTeaser: Bool; var place: SocialPlace?; var creatorName: String }
         struct Update: Codable { var title: String?; var description: String?; var visibility: String?; var isLive: Bool?; var allowsContributions: Bool?; var isTeaser: Bool?; var cover: String? }
         struct Side: Codable { var kind: String; var caption: String; var media: String?; var mediaKind: String?; var originalTimestamp: Date?; var authorName: String; var w: Int?; var h: Int? }
@@ -83,11 +86,13 @@ actor DecentralizedBackend: SocialBackend {
     }
 
     private var typingHandler: (@Sendable (String, String) -> Void)?
+    private var callSignalHandler: (@Sendable (CallSignal, String) -> Void)?
     func attach(_ t: EventTransport) {
         t.onWhisper = { [weak self] e in Task { await self?.receiveWhisper(e) } }
         transports.append(t); t.start()
     }
-    private func receiveWhisper(_ e: SignedEvent) {
+    private func receiveWhisper(_ e: SignedEvent) async {
+        if e.kind == .callSignal { await receiveCallSignal(e); return }
         guard e.kind == .seen, e.tags["typing"] == "1", let conv = e.tags["moment"], e.author != myID, abs(e.createdAt.timeIntervalSinceNow) < 30 else { return }
         typingHandler?(conv, e.author)
     }
@@ -217,6 +222,61 @@ actor DecentralizedBackend: SocialBackend {
             keys.save(SymmetricKey(data: raw), for: "set.\(setID)")
         }
     }
+    func availability(for creatorID: String) async throws -> CreatorAvailability {
+        for e in await store.all(.availability).sorted(by: { $0.createdAt > $1.createdAt }) where e.author == creatorID {
+            if let a = e.payload(Payloads.Availability.self)?.availability { return a }
+        }
+        return CreatorAvailability(creatorID: creatorID, windows: [], acceptingBookings: false)
+    }
+    func saveAvailability(_ availability: CreatorAvailability) async throws {
+        var a = availability; a.creatorID = myID
+        _ = try await emit(.availability, payload: Payloads.Availability(availability: a))
+    }
+    /// Only the creator's own phone knows what it has already agreed to — a booking is sealed between
+    /// the two people in it, so nothing on the network says when a creator is busy. A buyer therefore
+    /// sees every slot in the pattern; a clash is caught when the creator accepts, and they can decline
+    /// it with one tap. Publishing free/busy would mean publishing the shape of someone's week.
+    func busySlots(creatorID: String) async throws -> [DateInterval] {
+        guard creatorID == myID else { return [] }
+        return try await myBookings().filter { $0.creatorID == myID && $0.holdsTime }
+            .map { DateInterval(start: $0.startsAt, duration: Double(max(1, $0.minutes)) * 60) }
+    }
+    func recordCall(id: String, connectedAt: Date?, endedAt: Date?, extraMinutes: Int) async throws -> Booking {
+        guard var b = try await myBookings().first(where: { $0.id == id }) else { throw SocialError.notFound }
+        guard b.buyerID == myID || b.creatorID == myID else { throw SocialError.notAllowed }
+        if let connectedAt, b.connectedAt == nil { b.connectedAt = connectedAt }
+        if let endedAt { b.endedAt = endedAt; b.status = .done }
+        if extraMinutes > 0 { b.extraMinutes = max(b.extraMinutes, extraMinutes) }
+        try await emit(.booking, tags: ["booking": b.id, "to": b.creatorID == myID ? b.buyerID : b.creatorID], payload: Payloads.BookingBody(booking: b))
+        return b
+    }
+
+    /// A call handshake is sealed to the other person and sent as a whisper: relays and peers forward it
+    /// and store nothing. An ICE candidate carries IP addresses, which is exactly why it is sealed —
+    /// a relay carrying a call learns that two keys are talking and not where either of them is.
+    func sendCallSignal(_ signal: CallSignal, to peerID: String) async throws {
+        guard let their = await store.all(.profile).last(where: { $0.author == peerID })?.payload(Payloads.Profile.self),
+              let agree = their.agreePK else { throw SocialError.notFound }
+        let raw = try JSONEncoder.event.encode(signal)
+        let box = try SealedForPeer.seal(raw, from: agreement, to: agree)
+        let (content, _) = try SignedEvent.encode(Payloads.Sealed(box: box), momentKey: nil)
+        let e = try SignedEvent.make(kind: .callSignal, key: key, tags: ["to": peerID, "booking": signal.bookingID], content: content)
+        for t in transports { t.whisper(e) }
+    }
+    func onCallSignal(_ handler: @escaping @Sendable (CallSignal, String) -> Void) async { callSignalHandler = handler }
+
+    /// Opens a whispered handshake addressed to me.
+    private func receiveCallSignal(_ e: SignedEvent) async {
+        guard e.kind == .callSignal, e.tags["to"] == myID, e.author != myID,
+              abs(e.createdAt.timeIntervalSinceNow) < 120,
+              let their = await store.all(.profile).last(where: { $0.author == e.author })?.payload(Payloads.Profile.self),
+              let agree = their.agreePK,
+              let box = e.payload(Payloads.Sealed.self)?.box,
+              let raw = SealedForPeer.open(box, with: agreement, from: agree),
+              let sig = try? JSONDecoder.event.decode(CallSignal.self, from: raw) else { return }
+        callSignalHandler?(sig, e.author)
+    }
+
     func bookingOffers(creatorID: String) async throws -> [BookingOffer] {
         var latest: [String: BookingOffer] = [:]
         for e in await store.all(.offer) where e.author == creatorID {

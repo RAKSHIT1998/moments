@@ -58,6 +58,74 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'reel-'")).firstMatch.exists)
     }
 
+    // MARK: Paid calls
+
+    /// A confirmed call is the one thing on Home with a deadline, so it sits above the feed.
+    func testAConfirmedCallCanBeJoinedFromHome() {
+        waitForFeed()
+        let banner = app.descendants(matching: .any)["joinCallBanner"].firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: 15), "a call whose window is open is offered on Home")
+        snap("10-join-banner")
+        banner.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["callLobby"].waitForExistence(timeout: 10), "the banner opens the call")
+        XCTAssertTrue(app.buttons["joinCall"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["joinCall"].isEnabled, "the window is open, so Join is live")
+        XCTAssertTrue(app.staticTexts["The clock starts when you're both connected"].exists, "the lobby states the rule the money turns on")
+        snap("11-call-lobby")
+    }
+
+    /// Buying a call means picking from the creator's hours — not typing any time you like.
+    func testBookingACallOffersOnlyTheCreatorsHours() {
+        waitForFeed()
+        app.tabBars.buttons["Profile"].tap()
+        let about = app.buttons["About"].firstMatch
+        XCTAssertTrue(about.waitForExistence(timeout: 10))
+        // Straight to a creator who sells time.
+        app.tabBars.buttons["Home"].tap()
+        let sarah = app.buttons["Sarah Kim"].firstMatch
+        for _ in 0..<10 where !(sarah.exists && sarah.isHittable) { app.swipeUp(); sleep(1) }
+        guard sarah.exists && sarah.isHittable else { return XCTFail("couldn't reach a creator who sells calls") }
+        sarah.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
+        let shop = app.buttons["shopLink"].firstMatch
+        for _ in 0..<8 where !(shop.exists && shop.isHittable) { app.swipeUp() }
+        XCTAssertTrue(shop.exists, "a creator selling time has a shop")
+        shop.tap()
+        let voice = app.descendants(matching: .any)["offer-offer_voice_sarah"].firstMatch
+        for _ in 0..<8 where !voice.exists { app.swipeUp() }
+        XCTAssertTrue(voice.waitForExistence(timeout: 10), "the voice call is on the menu")
+        voice.tap()
+        // Slots, not a free-text date picker.
+        let slot = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'slot-'")).firstMatch
+        XCTAssertTrue(slot.waitForExistence(timeout: 10), "the buyer picks from the creator's hours")
+        snap("12-slot-picker")
+        let request = app.buttons["requestBooking"].firstMatch
+        XCTAssertFalse(request.isEnabled, "nothing can be requested until a time is chosen")
+        slot.tap()
+        XCTAssertTrue(request.isEnabled, "picking a slot arms the request")
+    }
+
+    /// A creator's hours are the only place they say when they're free.
+    func testACreatorSetsTheHoursCallsCanLandIn() {
+        waitForFeed()
+        app.tabBars.buttons["Profile"].tap()
+        let studio = app.descendants(matching: .any)["Open Creator mode"].firstMatch
+        let earn = app.descendants(matching: .any)["Start earning"].firstMatch
+        if studio.waitForExistence(timeout: 8) { studio.tap() } else if earn.exists { earn.tap() } else { return XCTFail("no way into Creator mode") }
+        let hours = app.descendants(matching: .any)["availabilityLink"].firstMatch
+        for _ in 0..<10 where !hours.exists { app.swipeUp() }
+        XCTAssertTrue(hours.waitForExistence(timeout: 10), "Creator mode is where hours are set")
+        hours.tap()
+        XCTAssertTrue(app.switches["acceptingBookings"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["addWindow"].exists)
+        snap("13-availability")
+        app.buttons["addWindow"].tap()
+        XCTAssertTrue(app.buttons["confirmWindow"].waitForExistence(timeout: 8))
+        app.buttons["confirmWindow"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["availabilityPreview"].waitForExistence(timeout: 8), "the editor says what the rules add up to")
+        app.buttons["saveAvailability"].firstMatch.tap()
+    }
+
     func testCreateSheetIsAboutPosts() {
         waitForFeed()
         app.tabBars.buttons["Create"].tap()

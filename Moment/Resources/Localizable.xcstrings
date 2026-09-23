@@ -4,9 +4,6 @@
     "" : {
 
     },
-    " " : {
-
-    },
     "— %@" : {
 
     },
@@ -22,9 +19,6 @@
     "· birthday in %lld days" : {
 
     },
-    "· Live" : {
-
-    },
     "· shared %lld×" : {
 
     },
@@ -32,9 +26,6 @@
 
     },
     "“%@”" : {
-
-    },
-    "\"%@\" is from the same day with the same people. Merge it into this Moment? Everyone's sides stay attributed." : {
 
     },
     "“I really want these New Balance 530 😍”" : {
@@ -62,16 +53,6 @@
         }
       }
     },
-    "%@ · %@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@ · %3$@"
-          }
-        }
-      }
-    },
     "%@ / 30 days" : {
 
     },
@@ -95,12 +76,6 @@
         }
       }
     },
-    "%@ AGO" : {
-
-    },
-    "%@ AGO TODAY" : {
-
-    },
     "%@ asked for %@" : {
       "localizations" : {
         "en" : {
@@ -111,19 +86,6 @@
         }
       }
     },
-    "%@ by %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ by %2$@"
-          }
-        }
-      }
-    },
-    "%@ in Moments" : {
-
-    },
     "%@ is coming together." : {
 
     },
@@ -131,9 +93,6 @@
 
     },
     "%@ isn't selling anything yet." : {
-
-    },
-    "%@ joined" : {
 
     },
     "%@ memor%@" : {
@@ -155,9 +114,6 @@
           }
         }
       }
-    },
-    "%@ says you were there" : {
-
     },
     "%@ sets the price and keeps %lld%% on card checkout. Media stays on their storage; buying gets you the key, not a copy from us." : {
       "localizations" : {
@@ -188,16 +144,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@"
-          }
-        }
-      }
-    },
-    "%@, %lld Moments" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@, %2$lld Moments"
           }
         }
       }
@@ -242,26 +188,6 @@
         }
       }
     },
-    "%@. %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@. %2$@"
-          }
-        }
-      }
-    },
-    "%@'s %@ · %lld reactions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@'s %2$@ · %3$lld reactions"
-          }
-        }
-      }
-    },
     "%@/month" : {
 
     },
@@ -285,28 +211,8 @@
         }
       }
     },
-    "%@%lld %@ · %lld people" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@%2$lld %3$@ · %4$lld people"
-          }
-        }
-      }
-    },
     "%lld" : {
 
-    },
-    "%lld / %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld / %2$lld"
-          }
-        }
-      }
     },
     "%lld %@" : {
       "localizations" : {
@@ -328,52 +234,12 @@
         }
       }
     },
-    "%lld %@ · %lld people%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ · %3$lld people%4$@"
-          }
-        }
-      }
-    },
-    "%lld %@ · %lld sides" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ · %3$lld sides"
-          }
-        }
-      }
-    },
     "%lld %@ from %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@ from %3$@"
-          }
-        }
-      }
-    },
-    "%lld %@ together" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ together"
-          }
-        }
-      }
-    },
-    "%lld %@%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@%3$@"
           }
         }
       }
@@ -388,35 +254,13 @@
         }
       }
     },
-    "%lld added" : {
-
-    },
     "%lld all time" : {
 
     },
     "%lld chosen" : {
 
     },
-    "%lld in" : {
-
-    },
-    "%lld in · by %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld in · by %2$@"
-          }
-        }
-      }
-    },
-    "%lld items" : {
-
-    },
     "%lld minutes" : {
-
-    },
-    "%lld minutes with nothing in the Moment." : {
 
     },
     "%lld Moment%@ remembered for you this month." : {
@@ -425,26 +269,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld Moment%2$@ remembered for you this month."
-          }
-        }
-      }
-    },
-    "%lld Moments · %lld people · %lld places%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld Moments · %2$lld people · %3$lld places%4$@"
-          }
-        }
-      }
-    },
-    "%lld Moments · %lld places · since %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld Moments · %2$lld places · since %3$@"
           }
         }
       }
@@ -468,25 +292,8 @@
     "%lld open" : {
 
     },
-    "%lld people · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld people · %2$@"
-          }
-        }
-      }
-    },
-    "%lld people · %lld Moments" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld people · %2$lld Moments"
-          }
-        }
-      }
+    "%lld people" : {
+
     },
     "%lld people are typing" : {
 
@@ -507,42 +314,16 @@
         }
       }
     },
-    "%lld sides from %lld %@, in order. It grows as people add." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld sides from %2$lld %3$@, in order. It grows as people add."
-          }
-        }
-      }
-    },
     "%lld uploads need a retry" : {
 
     },
     "%lld%% off" : {
 
     },
-    "%lld× · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld× · %2$@"
-          }
-        }
-      }
-    },
-    "%lld× here" : {
-
-    },
     "+%lld" : {
 
     },
     "+%lld more" : {
-
-    },
-    "×%lld" : {
 
     },
     "₹" : {
@@ -554,13 +335,13 @@
     "1 new Moment to review" : {
 
     },
+    "1 person" : {
+
+    },
     "12 words, separated by spaces" : {
 
     },
     "499" : {
-
-    },
-    "A card for the people who weren't there — and the ones who were. The invite link goes with it." : {
 
     },
     "A fingerprint of a key that lives only in this iPhone's Keychain. Everything you create is signed with it, so people can tell it's really yours — without any server." : {
@@ -572,25 +353,19 @@
     "A GOAL (OPTIONAL)" : {
 
     },
-    "A group is a private space for the people you keep making Moments with." : {
+    "A group is a shared chat. You can add people to it afterwards." : {
+
+    },
+    "A group is one private chat for the people you talk to together." : {
 
     },
     "A line about it" : {
 
     },
-    "A line about it (optional)" : {
-
-    },
     "A line about you" : {
 
     },
-    "A minute now, then it's just Moments. Skip anything — you can do it later from Settings." : {
-
-    },
-    "A Moment" : {
-
-    },
-    "A NOTE" : {
+    "A minute now, then you're in. Skip anything — you can do it later from Settings." : {
 
     },
     "A one-off. They get %lld%% of what's left after the App Store." : {
@@ -599,7 +374,7 @@
     "A photo, a call, a meeting — they name the price for that one thing." : {
 
     },
-    "A reel appears when a night has three sides in it — or when someone adds a video. Add yours and the cut updates for everyone." : {
+    "A post" : {
 
     },
     "About" : {
@@ -626,37 +401,13 @@
     "Add “%@” to your calendar?" : {
 
     },
-    "Add a comment…" : {
-
-    },
-    "Add a few sides first." : {
-
-    },
     "Add a line about you" : {
 
     },
     "Add a photo" : {
 
     },
-    "Add a photo now" : {
-
-    },
-    "Add a place — café, beach, venue" : {
-
-    },
-    "Add a place to a Moment and it shows up here." : {
-
-    },
-    "Add a venue to a Moment and it shows up here, on the map and on your passport." : {
-
-    },
     "Add another memory" : {
-
-    },
-    "Add me to Moments" : {
-
-    },
-    "Add Moments from any Moment's menu → \"Add to collection\"." : {
 
     },
     "Add my side" : {
@@ -668,37 +419,13 @@
     "Add person" : {
 
     },
-    "Add photo" : {
-
-    },
-    "Add photos here" : {
-
-    },
-    "Add photos, a video or a note. Everyone who was there sees it here." : {
-
-    },
-    "Add to a Moment" : {
-
-    },
     "Add to Calendar" : {
-
-    },
-    "Add to collection" : {
 
     },
     "Add your side" : {
 
     },
-    "Add Your Side" : {
-
-    },
-    "ADD YOUR SIDE" : {
-
-    },
     "Add your side of the memory — a photo, a line, your version of what happened. %@ will see it when you send it back." : {
-
-    },
-    "added" : {
 
     },
     "Adding…" : {
@@ -713,19 +440,10 @@
     "All data deleted" : {
 
     },
-    "Allow downloads" : {
-
-    },
     "Allow notifications" : {
 
     },
-    "Allow resharing" : {
-
-    },
     "Already understood. Save the ones that matter." : {
-
-    },
-    "Also block this person" : {
 
     },
     "Amount" : {
@@ -737,16 +455,7 @@
     "Answer" : {
 
     },
-    "Anyone out? (optional)" : {
-
-    },
-    "ANYONE UP?" : {
-
-    },
-    "Anyone who scans gets the invite link. They join with their own iCloud account and add their side." : {
-
-    },
-    "Anyone with the QR can join" : {
+    "Anyone whose subscription is live opens this — that's what they're paying for. It stops opening the day they lapse." : {
 
     },
     "Anything they should know" : {
@@ -762,9 +471,6 @@
 
     },
     "Archive" : {
-
-    },
-    "Around you" : {
 
     },
     "Ask" : {
@@ -815,9 +521,6 @@
     "Before %@" : {
 
     },
-    "Best for parties, weddings, events. Up to %lld people on the free plan." : {
-
-    },
     "Bio" : {
 
     },
@@ -830,7 +533,7 @@
     "Block" : {
 
     },
-    "Block %@" : {
+    "Block them too" : {
 
     },
     "Blocked" : {
@@ -839,28 +542,19 @@
     "Blocked people (%lld)" : {
 
     },
+    "Blocking hides them from you everywhere, immediately. Reports are read by whoever runs the relay; we hold nothing centrally." : {
+
+    },
+    "Bought once, kept. You keep %lld%% on card checkout, and the photos stay on your storage — buyers get a key." : {
+
+    },
     "BUNDLES" : {
-
-    },
-    "Business" : {
-
-    },
-    "Business name" : {
 
     },
     "Buy · %@" : {
 
     },
-    "Cafés, bars, beaches, venues near you." : {
-
-    },
-    "Cafés, beaches, venues — and the Moments people made there. Your location stays on your phone; only \"within %lld km\" is asked." : {
-
-    },
     "Calendar" : {
-
-    },
-    "Camera" : {
 
     },
     "Cancel" : {
@@ -893,19 +587,10 @@
     "Choose a photo" : {
 
     },
-    "Choose from your library" : {
-
-    },
     "Choose photos" : {
 
     },
-    "Claim" : {
-
-    },
-    "Claim this place" : {
-
-    },
-    "Claims are reviewed manually before showing a verified badge. Until then the page says \"claimed, pending verification\". Free plan: %lld place." : {
+    "Choose photos or video" : {
 
     },
     "Clear" : {
@@ -938,19 +623,7 @@
     "Cloud AI is on — captures are sent to your provider." : {
 
     },
-    "Collections" : {
-
-    },
-    "Collections are private. Only you see how you group your Moments." : {
-
-    },
-    "Come back next year — today's Moments will be waiting here." : {
-
-    },
-    "Comment on my Moments" : {
-
-    },
-    "Comments" : {
+    "Comment on my posts" : {
 
     },
     "Confidence: %@" : {
@@ -1004,13 +677,7 @@
     "Create encrypted backup" : {
 
     },
-    "Create Moment" : {
-
-    },
-    "Created it · %lld added" : {
-
-    },
-    "Creating…" : {
+    "Create my account" : {
 
     },
     "Creator mode" : {
@@ -1019,7 +686,7 @@
     "Creators" : {
 
     },
-    "Current subscribers keep what they already have until it expires. New Moments can't be sold until you set up a plan again." : {
+    "Current subscribers keep what they already have until it expires. New posts can't be sold until you set up a plan again." : {
 
     },
     "Daily brief" : {
@@ -1034,9 +701,6 @@
     "Date" : {
 
     },
-    "Dates come from your photos." : {
-
-    },
     "Decline" : {
 
     },
@@ -1044,9 +708,6 @@
 
     },
     "Delete All Data" : {
-
-    },
-    "Delete collection" : {
 
     },
     "Delete everything?" : {
@@ -1058,13 +719,7 @@
     "Delete Moment" : {
 
     },
-    "Delete this collection?" : {
-
-    },
     "Delete this group?" : {
-
-    },
-    "Delete this Moment for everyone?" : {
 
     },
     "Delete this Moment?" : {
@@ -1076,22 +731,10 @@
     "Density" : {
 
     },
-    "Description" : {
-
-    },
-    "Details" : {
-
-    },
-    "Details (optional)" : {
-
-    },
     "DEV" : {
 
     },
     "Discard" : {
-
-    },
-    "Discover" : {
 
     },
     "Dismiss" : {
@@ -1133,15 +776,6 @@
     "ELSEWHERE" : {
 
     },
-    "End" : {
-
-    },
-    "End — keep the Moment" : {
-
-    },
-    "End this activity?" : {
-
-    },
     "Estimate after App Store fees (%lld%%) and MOMENT's share; you keep %lld%% of the net. Paid out monthly to the details below." : {
       "localizations" : {
         "en" : {
@@ -1152,31 +786,19 @@
         }
       }
     },
-    "Event" : {
-
-    },
-    "Every %@" : {
-
-    },
     "Every Moment lands here with its source, in the order it happened." : {
 
     },
-    "Everyone" : {
-
-    },
-    "Everyone in the group can see its Moments and chat. You can add people later." : {
-
-    },
-    "Everyone who was invited loses access. Their own photos stay on their phones." : {
-
-    },
-    "Everyone's cut" : {
+    "Every post you share carries a link back to your page. This is the direct one." : {
 
     },
     "Everything about %@" : {
 
     },
     "Everything is understood on this iPhone." : {
+
+    },
+    "Everything you post stays on your storage. Buyers get a key, not a copy from us." : {
 
     },
     "Exact date" : {
@@ -1197,16 +819,7 @@
     "Export as %@" : {
 
     },
-    "Export as video / images" : {
-
-    },
     "Export failed" : {
-
-    },
-    "Export images" : {
-
-    },
-    "Export video" : {
 
     },
     "Export, clear media, delete everything" : {
@@ -1215,31 +828,13 @@
     "Export, media & delete" : {
 
     },
-    "Exports include every side with the person's name. No music, no watermark clutter — just \"Made with MOMENT\" on the last frame." : {
-
-    },
-    "Failed" : {
-
-    },
-    "Feed" : {
-
-    },
     "Fictional friends (Rahul, Sarah, Dev…), a Goa trip, a birthday, a live sunset, NOW posts, a group and private memories — so every screen has something in it. Nothing is uploaded; switch it off in Settings." : {
 
     },
     "Fictional people and Moments on an in-process backend. Turning it off deletes them and returns to iCloud." : {
 
     },
-    "Fill the gap" : {
-
-    },
-    "Find your people" : {
-
-    },
     "Find your people." : {
-
-    },
-    "Finding you…" : {
 
     },
     "First came up %@." : {
@@ -1251,13 +846,13 @@
     "Follow" : {
 
     },
+    "Follow a creator, or open Creator mode and post your first set." : {
+
+    },
     "Follow a creator, or post a set of your own — free sets are how people find you." : {
 
     },
     "Follow them — new sets show up in your feed." : {
-
-    },
-    "Follow to see the Moments you're not in." : {
 
     },
     "Followers" : {
@@ -1289,12 +884,6 @@
       }
     },
     "Free sets are how people find you." : {
-
-    },
-    "Friends you follow back see this. Your exact location is never shared." : {
-
-    },
-    "Friends' map" : {
 
     },
     "from %@" : {
@@ -1337,31 +926,13 @@
     "Given" : {
 
     },
-    "Goa '26, Sarah's 30th, Sunday run…" : {
-
-    },
-    "Goa trips, 2026, Birthdays…" : {
-
-    },
-    "Gone in %lldh" : {
-
-    },
     "Got it" : {
 
     },
     "Got it." : {
 
     },
-    "Got photos from this?" : {
-
-    },
-    "Group Moments into albums — a trip, a year, a person. Only you see them." : {
-
-    },
     "Groups" : {
-
-    },
-    "Grows as people add" : {
 
     },
     "handle" : {
@@ -1373,28 +944,10 @@
     "Handles" : {
 
     },
-    "Happening here" : {
-
-    },
-    "Happening now" : {
-
-    },
-    "HAPPENING NOW" : {
-
-    },
-    "Happening now (LIVE)" : {
-
-    },
-    "Happy hour 5–7. Ask for the window table." : {
-
-    },
     "Have a backup from another phone? Import it with its phrase. This replaces the identity on this device." : {
 
     },
-    "here" : {
-
-    },
-    "Here now" : {
+    "Here since %@" : {
 
     },
     "Here's exactly where they live and what leaves this iPhone." : {
@@ -1436,15 +989,6 @@
     "I only answer from what you've given me. Try a person's name, a place, or a topic — or tell me something to remember." : {
 
     },
-    "I was there" : {
-
-    },
-    "I'm here now" : {
-
-    },
-    "I'm up for…" : {
-
-    },
     "I've saved it" : {
 
     },
@@ -1472,55 +1016,25 @@
     "Important" : {
 
     },
-    "In" : {
-
-    },
-    "Inbox" : {
-
-    },
     "Instagram" : {
 
     },
     "Intelligence" : {
 
     },
-    "Invitations to other people's Moments land here. Links opened from Messages open the Moment directly." : {
-
-    },
     "Invite" : {
-
-    },
-    "Invite %lld" : {
 
     },
     "Invite friends" : {
 
     },
-    "Invite people" : {
-
-    },
     "Invite your people" : {
-
-    },
-    "Invites" : {
 
     },
     "It happened" : {
 
     },
-    "It happens every week. Same title next time links them: streaks, next date, who's usually there." : {
-
-    },
     "It lands in your Inbox, already understood." : {
-
-    },
-    "Join" : {
-
-    },
-    "JOIN" : {
-
-    },
-    "Join %@" : {
 
     },
     "Keep" : {
@@ -1547,25 +1061,16 @@
     "Last seen %@" : {
 
     },
-    "Lasts %lld hours" : {
-
-    },
     "Leave" : {
 
     },
     "Leave group" : {
 
     },
-    "Leave Moment" : {
-
-    },
     "Leave this group?" : {
 
     },
     "Let it go" : {
-
-    },
-    "Library" : {
 
     },
     "Light" : {
@@ -1586,12 +1091,6 @@
     "Live" : {
 
     },
-    "LIVE" : {
-
-    },
-    "Live · %@" : {
-
-    },
     "Load demo data" : {
 
     },
@@ -1607,9 +1106,6 @@
     "Loading…" : {
 
     },
-    "Location is off" : {
-
-    },
     "Lock it behind a price" : {
 
     },
@@ -1619,16 +1115,7 @@
     "Look around first" : {
 
     },
-    "Made by %@" : {
-
-    },
     "Made with MOMENT" : {
-
-    },
-    "Make a Moment with someone and they show up here." : {
-
-    },
-    "Make it a Moment" : {
 
     },
     "Make it yours." : {
@@ -1646,9 +1133,6 @@
     "Make this shareable" : {
 
     },
-    "Make your first Moment" : {
-
-    },
     "Make your own" : {
 
     },
@@ -1656,9 +1140,6 @@
 
     },
     "Making your video…" : {
-
-    },
-    "Map" : {
 
     },
     "Mark a memory important and it will live here." : {
@@ -1671,9 +1152,6 @@
 
     },
     "Media" : {
-
-    },
-    "Memories" : {
 
     },
     "Memories from the past" : {
@@ -1725,25 +1203,10 @@
     "Message me" : {
 
     },
-    "Messages" : {
-
-    },
-    "Minimise" : {
-
-    },
     "Model: %@. Stored only in this device's Keychain." : {
 
     },
-    "Moment" : {
-
-    },
     "MOMENT" : {
-
-    },
-    "Moment · %@" : {
-
-    },
-    "Moment Card" : {
 
     },
     "MOMENT identity backup" : {
@@ -1752,22 +1215,13 @@
     "MOMENT is locked" : {
 
     },
-    "MOMENT is only good with the people you actually see. Every Moment you share is an invite; this is the direct one." : {
-
-    },
     "MOMENT is running without saving. Restart the app; if this keeps happening, please contact support." : {
 
     },
     "MOMENT isn't ready yet. Open the app once." : {
 
     },
-    "Moment Map" : {
-
-    },
     "MOMENT never imports your address book. Link a person from their profile." : {
-
-    },
-    "MOMENT PASSPORT" : {
 
     },
     "MOMENT Pro" : {
@@ -1782,19 +1236,7 @@
     "Moments" : {
 
     },
-    "Moments and chats stay with the people in them." : {
-
-    },
-    "Moments here" : {
-
-    },
     "Moments MOMENT brought back this month that you acted on." : {
-
-    },
-    "MOMENTS TOGETHER" : {
-
-    },
-    "Moments you share with %@ will show here." : {
 
     },
     "More" : {
@@ -1809,25 +1251,13 @@
     "More reactions" : {
 
     },
-    "Most reacted" : {
-
-    },
     "Mute" : {
-
-    },
-    "Mute %@" : {
-
-    },
-    "My map" : {
 
     },
     "My private memory" : {
 
     },
     "My subscriptions" : {
-
-    },
-    "Mystery Moment" : {
 
     },
     "Name" : {
@@ -1842,22 +1272,10 @@
     "Name your price" : {
 
     },
-    "Nearby" : {
-
-    },
-    "Nearby map" : {
-
-    },
     "Needs review" : {
 
     },
     "Network" : {
-
-    },
-    "New" : {
-
-    },
-    "New collection" : {
 
     },
     "New group" : {
@@ -1866,34 +1284,22 @@
     "New message" : {
 
     },
-    "New Moment" : {
-
-    },
     "New name" : {
 
     },
     "New offer" : {
 
     },
-    "New set" : {
+    "New post" : {
 
     },
-    "New subscribers-only Moment" : {
+    "New set" : {
 
     },
     "Next" : {
 
     },
-    "Next: %@" : {
-
-    },
     "No categories. Just give it to me." : {
-
-    },
-    "No collections yet." : {
-
-    },
-    "No comments yet." : {
 
     },
     "No date yet." : {
@@ -1905,16 +1311,7 @@
     "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
 
     },
-    "No Moments with everyone yet. Start one — the group is invited automatically." : {
-
-    },
-    "No Moments yet" : {
-
-    },
     "No one blocked." : {
-
-    },
-    "No one found." : {
 
     },
     "No password, no email. A key on this iPhone signs everything you make. This is its ID:" : {
@@ -1923,31 +1320,16 @@
     "No pending promises." : {
 
     },
-    "No photos here yet. Yours would be the first." : {
-
-    },
-    "No places yet" : {
-
-    },
     "No plans yet." : {
 
     },
     "No plans yet. Say “let's go to Goa in December” and MOMENT will keep it as an intention." : {
 
     },
-    "No public Moments within %lld km yet. Be the first — add the place to your next one." : {
-
-    },
     "No reels yet." : {
 
     },
     "No saved memories yet." : {
-
-    },
-    "No sides yet" : {
-
-    },
-    "No stamps yet." : {
 
     },
     "No thanks" : {
@@ -1959,13 +1341,7 @@
     "Nobody yet." : {
 
     },
-    "Nobody yet. Share a subscribers-only Moment — the locked preview does the selling." : {
-
-    },
-    "Nobody's out yet" : {
-
-    },
-    "Nobody's out yet. Say what you're up for and see who joins." : {
+    "Nobody yet. Post a subscribers-only set — the locked cover does the selling." : {
 
     },
     "Not connected" : {
@@ -1990,12 +1366,6 @@
 
     },
     "Nothing for sale yet." : {
-
-    },
-    "Nothing found. Try the street or area." : {
-
-    },
-    "Nothing from this day yet." : {
 
     },
     "Nothing here yet." : {
@@ -2025,28 +1395,19 @@
     "Nothing open. When someone says “I'll send you…”, MOMENT keeps track." : {
 
     },
-    "Nothing to replay yet" : {
-
-    },
-    "Nothing to see yet" : {
-
-    },
     "Nothing to tidy up." : {
 
     },
     "Nothing yet." : {
 
     },
+    "Nothing yet. Subscriptions, unlocks, tips and requests land here." : {
+
+    },
     "Notifications" : {
 
     },
     "Notify me" : {
-
-    },
-    "Now" : {
-
-    },
-    "NOW" : {
 
     },
     "Now give me something from your life." : {
@@ -2090,22 +1451,13 @@
         }
       }
     },
-    "Only friends you follow back can join, even with the QR." : {
+    "One-off price" : {
 
     },
     "Only genuinely useful ones — a birthday coming up with a gift idea saved, a promise going stale, a plan whose time is near. Never “come back to MOMENT”." : {
 
     },
-    "Only NOW posts where you picked a venue. Your phone's location is never stored or shared — the venue is." : {
-
-    },
-    "Only the people you invite can see a Moment set to \"People in it\". You can change this any time." : {
-
-    },
     "Open" : {
-
-    },
-    "Open %@" : {
 
     },
     "Open Creator mode" : {
@@ -2117,19 +1469,16 @@
     "Open memory" : {
 
     },
-    "Open Moment" : {
-
-    },
     "Open plan" : {
-
-    },
-    "Open Settings" : {
 
     },
     "Open Studio" : {
 
     },
-    "Open the map" : {
+    "Opens every subscribers-only post for 30 days. %lld right now." : {
+
+    },
+    "Optional" : {
 
     },
     "Optional. Used as context only; MOMENT never adds events without asking." : {
@@ -2144,31 +1493,16 @@
     "Original screenshot" : {
 
     },
-    "Others see it blurred — \"You had to be there\" — until they tap Reveal." : {
-
-    },
-    "OUR STORY" : {
-
-    },
-    "Owner" : {
-
-    },
     "Paid — confirm it" : {
 
     },
     "Paid photo" : {
 
     },
-    "Passport" : {
-
-    },
     "Paste a link" : {
 
     },
     "Paste your key" : {
-
-    },
-    "Pause" : {
 
     },
     "Paused" : {
@@ -2192,16 +1526,10 @@
     "PEOPLE" : {
 
     },
-    "People around %@ see it and can join. Great for cafés, venues, public events." : {
-
-    },
     "People booking you" : {
 
     },
-    "People in it can add" : {
-
-    },
-    "People must be approved to follow you and see Moments set to Friends." : {
+    "People must be approved before they can follow you or see anything you post to followers." : {
 
     },
     "People who commit for longer churn less. 0% means that length isn't offered." : {
@@ -2219,16 +1547,10 @@
     "PERKS" : {
 
     },
-    "Permissions" : {
-
-    },
     "Person" : {
 
     },
     "Phone‑to‑phone" : {
-
-    },
-    "Photo" : {
 
     },
     "Photo added" : {
@@ -2240,9 +1562,6 @@
     "Photos" : {
 
     },
-    "PHOTOS & VIDEO" : {
-
-    },
     "Pick 5–10 photos from a trip or a night out. MOMENT turns them into your first Moment — on your iPhone, in seconds." : {
 
     },
@@ -2252,46 +1571,16 @@
     "Pick the photos. I'll find the story." : {
 
     },
-    "Pin to profile" : {
-
-    },
-    "Pinned" : {
-
-    },
-    "Place" : {
-
-    },
-    "Places" : {
-
-    },
-    "Places near you" : {
-
-    },
     "Plan · %@" : {
 
     },
     "Plans" : {
 
     },
-    "Play" : {
-
-    },
     "Play voice note" : {
 
     },
-    "Post" : {
-
-    },
-    "Post a photo to NOW" : {
-
-    },
-    "Post comment" : {
-
-    },
-    "Post to NOW" : {
-
-    },
-    "Posted" : {
+    "Post a video" : {
 
     },
     "Posts" : {
@@ -2301,9 +1590,6 @@
 
     },
     "Price (₹)" : {
-
-    },
-    "Print your QR for the counter: every scan lands people on this page." : {
 
     },
     "Privacy" : {
@@ -2339,9 +1625,6 @@
     "Question" : {
 
     },
-    "Quiet around here" : {
-
-    },
     "Re-link contact" : {
 
     },
@@ -2368,9 +1651,6 @@
 
     },
     "Reels" : {
-
-    },
-    "Regulars" : {
 
     },
     "Relationship (optional, e.g. brother)" : {
@@ -2403,34 +1683,16 @@
     "Reminders" : {
 
     },
-    "Remix" : {
-
-    },
-    "Remix into a new Moment" : {
-
-    },
     "Remixed from %@" : {
 
     },
-    "Remove" : {
-
-    },
     "Remove demo data" : {
-
-    },
-    "Remove from collection" : {
 
     },
     "Remove key" : {
 
     },
     "Remove link" : {
-
-    },
-    "Remove photo" : {
-
-    },
-    "Remove place" : {
 
     },
     "Removes stored screenshots, audio and files. Text memories stay." : {
@@ -2442,22 +1704,13 @@
     "Reopen" : {
 
     },
-    "Replay" : {
-
-    },
     "Reply" : {
-
-    },
-    "Reply to a Moment or message a friend. Conversations stay between you." : {
 
     },
     "Replying to %@" : {
 
     },
     "Report" : {
-
-    },
-    "Reports are reviewed. The person isn't told who reported them." : {
 
     },
     "Request · %@" : {
@@ -2484,16 +1737,10 @@
     "Retry" : {
 
     },
-    "Reveal" : {
-
-    },
     "Review" : {
 
     },
     "Right now" : {
-
-    },
-    "Ritual" : {
 
     },
     "Room %@" : {
@@ -2502,19 +1749,13 @@
     "Run setup again" : {
 
     },
-    "Same event?" : {
-
-    },
-    "Same second" : {
+    "Sales" : {
 
     },
     "Same template, your memories." : {
 
     },
     "Sample data (development)" : {
-
-    },
-    "Sample photos" : {
 
     },
     "Save" : {
@@ -2547,16 +1788,7 @@
     "Save something to MOMENT. It will be understood and remembered." : {
 
     },
-    "Save to a Moment" : {
-
-    },
-    "Saved to a Moment" : {
-
-    },
     "Saving…" : {
-
-    },
-    "Say something" : {
 
     },
     "Say something (optional)" : {
@@ -2568,46 +1800,22 @@
     "Say what you want. They'll name a price for it — you pay only if you accept." : {
 
     },
-    "Say what you're up for and see who joins." : {
-
-    },
-    "Scan to join" : {
-
-    },
-    "SCAN TO JOIN" : {
-
-    },
-    "Scanner unavailable" : {
-
-    },
-    "Scope" : {
-
-    },
     "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
 
     },
     "Screenshots of this set come out blank, and every view carries your MOMENT ID. A photo taken with another phone can still be traced to you." : {
 
     },
-    "Screenshots, promises, plans — on this iPhone only. %lld memories." : {
+    "Screenshots, promises, plans — on this iPhone only. %lld saved." : {
 
     },
     "Search" : {
-
-    },
-    "Search by name or @handle." : {
 
     },
     "Search Memories" : {
 
     },
     "Search My Memories" : {
-
-    },
-    "Search places" : {
-
-    },
-    "Search your Moments" : {
 
     },
     "Section" : {
@@ -2619,13 +1827,7 @@
     "See it" : {
 
     },
-    "See Moment →" : {
-
-    },
     "See what MOMENT understands" : {
-
-    },
-    "See what's happening around you" : {
 
     },
     "See your shop" : {
@@ -2667,7 +1869,13 @@
     "Send price" : {
 
     },
+    "Send report" : {
+
+    },
     "Send to everyone" : {
+
+    },
+    "Sent" : {
 
     },
     "Sent to %lld." : {
@@ -2677,9 +1885,6 @@
 
     },
     "Set" : {
-
-    },
-    "Set as cover" : {
 
     },
     "Set reminder" : {
@@ -2715,40 +1920,22 @@
     "Share anything to MOMENT" : {
 
     },
-    "Share as a card" : {
-
-    },
     "Share as images" : {
 
     },
     "Share as video" : {
 
     },
-    "Share card" : {
-
-    },
     "Share invite link" : {
 
     },
-    "Share link" : {
-
-    },
     "Share profile" : {
-
-    },
-    "Share QR" : {
-
-    },
-    "Share this memory" : {
 
     },
     "Share with %@" : {
 
     },
     "Shared Moments" : {
-
-    },
-    "Shared Moments live in your iCloud (private database) and in the iCloud of people you share with. Leaving a Moment removes your access; deleting one you created removes it for everyone." : {
 
     },
     "Shared with you" : {
@@ -2772,22 +1959,10 @@
     "Show Gift Ideas" : {
 
     },
-    "Show my NOW to people nearby" : {
-
-    },
-    "Show nearby" : {
-
-    },
     "Show on Home" : {
 
     },
-    "Show on Nearby" : {
-
-    },
     "Show Pending Promises" : {
-
-    },
-    "Show QR to join" : {
 
     },
     "Show Today's Moments" : {
@@ -2802,19 +1977,7 @@
     "Shown on your profile. We don't check them — they're yours to claim." : {
 
     },
-    "Shows as LIVE; people can add as it happens." : {
-
-    },
-    "Shows next to %@'s, with your name on it." : {
-
-    },
-    "Sign in to iCloud on this iPhone to share Moments with people. You can still make private ones." : {
-
-    },
-    "Signed" : {
-
-    },
-    "Signed by %@'s key" : {
+    "Sign in to iCloud on this iPhone to follow creators and publish your own posts." : {
 
     },
     "Signed identity" : {
@@ -2854,31 +2017,16 @@
     "Sources" : {
 
     },
-    "STAMPS" : {
-
-    },
-    "Start & show QR" : {
-
-    },
-    "Start a Moment" : {
-
-    },
-    "Start a new Moment" : {
-
-    },
-    "Start an event here" : {
-
-    },
     "Start earning" : {
+
+    },
+    "Start looking" : {
 
     },
     "Start selling" : {
 
     },
     "Start with photos" : {
-
-    },
-    "Starting…" : {
 
     },
     "Status" : {
@@ -2902,6 +2050,9 @@
     "Subscribe · %@ for 30 days" : {
 
     },
+    "Subscribe to open this" : {
+
+    },
     "SUBSCRIBED" : {
 
     },
@@ -2911,7 +2062,10 @@
     "SUBSCRIBERS" : {
 
     },
-    "Subscribers pay for 30 days at a time and see every Moment you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt." : {
+    "Subscribers pay for 30 days at a time and see every post you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt." : {
+
+    },
+    "Subscription" : {
 
     },
     "Subscription · %@ / 30 days" : {
@@ -2950,34 +2104,19 @@
     "The boys, Family, Travel crew…" : {
 
     },
+    "The chat stays with the people in it." : {
+
+    },
     "The creator made this one free." : {
 
     },
     "The file is useless without the phrase. Keep them apart." : {
 
     },
-    "The Moment" : {
-
-    },
-    "The Moment is live until you end it. Everyone keeps their own photos; you can remove anything from your activity." : {
-
-    },
-    "The Moments inside stay where they are." : {
-
-    },
     "The number MOMENT cares about: experiences you kept together with the people who were there." : {
 
     },
-    "The passport is built from your own Moments on this device. It's private unless you share a card." : {
-
-    },
-    "The QR stops admitting people. Everything added stays in the Moment." : {
-
-    },
     "The story" : {
-
-    },
-    "They get an invite and can add their side. You can also share a link after." : {
 
     },
     "They see a locked tile with the price. Screenshots of it come out blank on iPhone, and every view carries their MOMENT ID." : {
@@ -2989,13 +2128,7 @@
     "Things people owe me" : {
 
     },
-    "This account is private" : {
-
-    },
     "This cannot be undone. Export first if you want a copy." : {
-
-    },
-    "This device can't scan here. Open the link from Messages or Photos instead." : {
 
     },
     "This looks like a core memory." : {
@@ -3007,6 +2140,9 @@
     "This month, across subscriptions, sets, requests and tips." : {
 
     },
+    "This one comes with %@'s subscription rather than a separate price." : {
+
+    },
     "This permanently deletes your MOMENT memories and stored media from this device. There is no hidden copy." : {
 
     },
@@ -3014,9 +2150,6 @@
 
     },
     "This was useful" : {
-
-    },
-    "This week's is in. Next: %@" : {
 
     },
     "Through Apple: Apple takes %lld%% first. Card checkout is the %lld%% rail." : {
@@ -3041,22 +2174,16 @@
     "TIME" : {
 
     },
-    "Time Machine" : {
-
-    },
-    "TIME MACHINE" : {
-
-    },
     "TIME YOU SELL" : {
 
     },
     "Timeline" : {
 
     },
-    "times" : {
+    "Tip" : {
 
     },
-    "Tip" : {
+    "Tips" : {
 
     },
     "TIPS" : {
@@ -3093,9 +2220,6 @@
 
     },
     "Turn into a plan" : {
-
-    },
-    "Turn on location for MOMENT in Settings to see nearby places and Moments. Your location is only used on your phone to ask what's close." : {
 
     },
     "Type" : {
@@ -3152,13 +2276,7 @@
     "Unmute" : {
 
     },
-    "Unpin from profile" : {
-
-    },
     "Until %@" : {
-
-    },
-    "Up for" : {
 
     },
     "Up to %lld a day" : {
@@ -3170,13 +2288,7 @@
     "UPI ID, PayPal email or IBAN" : {
 
     },
-    "Uploading" : {
-
-    },
     "Uploading %lld…" : {
-
-    },
-    "Use \"%@\"" : {
 
     },
     "Use “%@”" : {
@@ -3197,22 +2309,13 @@
     "Version %@" : {
 
     },
+    "Video posts show up here. Creators you follow or pay, newest first." : {
+
+    },
     "View" : {
 
     },
-    "View all %lld comments" : {
-
-    },
     "View gift idea" : {
-
-    },
-    "Visibility" : {
-
-    },
-    "Visible to people you follow back. Disappears in 24 hours unless you save it to a Moment." : {
-
-    },
-    "Voice note" : {
 
     },
     "Voice note, %lld seconds" : {
@@ -3221,10 +2324,10 @@
     "Vote on the next spot" : {
 
     },
-    "Waiting for the people who were there." : {
+    "Waiting for them to accept %@" : {
 
     },
-    "Waiting for them to accept %@" : {
+    "Waiting on you" : {
 
     },
     "WAITING ON YOU" : {
@@ -3242,34 +2345,13 @@
     "Wants a price" : {
 
     },
-    "Watch the cut" : {
-
-    },
     "Website" : {
-
-    },
-    "week" : {
-
-    },
-    "weeks" : {
-
-    },
-    "Welcome line (shown on the page)" : {
-
-    },
-    "Were you there?" : {
 
     },
     "What" : {
 
     },
-    "What are we remembering?" : {
-
-    },
     "What are you trying to remember?" : {
-
-    },
-    "What are you up for?" : {
 
     },
     "What do they get?" : {
@@ -3278,19 +2360,10 @@
     "What do you have in mind?" : {
 
     },
-    "What do you remember?" : {
-
-    },
     "What do you want to remember?" : {
 
     },
     "What do you want to say?" : {
-
-    },
-    "What happened on this day, in other years." : {
-
-    },
-    "What happened?" : {
 
     },
     "What is this?" : {
@@ -3317,34 +2390,28 @@
     "What to remember" : {
 
     },
+    "What you post lives in your own iCloud (private database) and, once someone buys or subscribes, in theirs. Deleting a post stops new keys going out; copies people already opened are theirs." : {
+
+    },
     "What you're saving for" : {
-
-    },
-    "What's happening right now?" : {
-
-    },
-    "What's happening?" : {
 
     },
     "What's worth remembering?" : {
 
     },
-    "When" : {
+    "What's wrong" : {
 
     },
-    "WHEN & WHERE" : {
+    "When" : {
 
     },
     "When is this?" : {
 
     },
-    "When on, people in the same room get your Moments instantly — even offline. Others only ever see signed events, never your identity beyond your MOMENT ID." : {
+    "When on, people in the same room get your posts instantly — even offline. Others only ever see signed events, never your identity beyond your MOMENT ID." : {
 
     },
     "When people add to a Moment I'm in" : {
-
-    },
-    "When people add to your Moments or react, it shows here." : {
 
     },
     "When should I bring this back?" : {
@@ -3353,37 +2420,16 @@
     "When?" : {
 
     },
-    "Where (city, optional)" : {
-
-    },
     "WHERE IT CAME FROM" : {
 
     },
-    "Where?" : {
-
-    },
-    "Who can see it" : {
-
-    },
-    "WHO CAN SEE IT" : {
+    "Who can open it" : {
 
     },
     "Who can…" : {
 
     },
     "Who is this about?" : {
-
-    },
-    "Who was there" : {
-
-    },
-    "WHO WAS THERE" : {
-
-    },
-    "Who was there?" : {
-
-    },
-    "Who's out, right now. Gone in a few hours." : {
 
     },
     "Why am I seeing this?" : {
@@ -3399,9 +2445,6 @@
 
     },
     "With" : {
-
-    },
-    "with %@" : {
 
     },
     "Write it down. It's the only way to move your identity to a new phone — we can't recover it for you." : {
@@ -3420,15 +2463,6 @@
 
     },
     "You can also tell me things: “Remember that Rahul likes Japanese food.”" : {
-
-    },
-    "You get a QR. People scan it and they're in — their photos land next to yours." : {
-
-    },
-    "You had to be there." : {
-
-    },
-    "You keep %lld%% on card checkout. The photos stay on your storage — buyers get a key." : {
 
     },
     "You keep %lld%% on card checkout. They pay only if they accept." : {
@@ -3452,6 +2486,9 @@
     "You're on MOMENT Pro." : {
 
     },
+    "You're set up." : {
+
+    },
     "Your API key" : {
 
     },
@@ -3459,9 +2496,6 @@
 
     },
     "Your data" : {
-
-    },
-    "Your first one starts here." : {
 
     },
     "Your handles" : {
@@ -3497,9 +2531,6 @@
     "Your MOMENT ID" : {
 
     },
-    "Your Moments" : {
-
-    },
     "Your month in Moments" : {
 
     },
@@ -3509,22 +2540,13 @@
     "Your name (shown as “…'s side”)" : {
 
     },
-    "Your NOW" : {
-
-    },
     "Your numbers" : {
 
     },
-    "Your page, last 30 days" : {
-
-    },
-    "Your photos are compressed and stripped of location data before upload. You can remove them any time." : {
-
-    },
-    "Your place" : {
-
-    },
     "Your plan" : {
+
+    },
+    "Your posts live on your own storage. Buyers get a key, not a copy from us — so nobody, including us, can take this page down." : {
 
     },
     "Your price, charged on card checkout. MOMENT keeps %lld%%." : {
@@ -3540,10 +2562,7 @@
         }
       }
     },
-    "Your profile is stored in your iCloud. Only people you share with see your Moments." : {
-
-    },
-    "Your role" : {
+    "Your profile is stored in your own iCloud. Only what you publish is public." : {
 
     },
     "YOUR SETS" : {
@@ -3552,7 +2571,7 @@
     "Your side" : {
 
     },
-    "YOUR SIDE OF" : {
+    "Your subscription" : {
 
     },
     "Yours" : {

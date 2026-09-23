@@ -41,6 +41,8 @@ actor InMemoryBackend: SocialBackend {
     var offers: [String: BookingOffer] = [:]
     var bookings: [Booking] = []
     var links: [String: CreatorLinks] = [:]
+    var availabilities: [String: CreatorAvailability] = [:]
+    var callSignalHandler: (@Sendable (CallSignal, String) -> Void)?
     var typingHandler: (@Sendable (String, String) -> Void)?
     var status: AccountStatus = .available
     /// Simulate a dead network for offline-queue tests.
@@ -444,6 +446,32 @@ actor InMemoryBackend: SocialBackend {
         return bookings[i]
     }
     func myBookings() async throws -> [Booking] { try gate(); return bookings.filter { $0.buyerID == me.id || $0.creatorID == me.id }.sorted { $0.startsAt > $1.startsAt } }
+    func availability(for creatorID: String) async throws -> CreatorAvailability { try gate(); return availabilities[creatorID] ?? CreatorAvailability(creatorID: creatorID, windows: [], acceptingBookings: false) }
+    func saveAvailability(_ availability: CreatorAvailability) async throws {
+        try gate(); var a = availability; a.creatorID = me.id; availabilities[me.id] = a
+    }
+    func busySlots(creatorID: String) async throws -> [DateInterval] {
+        try gate()
+        return bookings.filter { $0.creatorID == creatorID && $0.holdsTime }
+            .map { DateInterval(start: $0.startsAt, duration: Double(max(1, $0.minutes)) * 60) }
+    }
+    func recordCall(id: String, connectedAt: Date?, endedAt: Date?, extraMinutes: Int) async throws -> Booking {
+        try gate(); guard let i = bookings.firstIndex(where: { $0.id == id }) else { throw SocialError.notFound }
+        guard bookings[i].buyerID == me.id || bookings[i].creatorID == me.id else { throw SocialError.notAllowed }
+        if let connectedAt, bookings[i].connectedAt == nil { bookings[i].connectedAt = connectedAt }
+        if let endedAt { bookings[i].endedAt = endedAt; bookings[i].status = .done }
+        if extraMinutes > 0 { bookings[i].extraMinutes = max(bookings[i].extraMinutes, extraMinutes) }
+        return bookings[i]
+    }
+    /// In-process: hand the signal straight to the other side's handler, which is what a loopback
+    /// demo needs. On a device the real backends put it on the wire.
+    func sendCallSignal(_ signal: CallSignal, to peerID: String) async throws {
+        try gate()
+        let handler = callSignalHandler
+        let from = me.id
+        Task { handler?(signal, from) }
+    }
+    func onCallSignal(_ handler: @escaping @Sendable (CallSignal, String) -> Void) async { callSignalHandler = handler }
     func creatorLinks(for userID: String) async throws -> CreatorLinks { try gate(); return links[userID] ?? CreatorLinks() }
     func saveCreatorLinks(_ l: CreatorLinks) async throws { try gate(); links[me.id] = l }
 
@@ -536,6 +564,17 @@ actor InMemoryBackend: SocialBackend {
         if let avatar, let data = DemoPhotos.data(avatar) { mediaBlobs["avatar_\(id)"] = data; ref = MediaRef(kind: .photo, localRef: nil, remoteID: "avatar_\(id)") }
         users[id] = SocialUser(id: id, displayName: name, handle: handle, bio: bio, avatarRef: ref, isPrivateAccount: isPrivate, momentCount: Int.random(in: 3...30), sharedCount: Int.random(in: 1...12), placeCount: Int.random(in: 2...9), peopleCount: Int.random(in: 3...20), createdAt: .now.adding(days: -200))
     }
+
+    #if DEBUG
+    /// Tests only: act as one of the seeded people, so a single in-process backend can play both sides
+    /// of a two-person flow (a fan books, the creator accepts). Never called by the app.
+    func actAs(_ id: String, name: String) {
+        users[me.id] = me
+        me = users[id] ?? SocialUser(id: id, displayName: name, handle: id, bio: "", avatarRef: nil, isPrivateAccount: false, momentCount: 0, sharedCount: 0, placeCount: 0, peopleCount: 0, createdAt: .now)
+        me.displayName = name
+        users[id] = me
+    }
+    #endif
 
     /// Fictional friends and Moments for the simulator and UI tests. Idempotent.
     func seedDemo() {
@@ -639,7 +678,23 @@ actor InMemoryBackend: SocialBackend {
         }
         offers["offer_call_sunsets"] = BookingOffer(id: "offer_call_sunsets", creatorID: "u_public", creatorName: "Sunset Society", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "Fifteen minutes, camera on, ask me anything about the shoot.", active: true)
         offers["offer_custom_sarah"] = BookingOffer(id: "offer_custom_sarah", creatorID: "u_sarah", creatorName: "Sarah Kim", kind: .custom, minutes: 0, priceMinor: 29900, currency: "INR", note: "A recipe shot the way you want it.", active: true)
-        bookings = [Booking(id: "bk_demo_ask", offerID: "", creatorID: me.id, creatorName: me.displayName, buyerID: "u_dev", buyerName: "Dev Patel", kind: .photo, minutes: 0, amountMinor: 0, currency: "INR", startsAt: .now.adding(days: 2), status: .asked, note: "A shot of the pier at 6:40 — the one you didn't post?", rail: .web, reference: nil, roomID: "", createdAt: .now.addingTimeInterval(-5400))]
+        offers["offer_voice_sarah"] = BookingOffer(id: "offer_voice_sarah", creatorID: "u_sarah", creatorName: "Sarah Kim", kind: .voiceCall, minutes: 10, priceMinor: 49900, currency: "INR", note: "Ten minutes on the phone. Cooking questions, mostly.", active: true)
+        // Both demo creators keep evening hours, so the slot picker has something real to show.
+        availabilities["u_public"] = CreatorAvailability(creatorID: "u_public", windows: [
+            .init(weekday: 6, startMinute: 17 * 60, endMinute: 20 * 60),
+            .init(weekday: 7, startMinute: 17 * 60, endMinute: 20 * 60)
+        ], timeZoneID: TimeZone.current.identifier, minNoticeHours: 2, maxDaysAhead: 14, bufferMinutes: 10, acceptingBookings: true)
+        availabilities["u_sarah"] = CreatorAvailability(creatorID: "u_sarah", windows: [
+            .init(weekday: 2, startMinute: 11 * 60, endMinute: 13 * 60),
+            .init(weekday: 4, startMinute: 11 * 60, endMinute: 13 * 60)
+        ], timeZoneID: TimeZone.current.identifier, minNoticeHours: 4, maxDaysAhead: 21, bufferMinutes: 5, acceptingBookings: true)
+        bookings = [
+            Booking(id: "bk_demo_ask", offerID: "", creatorID: me.id, creatorName: me.displayName, buyerID: "u_dev", buyerName: "Dev Patel", kind: .photo, minutes: 0, amountMinor: 0, currency: "INR", startsAt: .now.adding(days: 2), status: .asked, note: "A shot of the pier at 6:40 — the one you didn't post?", rail: .web, reference: nil, roomID: "", createdAt: .now.addingTimeInterval(-5400)),
+            // A confirmed video call whose window is open right now, so Home shows the Join banner.
+            Booking(id: "bk_demo_call", offerID: "offer_call_sunsets", creatorID: "u_public", creatorName: "Sunset Society", buyerID: me.id, buyerName: me.displayName, kind: .videoCall, minutes: 15, amountMinor: 99900, currency: "INR", startsAt: .now.addingTimeInterval(120), status: .accepted, note: "The Friday shoot — how do you meter for that?", rail: .web, reference: "demo", roomID: "room_demo000", createdAt: .now.addingTimeInterval(-86400)),
+            // One that already happened, so the receipt shows real talked-for time.
+            Booking(id: "bk_demo_past", offerID: "offer_voice_sarah", creatorID: "u_sarah", creatorName: "Sarah Kim", buyerID: me.id, buyerName: me.displayName, kind: .voiceCall, minutes: 10, amountMinor: 49900, currency: "INR", startsAt: .now.adding(days: -3), status: .done, note: "", rail: .web, reference: "demo", roomID: "room_demo001", createdAt: .now.adding(days: -5), connectedAt: .now.adding(days: -3), endedAt: .now.adding(days: -3).addingTimeInterval(9 * 60 + 40), extraMinutes: 0)
+        ]
         links["u_public"] = CreatorLinks(instagram: "sunsetsociety", x: "", tiktok: "sunsetsociety", youtube: "", website: "sunsetsociety.example")
         links["u_sarah"] = CreatorLinks(instagram: "sarahkimeats", x: "sarahkimeats", tiktok: "", youtube: "", website: "")
         tipsList = [CreatorTip(id: "tip_1", fromID: "u_dev", fromName: "Dev Patel", creatorID: "u_sarah", momentID: "m_cafe", amount: .medium, note: "that broth 🙏", createdAt: .now.adding(days: -2), transactionID: nil)]

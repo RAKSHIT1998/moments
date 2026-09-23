@@ -1,6 +1,6 @@
 # Selling on MOMENT — how it works, and what it costs to run
 
-Creators sell three things: **sets** (photos/clips, free or priced), **time** (video call, voice call, custom), and **subscriptions + tips** (already in the app). Creators set every price and can withdraw anything at any time.
+Creators sell three things: **sets** (photos/clips, free or priced), **time** (video and voice calls that happen inside the app, on a paid clock, plus meets and customs), and **subscriptions + tips**. Creators set every price and can withdraw anything at any time.
 
 ## One subscription, your price
 
@@ -29,10 +29,24 @@ Beyond the subscription and the sets, a fan can **ask** for a photo, a voice or 
     fan asks  →  asked        (no price, nothing charged, lands in the creator's chat)
     creator   →  quoted       (a price for this one thing)
     fan       →  requested    (accepts the price)  |  declined (walks away)
-    creator   →  accepted     (confirmed; a room id exists for calls and deliveries)
+    creator   →  accepted     (confirmed; a room exists and the call can be joined)
                  done / refunded / declined
 
 Money is only ever counted on `accepted` and `done` (`Booking.Status.isPaid`), so a price on the table is never revenue. Creators can still publish a fixed menu (`BookingOffer`) for the things they always sell at the same price — both paths end in the same request.
+
+## Calls
+
+A call is the one thing on the platform with a clock, so the rules are written down rather than implied.
+
+**The creator says when.** `CreatorAvailability` is a weekly pattern in the creator's own time zone, plus how much notice they want, how far ahead people may book, and a gap between calls. `CallSlots.slots(...)` turns that into the only start times a buyer can pick — there is no free-text "how about 3am?". A slot already held by a booking is not offered (`Booking.holdsTime`). On the mesh a buyer sees the whole pattern, because a booking is sealed between two people and nothing on the network says when a creator is busy; a clash is caught when the creator accepts, and publishing free/busy would mean publishing the shape of someone's week.
+
+**The clock starts when the call connects**, not when the slot was scheduled (`CallClock`). A creator five minutes late costs the buyer nothing; a buyer who joins late loses nothing either. Both phones start it on the same event — the peer connection reaching `connected` — so the two countdowns agree to within a round trip, and the call ends when either runs out, which is the reading neither side can game. The last minute is warned, then there are 30 seconds of grace to say goodbye, then it hangs up. A call that never connects is never billed and stays booked.
+
+**Adding time mid-call** is priced at the booking's own per-minute rate — no surge — and is recorded as `extraMinutes` on the same booking, so the receipt is one number with the arithmetic visible.
+
+**The media never touches a server.** Audio and video are WebRTC peer-to-peer, encrypted by DTLS-SRTP. The only thing that crosses the relay is the handshake (`CallSignal`), and it is **sealed to the other person** before it leaves the device, because an ICE candidate contains IP addresses — a relay carrying a call learns that two keys are talking and not where either of them is. On iCloud, which has no live channel, the handshake is a short-lived record the other phone polls for; it costs a second or two of setup and the media still goes direct.
+
+**Nothing is recorded.** There is no recording feature and no server that could hold one. A video call is treated as paid content: it is rendered inside the secure layer, so screenshots and recordings of it come out blank, it carries the viewer's MOMENT ID as a watermark, and the creator is told if the other person captures. A second camera pointed at the screen still works — the app says so rather than pretending otherwise.
 
 ## The 10%
 
@@ -110,5 +124,5 @@ None of that is in this repo, and none of it should be faked. If you go this way
 
 1. A **payment processor integration** (web checkout + webhook that records the purchase reference). Today `buySet(_:reference:)` accepts the reference; nothing calls a processor.
 2. **Payout runs** — see `LAUNCH.md`; the ledger exists, the transfers don't.
-3. **Video calls**: bookings mint a room id, but there's no media layer. That needs WebRTC (LiveKit or similar); signalling can ride the relay as ephemeral frames, the media cannot.
+3. **A TURN server**, if you want calls to connect on every network. Calls are WebRTC peer-to-peer with STUN only; on networks that block direct connections the call fails and says so. MOMENT runs no TURN — a creator can add their own under Settings → Network, and the app explains what that means before they do.
 4. **Creator onboarding/KYC** and, for adult content, everything in the section above.

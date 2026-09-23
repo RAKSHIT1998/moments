@@ -72,7 +72,7 @@
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Optional. Use your calendar as context for what matters this week. MOMENT never adds or changes events without asking you first.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Use your camera to scan documents and screens into Moments. Scans are processed on this iPhone.</string>
+	<string>Use your camera for video calls you or a creator booked, and to scan documents and screens into your private memories. Nothing is recorded, and scans are processed on this iPhone.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Optional. Link a person in MOMENT to one of your contacts. MOMENT never imports your address book.</string>
 	<key>NSFaceIDUsageDescription</key>
@@ -80,7 +80,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Attach a city-level place to a Moment. Never your exact location.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Use your microphone to turn voice notes into Moments.</string>
+	<string>Use your microphone for voice and video calls, and for voice notes in chats. Calls go directly between the two phones and are never recorded.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose photos to add to a Moment.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
@@ -97,6 +97,7 @@
 	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string>
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>

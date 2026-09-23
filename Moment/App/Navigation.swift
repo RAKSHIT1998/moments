@@ -55,6 +55,7 @@ extension View {
             case .vaultSet(let id): VaultSetView(setID: id)
             case .studio: StudioView()
             case .bookings: BookingsView()
+            case .call(let id): CallLobbyView(bookingID: id)
             case .reels(let start): ReelsView(startAt: start)
             case .subscriptions: MySubscriptionsView()
             case .inbox: InboxView(embedded: true)

@@ -997,3 +997,210 @@ final class RevenueFeatureTests: XCTestCase {
         XCTAssertEqual(sub.expiresAt.timeIntervalSinceNow / 86400, 90, accuracy: 1.5, "three months, not one")
     }
 }
+
+// MARK: - Paid calls
+
+final class CallSchedulingTests: XCTestCase {
+    /// A fixed Monday 09:00 UTC, so weekday maths can't drift with the day the suite runs.
+    private let monday = Date(timeIntervalSince1970: 1_767_171_600)   // 2026-01-01 is a Thursday; this is a Monday
+    private var utc: TimeZone { TimeZone(identifier: "UTC")! }
+
+    private func availability(_ windows: [CreatorAvailability.Window], notice: Int = 0, ahead: Int = 7, buffer: Int = 0) -> CreatorAvailability {
+        CreatorAvailability(creatorID: "c", windows: windows, timeZoneID: "UTC", minNoticeHours: notice, maxDaysAhead: ahead, bufferMinutes: buffer, acceptingBookings: true)
+    }
+    private func weekday(_ date: Date) -> Int {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = utc
+        return cal.component(.weekday, from: date)
+    }
+
+    func testSlotsOnlyFallInsideTheCreatorsWindows() {
+        let day = weekday(monday)
+        let a = availability([.init(weekday: day, startMinute: 18 * 60, endMinute: 20 * 60)])
+        let slots = CallSlots.slots(availability: a, minutes: 30, now: monday)
+        XCTAssertFalse(slots.isEmpty)
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = utc
+        for s in slots {
+            let minute = cal.component(.hour, from: s) * 60 + cal.component(.minute, from: s)
+            XCTAssertTrue(minute >= 18 * 60 && minute + 30 <= 20 * 60, "a slot ran outside the window")
+            XCTAssertEqual(cal.component(.weekday, from: s), day, "a slot landed on a day with no window")
+        }
+    }
+
+    func testASlotNeverStartsSoonerThanTheNoticeTheCreatorAsked() {
+        let a = availability([.init(weekday: weekday(monday), startMinute: 0, endMinute: 24 * 60)], notice: 12)
+        let slots = CallSlots.slots(availability: a, minutes: 15, now: monday)
+        for s in slots {
+            XCTAssertGreaterThanOrEqual(s.timeIntervalSince(monday), 12 * 3600 - 1, "a slot broke the notice period")
+        }
+    }
+
+    func testABookedSlotDisappearsAndItsNeighboursSurvive() {
+        let a = availability([.init(weekday: weekday(monday), startMinute: 18 * 60, endMinute: 20 * 60)])
+        let open = CallSlots.slots(availability: a, minutes: 30, now: monday)
+        let target = try! XCTUnwrap(open.first)
+        let taken = Booking(id: "b", offerID: "", creatorID: "c", creatorName: "", buyerID: "x", buyerName: "", kind: .videoCall,
+                            minutes: 30, amountMinor: 0, currency: "INR", startsAt: target, status: .accepted, note: "",
+                            rail: .none, reference: nil, roomID: "r", createdAt: monday)
+        let after = CallSlots.slots(availability: a, minutes: 30, taken: [taken], now: monday)
+        XCTAssertFalse(after.contains(target), "the booked slot was still on sale")
+        XCTAssertEqual(after.count, open.count - 1, "booking one slot removed more than one")
+    }
+
+    func testAPausedCreatorOffersNothingButKeepsTheirHours() {
+        var a = availability([.init(weekday: weekday(monday), startMinute: 18 * 60, endMinute: 20 * 60)])
+        a.acceptingBookings = false
+        XCTAssertTrue(CallSlots.slots(availability: a, minutes: 30, now: monday).isEmpty)
+        XCTAssertEqual(a.windows.count, 1, "pausing threw the hours away")
+    }
+
+    func testTheBufferKeepsCallsFromTouching() {
+        let a = availability([.init(weekday: weekday(monday), startMinute: 18 * 60, endMinute: 19 * 60)], buffer: 15)
+        let slots = CallSlots.slots(availability: a, minutes: 15, now: monday)
+        guard slots.count >= 2 else { return XCTFail("expected at least two slots") }
+        XCTAssertEqual(slots[1].timeIntervalSince(slots[0]), 30 * 60, accuracy: 1, "slots ignored the gap the creator asked for")
+    }
+}
+
+final class CallClockTests: XCTestCase {
+    func testTheClockDoesNotRunBeforeTheCallConnects() {
+        let c = CallClock(minutes: 10)
+        XCTAssertEqual(c.remaining(at: .now.addingTimeInterval(600)), 600, "a late creator cost the buyer minutes")
+        XCTAssertFalse(c.isOver(at: .now.addingTimeInterval(9999)))
+    }
+
+    func testItCountsDownFromTheMomentItConnects() {
+        let start = Date()
+        let c = CallClock(minutes: 5, connectedAt: start)
+        XCTAssertEqual(c.remaining(at: start.addingTimeInterval(60)), 240)
+        XCTAssertFalse(c.isEnding(at: start.addingTimeInterval(60)))
+        XCTAssertTrue(c.isEnding(at: start.addingTimeInterval(4 * 60 + 5)), "no warning before the end")
+        XCTAssertTrue(c.isOver(at: start.addingTimeInterval(300)))
+    }
+
+    func testTheGraceIsForSayingGoodbyeNotForFreeMinutes() {
+        let start = Date()
+        let c = CallClock(minutes: 1, connectedAt: start)
+        XCTAssertTrue(c.isOver(at: start.addingTimeInterval(61)), "paid time should be spent")
+        XCTAssertFalse(c.isHardOver(at: start.addingTimeInterval(80)), "cut off mid-goodbye")
+        XCTAssertTrue(c.isHardOver(at: start.addingTimeInterval(95)), "the grace never ended")
+    }
+
+    func testBoughtMinutesAreAddedToWhatWasPaidFor() {
+        let start = Date()
+        var c = CallClock(minutes: 5, connectedAt: start)
+        c.extraSeconds = 300
+        XCTAssertEqual(c.totalSeconds, 600)
+        XCTAssertFalse(c.isOver(at: start.addingTimeInterval(400)))
+        XCTAssertEqual(CallClock.label(c.remaining(at: start.addingTimeInterval(400))), "3:20")
+    }
+}
+
+final class CallBookingTests: XCTestCase {
+    private func call(_ status: Booking.Status, startsAt: Date, minutes: Int = 15, room: String = "r1") -> Booking {
+        Booking(id: "b", offerID: "o", creatorID: "c", creatorName: "C", buyerID: "me", buyerName: "Me", kind: .videoCall,
+                minutes: minutes, amountMinor: 30000, currency: "INR", startsAt: startsAt, status: status, note: "",
+                rail: .web, reference: nil, roomID: room, createdAt: .now)
+    }
+
+    func testOnlyAConfirmedCallWithARoomCanBeJoined() {
+        XCTAssertTrue(call(.accepted, startsAt: .now).isJoinable)
+        XCTAssertFalse(call(.requested, startsAt: .now).isJoinable, "an unconfirmed call was joinable")
+        XCTAssertFalse(call(.accepted, startsAt: .now, room: "").isJoinable, "joined a call with no room")
+        var done = call(.accepted, startsAt: .now); done.endedAt = .now
+        XCTAssertFalse(done.isJoinable, "a finished call reopened")
+    }
+
+    func testTheJoinWindowOpensEarlyAndClosesAfterThePaidTime() {
+        let start = Date()
+        let w = call(.accepted, startsAt: start, minutes: 15).joinWindow()
+        XCTAssertTrue(w.contains(start.addingTimeInterval(-4 * 60)), "couldn't join four minutes early")
+        XCTAssertFalse(w.contains(start.addingTimeInterval(-6 * 60)), "joinable far too early")
+        XCTAssertTrue(w.contains(start.addingTimeInterval(15 * 60)))
+        XCTAssertFalse(w.contains(start.addingTimeInterval(25 * 60)), "the window never closed")
+    }
+
+    func testAnUnfinishedCallHoldsTheSlotAndAFinishedOneReleasesIt() {
+        XCTAssertTrue(call(.accepted, startsAt: .now).holdsTime)
+        XCTAssertTrue(call(.requested, startsAt: .now).holdsTime, "a paid-for slot was resold")
+        XCTAssertFalse(call(.declined, startsAt: .now).holdsTime)
+        var done = call(.accepted, startsAt: .now); done.endedAt = .now
+        XCTAssertFalse(done.holdsTime)
+    }
+
+    func testAddedMinutesArePricedAtTheSameRate() {
+        var b = call(.accepted, startsAt: .now, minutes: 15)   // ₹300 for 15 min
+        b.extraMinutes = 5
+        XCTAssertEqual(b.paidMinutes, 20)
+        // ₹300 for 15 minutes is ₹20 a minute, so 20 minutes is ₹400. Compare the number, not a
+        // locale's spacing around the symbol.
+        let digits = b.totalLabel(Locale(identifier: "en_IN")).filter(\.isNumber)
+        XCTAssertEqual(digits, "400", "extra minutes were not charged at the booking's rate")
+    }
+}
+
+final class CallBackendTests: XCTestCase {
+    func testAvailabilityRoundTripsAndBusySlotsComeFromRealBookings() async throws {
+        let backend = InMemoryBackend(meID: "c", displayName: "Creator")
+        await backend.addUser("fan", name: "Fan", handle: "fan")
+        let a = CreatorAvailability(creatorID: "c", windows: [.init(weekday: 3, startMinute: 600, endMinute: 720)], timeZoneID: "UTC", acceptingBookings: true)
+        try await backend.saveAvailability(a)
+        let back = try await backend.availability(for: "c")
+        XCTAssertEqual(back.windows, a.windows)
+        XCTAssertTrue(back.acceptingBookings)
+
+        // Nothing booked yet.
+        var busy = try await backend.busySlots(creatorID: "c")
+        XCTAssertTrue(busy.isEmpty)
+
+        // A fan books and the creator accepts: the slot is now held.
+        let offer = try await backend.saveBookingOffer(BookingOffer(id: "", creatorID: "c", creatorName: "Creator", kind: .videoCall, minutes: 15, priceMinor: 30000, currency: "INR", note: "", active: true))
+        let start = Date().addingTimeInterval(86400)
+        await backend.actAs("fan", name: "Fan")
+        let booking = try await backend.requestBooking(offerID: offer.id, creatorID: "c", kind: .videoCall, startsAt: start, note: "", rail: .web, reference: nil)
+        await backend.actAs("c", name: "Creator")
+        let accepted = try await backend.setBookingStatus(id: booking.id, status: .accepted)
+        XCTAssertFalse(accepted.roomID.isEmpty, "accepting a call minted no room")
+
+        busy = try await backend.busySlots(creatorID: "c")
+        XCTAssertEqual(busy.count, 1)
+        XCTAssertEqual(busy.first?.duration, 15 * 60)
+    }
+
+    func testARecordedCallIsTheOneThatGetsBilled() async throws {
+        let backend = InMemoryBackend(meID: "c", displayName: "Creator")
+        let offer = try await backend.saveBookingOffer(BookingOffer(id: "", creatorID: "c", creatorName: "Creator", kind: .voiceCall, minutes: 10, priceMinor: 20000, currency: "INR", note: "", active: true))
+        await backend.actAs("fan", name: "Fan")
+        let b = try await backend.requestBooking(offerID: offer.id, creatorID: "c", kind: .voiceCall, startsAt: .now, note: "", rail: .web, reference: nil)
+
+        let connected = Date()
+        let mid = try await backend.recordCall(id: b.id, connectedAt: connected, endedAt: nil, extraMinutes: 0)
+        XCTAssertNotNil(mid.connectedAt)
+        XCTAssertNil(mid.endedAt)
+        XCTAssertNotEqual(mid.status, .done, "a call was marked done before it ended")
+
+        let ended = try await backend.recordCall(id: b.id, connectedAt: nil, endedAt: connected.addingTimeInterval(600), extraMinutes: 5)
+        XCTAssertEqual(ended.status, .done)
+        XCTAssertEqual(ended.extraMinutes, 5)
+        XCTAssertEqual(ended.connectedAt, mid.connectedAt, "the connect time moved after the fact")
+        XCTAssertFalse(ended.holdsTime, "a finished call still blocked the diary")
+    }
+
+    func testACallSignalReachesTheOtherSideAndCarriesNoMedia() async throws {
+        let backend = InMemoryBackend(meID: "c", displayName: "Creator")
+        let box = SignalBox()
+        await backend.onCallSignal { signal, from in Task { await box.put(signal, from) } }
+        try await backend.sendCallSignal(CallSignal(kind: .offer, bookingID: "b1", roomID: "r1", sdp: "v=0 fake"), to: "fan")
+        try await Task.sleep(for: .milliseconds(200))
+        let got = await box.first
+        XCTAssertEqual(got?.0.kind, .offer)
+        XCTAssertEqual(got?.0.bookingID, "b1")
+        XCTAssertEqual(got?.1, "c")
+    }
+
+    /// Collects signals off the handler's concurrent context.
+    actor SignalBox {
+        private var items: [(CallSignal, String)] = []
+        func put(_ s: CallSignal, _ from: String) { items.append((s, from)) }
+        var first: (CallSignal, String)? { items.first }
+    }
+}
