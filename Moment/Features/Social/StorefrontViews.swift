@@ -507,7 +507,7 @@ struct EditSetSheet: View {
         NavigationStack {
             Form {
                 Section("Photos") {
-                    PhotosPicker(selection: $picker, maxSelectionCount: 30, matching: .any(of: [.images, .videos])) { Label(picked.isEmpty ? "Choose from your library" : "\(picked.count) chosen", systemImage: "photo.on.rectangle") }
+                    PhotosPicker(selection: $picker, maxSelectionCount: 30, matching: .any(of: [.images, .videos])) { Label(picked.isEmpty ? "Choose photos or video" : "\(picked.count) chosen", systemImage: "photo.on.rectangle") }
                         .accessibilityIdentifier("setPhotos")
                     if loading { ProgressView() }
                     if !picked.isEmpty {
@@ -542,15 +542,19 @@ struct EditSetSheet: View {
         loading = true; defer { loading = false }
         var refs: [MediaRef] = []
         for item in items {
+            let isVideo = item.supportedContentTypes.contains { $0.conforms(to: .movie) }
             guard let d = try? await item.loadTransferable(type: Data.self) else { continue }
-            if let ref = await env.social.storeLocalMedia(d, kind: .photo) { refs.append(ref) }
+            if let ref = await env.social.storeLocalMedia(d, kind: isVideo ? .video : .photo) { refs.append(ref) }
         }
         picked = refs
     }
     private func save() {
         let minor = free ? 0 : max(0, (Int(price.filter(\.isNumber)) ?? 0) * 100)
         var s = set ?? VaultSet(id: "", creatorID: "", creatorName: "", title: "", blurb: "", priceMinor: 0, currency: "INR", cover: nil, itemCount: 0, isVideo: false, createdAt: .now, visible: true)
-        s.title = title.trimmed; s.blurb = blurb.trimmed; s.priceMinor = minor; s.cover = picked.first
+        s.title = title.trimmed; s.blurb = blurb.trimmed; s.priceMinor = minor
+        // A video post needs a still to show before it plays and while it's locked.
+        s.isVideo = picked.contains { $0.kind == .video }
+        s.cover = picked.first { $0.kind == .photo } ?? picked.first
         let items = picked.enumerated().map { i, r in VaultItem(id: "", setID: s.id, kind: r.kind, media: r, caption: "", index: i) }
         Task { if await env.social.saveSet(s, items: items) != nil { dismiss() } }
     }

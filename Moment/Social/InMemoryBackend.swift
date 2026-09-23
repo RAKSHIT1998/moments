@@ -625,6 +625,17 @@ actor InMemoryBackend: SocialBackend {
         set("set_sunsets_free", "u_public", "Versova, the free set", "Three frames from last Friday. The rest is in the paid set.", 0, "demo_270", ["demo_270", "demo_213", "demo_110"])
         set("set_sunsets_raw", "u_public", "The raw Friday", "Every frame, full resolution, before the edit.", 49900, "demo_173", ["demo_173", "demo_176", "demo_195", "demo_154"])
         set("set_sarah_kitchen", "u_sarah", "Kitchen, close up", "Eighteen hours of broth in twelve photos.", 19900, "demo_312", ["demo_312", "demo_292", "demo_225"])
+        // A video post, free, so the reels feed has something real in it.
+        if let clip = DemoPhotos.data("demo_clip", ext: "mp4") {
+            mediaBlobs["vc_set_clip"] = DemoPhotos.data("demo_213")
+            mediaBlobs["vi_set_clip_0"] = clip
+            vaultSets["set_clip"] = VaultSet(id: "set_clip", creatorID: "u_public", creatorName: "Sunset Society", title: "Friday, in motion", blurb: "Twenty seconds of the last light.", priceMinor: 0, currency: "INR", cover: MediaRef(kind: .photo, localRef: nil, remoteID: "vc_set_clip"), itemCount: 1, isVideo: true, createdAt: .now.addingTimeInterval(-7200), visible: true)
+            vaultItemsBySet["set_clip"] = [VaultItem(id: "vi_set_clip_0", setID: "set_clip", kind: .video, media: MediaRef(kind: .video, localRef: nil, remoteID: "vi_set_clip_0", durationSeconds: 4), caption: "6:47pm", index: 0)]
+            mediaBlobs["vc_set_clip_paid"] = DemoPhotos.data("demo_173")
+            mediaBlobs["vi_set_clip_paid_0"] = clip
+            vaultSets["set_clip_paid"] = VaultSet(id: "set_clip_paid", creatorID: "u_sarah", creatorName: "Sarah Kim", title: "The whole pour", blurb: "Uncut.", priceMinor: 29900, currency: "INR", cover: MediaRef(kind: .photo, localRef: nil, remoteID: "vc_set_clip_paid"), itemCount: 1, isVideo: true, createdAt: .now.addingTimeInterval(-10800), visible: true)
+            vaultItemsBySet["set_clip_paid"] = [VaultItem(id: "vi_set_clip_paid_0", setID: "set_clip_paid", kind: .video, media: MediaRef(kind: .video, localRef: nil, remoteID: "vi_set_clip_paid_0", durationSeconds: 4), caption: "", index: 0)]
+        }
         offers["offer_call_sunsets"] = BookingOffer(id: "offer_call_sunsets", creatorID: "u_public", creatorName: "Sunset Society", kind: .videoCall, minutes: 15, priceMinor: 99900, currency: "INR", note: "Fifteen minutes, camera on, ask me anything about the shoot.", active: true)
         offers["offer_custom_sarah"] = BookingOffer(id: "offer_custom_sarah", creatorID: "u_sarah", creatorName: "Sarah Kim", kind: .custom, minutes: 0, priceMinor: 29900, currency: "INR", note: "A recipe shot the way you want it.", active: true)
         bookings = [Booking(id: "bk_demo_ask", offerID: "", creatorID: me.id, creatorName: me.displayName, buyerID: "u_dev", buyerName: "Dev Patel", kind: .photo, minutes: 0, amountMinor: 0, currency: "INR", startsAt: .now.adding(days: 2), status: .asked, note: "A shot of the pier at 6:40 — the one you didn't post?", rail: .web, reference: nil, roomID: "", createdAt: .now.addingTimeInterval(-5400))]

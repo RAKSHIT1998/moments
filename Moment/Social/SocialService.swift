@@ -1258,13 +1258,7 @@ final class SocialService {
     /// The creator feed: every set and subscribers-only Moment from people I follow or pay, newest first.
     private(set) var creatorFeed: [CreatorPost] = []
     func refreshCreatorFeed() async {
-        // Whose shop to show: people I follow or pay, and anyone whose Moments already reach me.
-        var ids = Set(graph.following)
-        ids.formUnion(mySubscriptions.filter(\.isActive).map(\.creatorID))
-        ids.formUnion(setsByCreator.keys)
-        ids.formUnion(moments.values.map(\.creatorID))
-        ids.insert(myID)
-        for id in ids where setsByCreator[id] == nil { await loadStorefront(id) }
+        let ids = await knownCreatorIDs()
         for id in ids where creatorPlans[id] == nil && !checkedPlans.contains(id) { await loadCreatorPlan(id) }
         if myPurchases.isEmpty { myPurchases = (try? await backend.myPurchases()) ?? [] }
         let sets = ids.flatMap { setsByCreator[$0] ?? [] }
@@ -1277,11 +1271,29 @@ final class SocialService {
 
     private(set) var reels: [Reel] = []
     private var seenReels: Set<String> = []
-    /// Builds reels from what we already have, loading sides for the Moments that could carry one.
+
+    /// Whose shop this phone knows about: people I follow or pay, anyone I've bought from, and anyone
+    /// whose posts already reach me. Loads what's missing.
+    func knownCreatorIDs() async -> Set<String> {
+        var ids = Set(graph.following)
+        ids.formUnion(mySubscriptions.filter(\.isActive).map(\.creatorID))
+        ids.formUnion(setsByCreator.keys)
+        ids.formUnion(myPurchases.map(\.creatorID))
+        ids.formUnion(moments.values.map(\.creatorID))
+        ids.insert(myID)
+        // A new account follows nobody, so there'd be nothing to show. Ask the backend who exists —
+        // that's the same list the search field would return, not a ranking of strangers.
+        if ids.count < 4, let people = try? await backend.searchUsers("") { ids.formUnion(people.map(\.id)) }
+        for id in ids where setsByCreator[id] == nil { await loadStorefront(id) }
+        for id in ids where creatorPlans[id] == nil && !checkedPlans.contains(id) { await loadCreatorPlan(id) }
+        return ids
+    }
+    /// Video posts from creators you follow, pay, or have already bought from.
     func refreshReels() async {
-        let candidates = moments.values.filter { !$0.isLocked && ($0.mediaCount >= 3 || $0.memberIDs.contains(myID) || $0.isLive) }.sorted { $0.createdAt > $1.createdAt }.prefix(18)
-        for m in candidates where allContributions(m.id).isEmpty { _ = await loadMoment(m.id) }
-        reels = ReelBuilder.build(moments: Array(moments.values), sides: { [weak self] id in self?.allContributions(id) ?? [] }, me: myID, seen: seenReels)
+        let ids = await knownCreatorIDs()
+        let sets = ids.flatMap { setsByCreator[$0] ?? [] }.filter(\.isVideo)
+        for set in sets where itemsBySet[set.id] == nil && isUnlocked(set) { await loadItems(set.id) }
+        reels = ReelBuilder.build(sets: sets, items: { [weak self] in self?.items($0) ?? [] }, plans: creatorPlans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked, seen: seenReels)
     }
     func markReelSeen(_ id: String) { seenReels.insert(id) }
 

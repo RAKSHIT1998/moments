@@ -32,6 +32,7 @@ struct CreatorFeedView: View {
         .background(MColor.background)
         .refreshable { await env.social.refreshCreatorFeed() }
         .task { await env.social.refreshCreatorFeed() }
+        .task(id: env.social.hasLoadedOnce) { if env.social.hasLoadedOnce { await env.social.refreshCreatorFeed() } }
         .sheet(item: $buying) { s in BuySetSheet(set: s) }
         .sheet(item: Binding(get: { subscribing.map { BoxedID(id: $0) } }, set: { subscribing = $0?.id })) { b in SubscribeSheet(creatorID: b.id) }
     }

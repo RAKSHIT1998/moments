@@ -1,73 +1,52 @@
 import Foundation
 
-/// Reels, the MOMENT way: a reel is a night, not a post. Either someone's video side, or the whole
-/// Moment auto-cut from everyone's sides in order. Every reel names who was there and lets you step in.
+/// Reels are the video posts creators publish: full-screen, autoplaying, one per screen.
+/// A locked one shows its cover behind the blur with the price on it — the video itself is never
+/// sent to anyone who hasn't paid, so there is nothing to leak.
 struct Reel: Identifiable, Sendable, Equatable {
-    enum Kind: Sendable, Equatable {
-        case video(Contribution)          // a real video someone added
-        case cut([Contribution])          // everyone's sides, in time order
-    }
     var id: String
-    var momentID: String
-    var kind: Kind
-    var title: String
+    var setID: String
     var creatorID: String
     var creatorName: String
-    var memberNames: [String]
-    var memberIDs: [String]
-    var place: SocialPlace?
-    var coarsePlace: String?
+    var title: String
+    var blurb: String
+    /// The playable clip. Nil when the set is locked: only the cover exists on this device.
+    var video: MediaRef?
+    var cover: MediaRef?
     var createdAt: Date
-    var isLive: Bool
-    var contributionCount: Int
-    var commentCount: Int
-    var reactionCount: Int
-    /// A cut updates itself as people add sides — that's the reason to come back.
-    var isCut: Bool { if case .cut = kind { return true }; return false }
-    var sides: [Contribution] { switch kind { case .video(let c): [c]; case .cut(let cs): cs } }
-    var authorLine: String {
-        guard isCut else { return creatorName }
-        let n = memberIDs.count
-        return n <= 1 ? creatorName : "\(creatorName) + \(n - 1)"
-    }
+    var gate: CreatorPost.Gate
+    var isLocked: Bool { gate != .open }
 }
 
 enum ReelBuilder {
-    /// Which Moments become reels, and in what order. Fresh and live first, then the ones with the most
-    /// material. Locked/teaser Moments never become reels — a reel shows what's inside.
-    static func build(moments: [SocialMoment], sides: (String) -> [Contribution], me: String, seen: Set<String> = [], now: Date = .now) -> [Reel] {
+    /// Every video post the viewer could watch or buy, newest first. Free and already-bought ones first
+    /// when they're equally fresh, because a reel that plays is worth more than a wall.
+    static func build(sets: [VaultSet], items: (String) -> [VaultItem], plans: [String: CreatorPlan], purchases: Set<String>, subscribedTo: Set<String>, me: String, blocked: Set<String> = [], seen: Set<String> = [], now: Date = .now) -> [Reel] {
         var out: [Reel] = []
-        for m in moments where !m.isLocked && !(m.isTeaser && !m.memberIDs.contains(me)) {
-            let all = sides(m.id).filter { $0.uploadState == .uploaded }.sorted { ($0.originalTimestamp ?? $0.createdAt) < ($1.originalTimestamp ?? $1.createdAt) }
-            // Every video side is its own reel.
-            for v in all where v.kind == .video && v.media != nil {
-                out.append(reel(id: "v_" + v.id, moment: m, kind: .video(v), createdAt: v.originalTimestamp ?? v.createdAt))
-            }
-            // The night itself, when there's enough to cut: at least three visual sides.
-            let visual = all.filter { ($0.kind == .photo || $0.kind == .video) && $0.media != nil }
-            if visual.count >= 3 {
-                out.append(reel(id: "c_" + m.id, moment: m, kind: .cut(Array(visual.prefix(12))), createdAt: m.startAt ?? m.createdAt))
+        for set in sets where set.isVideo && set.visible && !blocked.contains(set.creatorID) {
+            let mine = set.creatorID == me
+            let open = mine || set.isFree || purchases.contains(set.id) || subscribedTo.contains(set.creatorID)
+            let gate: CreatorPost.Gate = open ? .open : .buy(priceMinor: set.priceMinor, currency: set.currency)
+            let clips = open ? items(set.id).filter { $0.kind == .video && $0.media != nil } : []
+            // One reel per clip when it's open; one locked card per set otherwise.
+            if open && !clips.isEmpty {
+                for (i, clip) in clips.enumerated() {
+                    out.append(Reel(id: "\(set.id)#\(i)", setID: set.id, creatorID: set.creatorID, creatorName: set.creatorName, title: set.title, blurb: clip.caption.isEmpty ? set.blurb : clip.caption, video: clip.media, cover: set.cover, createdAt: set.createdAt, gate: .open))
+                }
+            } else if !open {
+                out.append(Reel(id: set.id, setID: set.id, creatorID: set.creatorID, creatorName: set.creatorName, title: set.title, blurb: set.blurb, video: nil, cover: set.cover, createdAt: set.createdAt, gate: gate))
             }
         }
+        _ = plans
         return out.sorted { a, b in
-            let sa = score(a, me: me, seen: seen, now: now), sb = score(b, me: me, seen: seen, now: now)
+            let sa = score(a, seen: seen, now: now), sb = score(b, seen: seen, now: now)
             return sa == sb ? a.createdAt > b.createdAt : sa > sb
         }
     }
 
-    private static func reel(id: String, moment m: SocialMoment, kind: Reel.Kind, createdAt: Date) -> Reel {
-        Reel(id: id, momentID: m.id, kind: kind, title: m.title, creatorID: m.creatorID, creatorName: m.creatorName, memberNames: m.memberNames, memberIDs: m.memberIDs, place: m.place, coarsePlace: m.coarsePlace, createdAt: createdAt, isLive: m.isLive, contributionCount: m.contributionCount, commentCount: m.commentCount, reactionCount: m.reactionCounts.values.reduce(0, +))
-    }
-
-    /// No engagement bait: being in it, being live, being recent and having many people's sides is all that counts.
-    static func score(_ r: Reel, me: String, seen: Set<String>, now: Date) -> Double {
-        var s = 0.0
-        if r.memberIDs.contains(me) { s += 3 }
-        if r.isLive { s += 2 }
-        let ageHours = max(0, now.timeIntervalSince(r.createdAt) / 3600)
-        s += max(0, 2.5 - ageHours / 24)
-        s += min(2, Double(Set(r.sides.map(\.authorID)).count) * 0.5)   // more people in the cut = better
-        if case .video = r.kind { s += 0.5 }                            // a real video is a real reel
+    static func score(_ r: Reel, seen: Set<String>, now: Date) -> Double {
+        var s = max(0, 2.5 - now.timeIntervalSince(r.createdAt) / 86400)   // freshness over ~2.5 days
+        if !r.isLocked { s += 1 }
         if seen.contains(r.id) { s *= 0.4 }
         return s
     }

@@ -52,7 +52,7 @@ Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the ap
 
 ## Home: Feed and Moments
 
-Tabs are **Home · Create · Chats · Profile** — no Explore tab and no dating; NOW, Reels, Nearby and Scan live in the Home header. Home has two sides, switchable from the header and remembered: **Feed** — a creator‑platform column of posts from people you follow or pay, where a locked post shows its cover blurred with *Unlock for ₹X* or *Subscribe · ₹X* on it and nothing is teased without naming the price — and **Moments**, the immersive stack of nights. Reels, NOW, scan and activity live in the header on both. `CreatorFeedBuilder` decides each post's gate (`open` / `buy` / `subscribe`) and never shows a lock it can't explain: a subscribers‑only Moment whose creator has no plan loaded is left out rather than shown unopenable.
+Tabs are **Home · Create · Chats · Profile**. Home is the **creator feed**: a column of posts from people you follow or pay, where a locked one shows its cover blurred with *Unlock for ₹X* or *Subscribe · ₹X* on it — nothing is teased without naming the price. `CreatorFeedBuilder` decides each post's gate (`open` / `buy` / `subscribe`) and never shows a lock it can't explain. **Reels** is the video‑post feed: free and bought clips play, paid ones are a locked card whose clip was never sent to the device. **Create** offers a photo set, a video post, a message to every subscriber, and your subscription.
 
 ## Selling: subscription, bundles, sets, locked messages, requests, tips
 

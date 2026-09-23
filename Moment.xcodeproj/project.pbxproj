@@ -42,7 +42,6 @@
 		2953493AFAB2D222B6A54FFC /* demo_173.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A1235B60480B3A0BDEF9A3CF /* demo_173.jpg */; };
 		29F529A4CC7AFF0DB0AE6495 /* MemoryEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F7FB4AB4D27843673924B /* MemoryEditView.swift */; };
 		2A466CE19814BA5FAEA8BE1A /* MemoryActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4371AEE165C28E6AFF62C43F /* MemoryActions.swift */; };
-		2B156315E078AF7B48653798 /* ImmersiveFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = B910DBB3645F6F1DE5EA64DE /* ImmersiveFeed.swift */; };
 		2BE481DE8BC0A38FA6329E15 /* IdentityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB5AB857F6060A02D686BB0 /* IdentityService.swift */; };
 		2C02D06529CDFF9AE49E313B /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5C4E1628757B967D4EFA41 /* SearchEngine.swift */; };
 		2C913467DD2688980689051F /* PostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51760AF8F6A0625260BDBE8 /* PostCard.swift */; };
@@ -135,7 +134,6 @@
 		8C3D54549413F71443C70F1F /* MomentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */; };
 		8C48BDFA001921C190F8A425 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03EE7A0BC02BAF0519F3FD9F /* Contacts.framework */; };
 		91A3470C495E6AE3A2195936 /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B317B3A7B19EC3A46F0BCC83 /* PeopleView.swift */; };
-		91A8AA3E094B2DAB67E5E4DC /* MomentMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0265A93A19FEB7C292C84E3B /* MomentMapView.swift */; };
 		92E2060C773758E5F99FAC9A /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C76A24F401455CDDD4FBD9 /* SpotlightService.swift */; };
 		961B5290CC4E0CE943747C56 /* CaptureResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5448A08E37BA411D80BA9745 /* CaptureResultView.swift */; };
 		9A2C8C96DBDC8CF2BB2C5D22 /* MomentTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */; };
@@ -210,7 +208,6 @@
 		E0C185D59FB14E5ABDFBCB51 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138469A6359AD25CB00CEAE2 /* OnboardingView.swift */; };
 		E0DEBBE3DD9C6DCD823BA5B2 /* PhotoMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8351DC4F38D2FFA323F3E9 /* PhotoMetadata.swift */; };
 		E13DB8C1AEC75D4839D32C10 /* ImageColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE17C8090CFD8B9147EE664 /* ImageColor.swift */; };
-		E1628EFB55F152CF15D9270B /* NearbyMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5C526FB81E25B1833ECA6D /* NearbyMapView.swift */; };
 		E21FAD5FFF9D347B80A7F6F3 /* demo_312.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 09974FA53BD0B0F016CD8482 /* demo_312.jpg */; };
 		E2373A87064B4F2298A8FC8B /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39297A7D87A51444667E9B87 /* PhotosUI.framework */; };
 		E2379D9E578C8166808ABA5A /* StoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27C829D9BD2CCB12CBE38A0D /* StoryService.swift */; };
@@ -291,7 +288,6 @@
 /* Begin PBXFileReference section */
 		00AA2E43C2DA317B153F92DF /* Source.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Source.swift; sourceTree = "<group>"; };
 		01A8D429606026115D94F7E9 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
-		0265A93A19FEB7C292C84E3B /* MomentMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentMapView.swift; sourceTree = "<group>"; };
 		02B1F4F35283648A73218767 /* TimeMachineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeMachineView.swift; sourceTree = "<group>"; };
 		03ADDAA92DD2C6F1379A9145 /* ContextResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextResolver.swift; sourceTree = "<group>"; };
 		03EE7A0BC02BAF0519F3FD9F /* Contacts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Contacts.framework; path = System/Library/Frameworks/Contacts.framework; sourceTree = SDKROOT; };
@@ -366,7 +362,6 @@
 		46D607AB349E4278D06776DF /* MomentViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentViewerView.swift; sourceTree = "<group>"; };
 		46DD6A0A48D1EF7D82CC70EC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		4950DFBD08A4056EEEDFD015 /* avatar_91.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = avatar_91.jpg; sourceTree = "<group>"; };
-		4A5C526FB81E25B1833ECA6D /* NearbyMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbyMapView.swift; sourceTree = "<group>"; };
 		4B9F341F53258CE9F9B1AA14 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		4C5BFF5C08501233D36B9CC9 /* MomentsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentsHubView.swift; sourceTree = "<group>"; };
 		4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentTools.swift; sourceTree = "<group>"; };
@@ -460,7 +455,6 @@
 		B317B3A7B19EC3A46F0BCC83 /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleView.swift; sourceTree = "<group>"; };
 		B562C9FE2609098E83C276D0 /* MomentEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentEditorView.swift; sourceTree = "<group>"; };
 		B8C76A24F401455CDDD4FBD9 /* SpotlightService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightService.swift; sourceTree = "<group>"; };
-		B910DBB3645F6F1DE5EA64DE /* ImmersiveFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImmersiveFeed.swift; sourceTree = "<group>"; };
 		B95B9C3A259A9C120E652B2C /* Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigation.swift; sourceTree = "<group>"; };
 		B9D0F4607A79E985EC89BA42 /* ScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleTests.swift; sourceTree = "<group>"; };
 		BB401EAD089DCDE281C4A403 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -929,15 +923,12 @@
 				C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */,
 				CC87A2C2D5ABC43ED3C0A24E /* GroupsViews.swift */,
 				7E5EF22418C4507F57DD33E4 /* IdentityViews.swift */,
-				B910DBB3645F6F1DE5EA64DE /* ImmersiveFeed.swift */,
 				D38D487C54357A09FE87A6AB /* InboxView.swift */,
 				28D528F9BC5B49B14127BAC0 /* MomentCardView.swift */,
-				0265A93A19FEB7C292C84E3B /* MomentMapView.swift */,
 				F77EA4C7C648B3B19E08F618 /* MomentPageView.swift */,
 				075796B622629115456247AA /* MomentQR.swift */,
 				78CDDCC14CAA01CA8B94AD72 /* MomentReplayView.swift */,
 				4CE4FA4107E6587DEC4EE817 /* MomentTools.swift */,
-				4A5C526FB81E25B1833ECA6D /* NearbyMapView.swift */,
 				C85AA650345DA9A7C1180B73 /* NearbyViews.swift */,
 				2F0E619E3206B4A31E0794B3 /* NetworkSettingsView.swift */,
 				7F89035B723D7B8D89B5FA44 /* NewMomentView.swift */,
@@ -1415,7 +1406,6 @@
 				2BE481DE8BC0A38FA6329E15 /* IdentityService.swift in Sources */,
 				55B2D52D8B3B0D2BF36C1A96 /* IdentityViews.swift in Sources */,
 				E13DB8C1AEC75D4839D32C10 /* ImageColor.swift in Sources */,
-				2B156315E078AF7B48653798 /* ImmersiveFeed.swift in Sources */,
 				FAE3D5587634EF1768F8909D /* ImportService.swift in Sources */,
 				F6622EA9DEBD444482E05D3C /* ImportanceEngine.swift in Sources */,
 				A573073C138D305C0B64A9EB /* InMemoryBackend.swift in Sources */,
@@ -1443,7 +1433,6 @@
 				6C305244AC139E93B4C7CE3C /* MomentApp.swift in Sources */,
 				8C3D54549413F71443C70F1F /* MomentCardView.swift in Sources */,
 				EFDABBED851392CE6E3DF100 /* MomentEditorView.swift in Sources */,
-				91A8AA3E094B2DAB67E5E4DC /* MomentMapView.swift in Sources */,
 				0F99C6652B4B02BDDF997F97 /* MomentMechanics.swift in Sources */,
 				4BD8072CDD074BDB025C68E7 /* MomentPackage.swift in Sources */,
 				CDBB878F04FBA8EB9F54629D /* MomentPageView.swift in Sources */,
@@ -1454,7 +1443,6 @@
 				D5EC1F0A13BC8D5B159BBB2B /* MomentViewerView.swift in Sources */,
 				F6380C89DA9184446A464620 /* MomentsHubView.swift in Sources */,
 				0C5C103168D6547093BC820E /* Navigation.swift in Sources */,
-				E1628EFB55F152CF15D9270B /* NearbyMapView.swift in Sources */,
 				3A5B310FA521D72BC375BC45 /* NearbyViews.swift in Sources */,
 				5C590E510D8930BACC276285 /* NetworkSettingsView.swift in Sources */,
 				3E37A8DB56E53CA53A00BAB6 /* NewMomentView.swift in Sources */,

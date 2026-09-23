@@ -31,13 +31,12 @@ struct SocialProfileView: View {
                 header
                 if isMe { AccountBanner(); UploadBanner() }
                 if !isMe { relationshipCard }
-                Picker("Section", selection: $section) { Text(isMe ? "Shop" : "Posts").tag(0); Text("Moments").tag(1); Text("Places").tag(2); Text("People").tag(3) }
+                Picker("Section", selection: $section) { Text("Posts").tag(0); Text("Moments").tag(1); Text("People").tag(3) }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("profileSections")
                 switch section {
                 case 0: shopTab
                 case 1: momentsTab
-                case 2: placesTab
                 default: peopleTab
                 }
             }
@@ -336,40 +335,6 @@ struct SocialProfileView: View {
     }
 
     /// Places: where life happened — your venues with visit counts, then map and passport.
-    private var placesTab: some View {
-        VStack(alignment: .leading, spacing: MSpacing.l) {
-            HStack(spacing: MSpacing.s) {
-                NavigationLink(value: SocialRoute.map) { Label("Map", systemImage: "map").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle()).accessibilityIdentifier("mapLink")
-                NavigationLink(value: SocialRoute.nearby) { Label("Nearby", systemImage: "location").frame(maxWidth: .infinity) }.buttonStyle(ProfileButtonStyle())
-            }
-            let places = isMe ? env.social.myPlaces : Dictionary(grouping: moments.compactMap(\.place), by: \.id).values.compactMap { g in g.first.map { (place: $0, visits: g.count) } }.sorted { $0.visits > $1.visits }
-            if places.isEmpty {
-                VStack(alignment: .leading, spacing: MSpacing.s) {
-                    Text("No places yet").font(MFont.title)
-                    Text("Add a venue to a Moment and it shows up here, on the map and on your passport.").font(MFont.body).foregroundStyle(MColor.textSecondary)
-                }
-                .padding(.vertical, MSpacing.l)
-            }
-            ForEach(places, id: \.place.id) { p in
-                NavigationLink(value: SocialRoute.place(p.place)) {
-                    HStack(spacing: MSpacing.m) {
-                        Image(systemName: "mappin.and.ellipse").frame(width: 44, height: 44).background(MColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(p.place.name).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary)
-                            Text("\(p.visits)× · \(p.place.area)").font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1)
-                        }
-                        Spacer()
-                        if env.social.claims[p.place.id]?.ownerID == env.social.myID { Image(systemName: "storefront").foregroundStyle(MColor.textTertiary) }
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(MColor.textTertiary)
-                    }
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    /// People: who you make Moments with, your groups, and who to follow.
     private var peopleTab: some View {
         VStack(alignment: .leading, spacing: MSpacing.l) {
             if isMe {

@@ -37,7 +37,6 @@ struct PassportView: View {
                         }
                     }
                 }
-                NavigationLink(value: SocialRoute.map) { Label("Open the map", systemImage: "map").frame(maxWidth: .infinity) }.buttonStyle(SecondaryButtonStyle())
                 if env.social.yearSummary() != nil { NavigationLink(value: SocialRoute.timeMachine) { Label("Time Machine", systemImage: "clock.arrow.circlepath").frame(maxWidth: .infinity) }.buttonStyle(SecondaryButtonStyle()) }
                 Text("The passport is built from your own Moments on this device. It's private unless you share a card.").font(MFont.caption).foregroundStyle(MColor.textTertiary)
             }

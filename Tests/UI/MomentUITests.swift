@@ -16,136 +16,61 @@ final class MomentUITests: XCTestCase {
         app.launch()
     }
 
-    /// Home opens on the creator Feed; the Moments stack is the second segment.
+    /// Home is the creator feed.
     private func waitForFeed() {
-        let moments = app.buttons["Moments"].firstMatch
-        if moments.waitForExistence(timeout: 20), !moments.isSelected { moments.tap(); sleep(1) }
-        if !app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 10) { snap("debug-home-segments") }
-        XCTAssertTrue(app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 30), "seeded social feed should show Goa '26")
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'post-'")).firstMatch.waitForExistence(timeout: 30), "the feed shows creators' posts")
     }
 
-    private func goHomeFeed() {
-        app.tabBars.buttons["Home"].tap()
-        let feed = app.buttons["Feed"].firstMatch
-        if feed.waitForExistence(timeout: 10), !feed.isSelected { feed.tap(); sleep(2) }
-    }
-
-    private func openMoment(_ id: String) {
-        let card = app.otherElements["feedMoment-\(id)"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 20))
-        let open = card.buttons["open-\(id)"].firstMatch
-        for _ in 0..<6 where !open.isHittable { app.swipeUp() }
-        if !open.isHittable { for _ in 0..<6 where !open.isHittable { app.swipeDown() } }
-        open.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["momentHero"].waitForExistence(timeout: 15))
-    }
 
     // MARK: Home & Moment
 
-    func testFeedShowsStoriesAndPosts() {
+    // MARK: The feed people pay in
+
+    func testFeedShowsLockedAndFreePostsWithPrices() {
         waitForFeed()
-        XCTAssertTrue(app.buttons["nowCompose"].exists, "stories row starts with your NOW")
-        XCTAssertTrue(app.buttons["now-n1"].exists, "friends' NOW in the stories row")
+        // A locked post says what opens it and what it costs — never a bare thumbnail.
+        let locked = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'unlockPost-' OR identifier BEGINSWITH 'subscribePost-'")).firstMatch
+        XCTAssertTrue(locked.waitForExistence(timeout: 20), "a paid post is in the feed with its price on the lock")
+        XCTAssertTrue(locked.label.contains("₹"), "the price is on the button: \(locked.label)")
         XCTAssertTrue(app.buttons["inboxButton"].exists)
-        let goa = app.otherElements["feedMoment-m_goa"].firstMatch
-        XCTAssertTrue(goa.buttons["addYourSide"].exists, "I'm in Goa '26, so the post offers Add your side")
-        XCTAssertTrue(goa.staticTexts.matching(NSPredicate(format: "label CONTAINS 'were there'")).firstMatch.exists, "people line instead of like count")
+        XCTAssertTrue(app.buttons["reelsLink"].exists)
     }
 
-    func testMomentPageShowsEveryonesSideAndAddsMine() {
+    func testUnlockingAPaidSetOpensIt() {
         waitForFeed()
-        openMoment("m_goa")
-        XCTAssertTrue(app.buttons["momentMembers"].waitForExistence(timeout: 5))
-        app.swipeUp()
-        XCTAssertTrue(app.buttons["addYourSide"].firstMatch.waitForExistence(timeout: 5))
-        app.buttons["addYourSide"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["sideSamplePhotos"].waitForExistence(timeout: 5))
-        app.buttons["sideSamplePhotos"].tap()
-        let note = app.textFields["sideNote"].firstMatch.exists ? app.textFields["sideNote"].firstMatch : app.textViews["sideNote"].firstMatch
-        note.tap(); note.typeText("Palolem was unreal")
-        app.buttons["submitSide"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["momentHero"].waitForExistence(timeout: 10))
-        for _ in 0..<3 where !app.staticTexts["Palolem was unreal"].exists { app.swipeUp() }
-        XCTAssertTrue(app.staticTexts["Palolem was unreal"].waitForExistence(timeout: 15), "my note shows in the timeline after upload")
+        let unlock = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'unlockPost-'")).firstMatch
+        for _ in 0..<10 where !(unlock.exists && unlock.isHittable) { app.swipeUp(); sleep(1) }
+        XCTAssertTrue(unlock.exists && unlock.isHittable, "a set to buy")
+        unlock.tap()
+        XCTAssertTrue(app.buttons["buySet"].waitForExistence(timeout: 10))
+        app.buttons["buySet"].tap()
+        XCTAssertTrue(app.buttons["See it"].waitForExistence(timeout: 15), "paying opens it")
+        app.buttons["See it"].tap()
     }
 
-    func testCreateMomentFromPlusTab() {
+    func testReelsPlayVideoPostsAndLockPaidOnes() {
+        waitForFeed()
+        app.buttons["reelsLink"].firstMatch.tap()
+        let anyReel = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'reel-'")).firstMatch
+        XCTAssertTrue(anyReel.waitForExistence(timeout: 20), "video posts play in reels")
+        snap("20-reels")
+        app.swipeUp(); sleep(2)
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'reel-'")).firstMatch.exists)
+    }
+
+    func testCreateSheetIsAboutPosts() {
         waitForFeed()
         app.tabBars.buttons["Create"].tap()
-        XCTAssertTrue(app.buttons["create-moment"].waitForExistence(timeout: 5))
-        app.buttons["create-moment"].tap()
-        let title = app.textViews["newMomentTitle"].firstMatch.exists ? app.textViews["newMomentTitle"].firstMatch : app.textFields["newMomentTitle"].firstMatch
-        XCTAssertTrue(title.waitForExistence(timeout: 5))
-        title.tap(); title.typeText("Rooftop Friday")
-        app.buttons["samplePhotos"].tap()
-        app.buttons["addPeople"].tap()
-        XCTAssertTrue(app.buttons["pick-rahul"].waitForExistence(timeout: 10))
-        app.buttons["pick-rahul"].tap()
-        app.buttons["peopleDone"].tap()
-        app.swipeUp()
-        XCTAssertTrue(app.buttons["createMoment"].waitForExistence(timeout: 5))
-        app.buttons["createMoment"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["momentHero"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts["Rooftop Friday"].firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any)["create-photo"].firstMatch.waitForExistence(timeout: 10), "a photo set is the first thing you can make")
+        XCTAssertTrue(app.descendants(matching: .any)["create-video"].firstMatch.exists)
+        snap("07-create")
+        app.buttons["Cancel"].firstMatch.tap()
     }
 
-    func testLikeCommentAndModeration() {
+    // MARK: Inbox, Messages
+
+    func testInboxAndMessages() {
         waitForFeed()
-        let goa = app.otherElements["feedMoment-m_goa"].firstMatch
-        goa.buttons["react-core"].tap()
-        XCTAssertTrue(goa.buttons["Unlike"].waitForExistence(timeout: 5) || goa.buttons["Like"].waitForExistence(timeout: 2), "heart toggles")
-        goa.buttons["comments-m_goa"].tap()
-        let field = app.descendants(matching: .any)["commentField"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 8))
-        field.tap(); field.typeText("kys")
-        app.buttons["postComment"].tap()
-        // The refusal is shown where it happened (or as an alert, when the composer is a sheet).
-        let inline = app.descendants(matching: .any)["commentError"].firstMatch
-        let refused = inline.waitForExistence(timeout: 8) || app.alerts.firstMatch.waitForExistence(timeout: 2)
-        if !refused { snap("debug-moderation") }
-        XCTAssertTrue(refused, "abuse is refused before it leaves the device")
-        if app.alerts.firstMatch.exists { app.alerts.buttons.firstMatch.tap() }
-    }
-
-    // MARK: NOW
-
-    func testNowPostAndSaveToMoment() {
-        waitForFeed()
-        app.buttons["nowLink"].tap()
-        XCTAssertTrue(app.buttons["nowCompose"].waitForExistence(timeout: 5))
-        app.buttons["nowCompose"].tap()
-        let field = app.textViews["nowText"].firstMatch.exists ? app.textViews["nowText"].firstMatch : app.textFields["nowText"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap(); field.typeText("Rooftop now")
-        app.buttons["postNow"].tap()
-        let mine = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'now-' AND label CONTAINS 'Rooftop now'")).firstMatch
-        if !mine.waitForExistence(timeout: 10) { snap("debug-now-after-post") }
-        XCTAssertTrue(mine.exists)
-        mine.tap()
-        XCTAssertTrue(app.buttons["saveNow"].waitForExistence(timeout: 5))
-        app.buttons["saveNow"].tap()
-        XCTAssertTrue(app.buttons["saveTo-m_goa"].waitForExistence(timeout: 5))
-        app.buttons["saveTo-m_goa"].tap()
-        XCTAssertTrue(app.staticTexts["Saved to a Moment"].waitForExistence(timeout: 5))
-    }
-
-    func testAnyoneUpJoin() {
-        waitForFeed()
-        app.buttons["nowLink"].tap()
-        if !app.buttons["joinNow-n3"].firstMatch.waitForExistence(timeout: 8) { snap("debug-now-link") }
-        XCTAssertTrue(app.buttons["joinNow-n3"].firstMatch.waitForExistence(timeout: 5), "Rahul is out for drinks")
-        app.buttons["joinNow-n3"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["In"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    // MARK: Search / Nearby, Inbox, Messages
-
-    func testSearchNearbyInboxAndMessages() {
-        waitForFeed()
-        // Nearby lives in the Home header now that Explore is gone.
-        app.buttons["nearbyLink"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["place-bastian_19062_72831"].firstMatch.waitForExistence(timeout: 20), "Bastian is within 3 km of the simulated location")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["inboxButton"].waitForExistence(timeout: 10))
         app.buttons["inboxButton"].tap()
         if !app.buttons["Invites"].waitForExistence(timeout: 10) { snap("debug-inbox-tap") }
@@ -182,15 +107,19 @@ final class MomentUITests: XCTestCase {
 
     func testProfileFriendshipAndBlock() {
         waitForFeed()
-        openMoment("m_goa")
-        app.buttons["momentMembers"].tap()
-        XCTAssertTrue(app.staticTexts["Rahul Mehta"].firstMatch.waitForExistence(timeout: 5))
-        app.staticTexts["Rahul Mehta"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["friendshipLink"].waitForExistence(timeout: 5))
-        app.buttons["friendshipLink"].tap()
-        XCTAssertTrue(app.staticTexts["You + Rahul Mehta"].waitForExistence(timeout: 5))
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        // Straight from a post to the creator's page.
+        let sarah = app.buttons["Sarah Kim"].firstMatch
+        for _ in 0..<10 where !(sarah.exists && sarah.isHittable) { app.swipeUp(); sleep(1) }
+        XCTAssertTrue(sarah.exists && sarah.isHittable)
+        sarah.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["subscribeBox"].waitForExistence(timeout: 8), "a creator page leads with the subscription")
+        // Sarah and I share Moments, so the "you two" link is there.
+        if app.buttons["friendshipLink"].waitForExistence(timeout: 5) {
+            app.buttons["friendshipLink"].tap()
+            XCTAssertTrue(app.staticTexts["You + Sarah Kim"].waitForExistence(timeout: 8))
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+        }
         let menu = app.buttons["profileMenu"].firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
         menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
@@ -241,22 +170,24 @@ final class MomentUITests: XCTestCase {
             app.buttons["onboardingContinue"].tap()
             XCTAssertTrue(app.descendants(matching: .any)["onboardingMomentID"].firstMatch.waitForExistence(timeout: 10), "identity step shows the MOMENT ID")
             app.buttons["identityContinue"].tap()
-            XCTAssertTrue(app.buttons["createMoment"].waitForExistence(timeout: 10), "first Moment builder opens")
-            app.buttons["onboardingSkip"].tap()
+            if app.buttons["onboardingSkip"].waitForExistence(timeout: 10) { app.buttons["onboardingSkip"].tap() }
         }
         if app.buttons["setupDone"].waitForExistence(timeout: 5) { app.buttons["setupDone"].tap() }
-        XCTAssertTrue(app.buttons["nowCompose"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["reelsLink"].waitForExistence(timeout: 25), "you land on the feed")
     }
 
     /// Not an assertion test: walks the app and writes screenshots for design review.
     func testCreatorPaywallSubscribeAndEarn() {
         waitForFeed()
-        // Page through the stack until the locked paid Moment is on screen; unlock it.
-        let unlock = app.descendants(matching: .any)["unlock-m_raw"].firstMatch
-        for _ in 0..<30 where !(unlock.exists && unlock.isHittable) { app.swipeUp(); sleep(1) }
-        XCTAssertTrue(unlock.exists && unlock.isHittable, "paid preview from a followed creator is in the feed")
         snap("12-locked")
-        unlock.tap()
+        // Subscribing happens on the creator's page.
+        let creator = app.buttons["Sunset Society"].firstMatch
+        for _ in 0..<12 where !(creator.exists && creator.isHittable) { app.swipeUp(); sleep(1) }
+        XCTAssertTrue(creator.exists && creator.isHittable, "a creator to subscribe to")
+        creator.tap()
+        let box = app.buttons["subscribeBox"].firstMatch
+        XCTAssertTrue(box.waitForExistence(timeout: 15), "their page leads with the subscription")
+        box.tap()
         let subscribe = app.buttons["subscribeButton"]
         XCTAssertTrue(subscribe.waitForExistence(timeout: 20))
         snap("13-subscribe")
@@ -265,9 +196,9 @@ final class MomentUITests: XCTestCase {
         let gone = NSPredicate(format: "exists == false")
         let dismissed = XCTNSPredicateExpectation(predicate: gone, object: subscribe)
         XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 40), .completed, "sheet goes away after the purchase")
-        if app.buttons["Done"].exists { app.buttons["Done"].tap() }
-        sleep(2)
-        XCTAssertFalse(unlock.exists && unlock.isHittable, "lock is gone once subscribed")
+        sleep(2)   // the sheet dismisses itself; tapping Done would race with it
+        XCTAssertTrue(app.buttons["subscribeBox"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["subscribeBox"].firstMatch.isEnabled, "the button says subscribed and can't be pressed again")
         // Creator side: set up a plan and see the earnings screen.
         app.tabBars.buttons["Profile"].tap()
         let studio = app.descendants(matching: .any)["studioLink"].firstMatch
@@ -295,12 +226,10 @@ final class MomentUITests: XCTestCase {
     func testScreenshotTour() {
         waitForFeed()
         snap("01-home"); app.swipeUp(); snap("02-home-scrolled")
-        openMoment("m_goa"); sleep(1); snap("03-moment"); app.swipeUp(); sleep(1); snap("04-moment-timeline")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.buttons["nearbyLink"].firstMatch.tap(); sleep(3); snap("05-nearby"); app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["reelsLink"].firstMatch.tap(); sleep(3); snap("03-reels")
+        if app.buttons["Close reels"].firstMatch.exists { app.buttons["Close reels"].firstMatch.tap() } else { app.swipeDown() }
+        sleep(1)
         app.tabBars.buttons["Create"].tap(); sleep(1); snap("07-create"); app.buttons["Cancel"].firstMatch.tap()
-        goHomeFeed(); sleep(2); snap("08a-creator-feed")
-        app.buttons["nowLink"].firstMatch.exists ? app.buttons["nowLink"].firstMatch.tap() : app.buttons["reelsLink"].firstMatch.tap(); sleep(1); snap("08-now"); app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Chats"].tap(); sleep(2); snap("08b-chats")
         app.tabBars.buttons["Profile"].tap(); sleep(2); snap("09-profile")
         if app.buttons["studioLink"].firstMatch.waitForExistence(timeout: 5) {

@@ -72,7 +72,6 @@ struct NearbyView: View {
         }
         .background(MColor.background)
         .navigationTitle("Nearby")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink(value: SocialRoute.nearbyMap) { Image(systemName: "map") }.accessibilityLabel("Map").accessibilityIdentifier("nearbyMapLink") } }
         .refreshable { await load() }
         .task { if !asked { asked = true; await load() } }
         .accessibilityIdentifier("nearbyScreen")

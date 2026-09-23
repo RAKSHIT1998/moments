@@ -4,51 +4,37 @@ import SwiftUI
 /// NOW and the stories strip float on top in glass.
 struct SocialHomeView: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var showNowComposer = false
-    @State private var showScanner = false
-    @State private var selectedNow: NowPost?
-
-    @AppStorage("homeTab") private var homeTab = 0
+    @State private var showNew = false
 
     var body: some View {
         NavigationStack {
-            Group {
-                if homeTab == 0 {
-                    CreatorFeedView()
-                        .safeAreaInset(edge: .top) { homeHeader }
-                } else {
-                    ImmersiveFeedView(showNowComposer: $showNowComposer, selectedNow: $selectedNow, showScanner: $showScanner)
-                }
-            }
-            .toolbar(.hidden, for: .navigationBar)
-            .refreshable { await env.social.refreshAll() }
-            .socialDestinations()
-            .sheet(isPresented: $showNowComposer) { NowComposerView() }
-            .sheet(isPresented: $showScanner) { QRScannerView() }
-            .fullScreenCover(item: $selectedNow) { post in NowViewerView(post: post) }
+            CreatorFeedView()
+                .safeAreaInset(edge: .top) { header }
+                .toolbar(.hidden, for: .navigationBar)
+                .socialDestinations()
+                .sheet(isPresented: $showNew) { EditSetSheet(set: nil) }
         }
         .modifier(SocialErrorAlert())
     }
 
-    /// Wordmark, the two ways to look at the app, and the way into what's happening now.
-    private var homeHeader: some View {
-        VStack(spacing: MSpacing.s) {
-            HStack(spacing: MSpacing.m) {
-                Wordmark(size: 19)
-                Spacer()
-                NavigationLink(value: SocialRoute.reels(nil)) { Image(systemName: "play.rectangle.fill").font(.title3) }.accessibilityIdentifier("reelsLink")
-                NavigationLink(value: SocialRoute.now) { Glyph(.now, size: 20) }.accessibilityLabel("Now").accessibilityIdentifier("nowLink")
-                NavigationLink(value: SocialRoute.nearby) { Glyph(.nearby, size: 20) }.accessibilityLabel("Nearby").accessibilityIdentifier("nearbyLink")
-                Button { showScanner = true } label: { Glyph(.scan, size: 20) }.accessibilityLabel("Scan to join").accessibilityIdentifier("scanQR")
-                NavigationLink(value: SocialRoute.inbox) {
-                    Glyph(.activity, size: 20).overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 2, y: -2) } }
-                }
-                .accessibilityLabel("Activity").accessibilityIdentifier("inboxButton")
+    /// Wordmark, the people you pay, and the two inboxes.
+    private var header: some View {
+        HStack(spacing: MSpacing.l) {
+            Wordmark(size: 19)
+            Spacer()
+            NavigationLink(value: SocialRoute.reels(nil)) { Image(systemName: "play.rectangle.fill").font(.title3) }
+                .accessibilityLabel("Reels").accessibilityIdentifier("reelsLink")
+            if env.social.isCreator {
+                Button { showNew = true } label: { Image(systemName: "plus.square").font(.title3) }
+                    .accessibilityLabel("New post").accessibilityIdentifier("newPostLink")
             }
-            .foregroundStyle(MColor.textPrimary)
-            Picker("Home", selection: $homeTab) { Text("Feed").tag(0); Text("Moments").tag(1) }
-                .pickerStyle(.segmented).accessibilityIdentifier("homeTabs")
+            NavigationLink(value: SocialRoute.inbox) {
+                Image(systemName: "bell").font(.title3)
+                    .overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 3, y: -2) } }
+            }
+            .accessibilityLabel("Notifications").accessibilityIdentifier("inboxButton")
         }
+        .foregroundStyle(MColor.textPrimary)
         .padding(.horizontal, MSpacing.page)
         .padding(.bottom, MSpacing.s)
         .background(.bar)
@@ -90,7 +76,6 @@ enum SocialRoute: Hashable {
     case groups
     case group(String)
     case newMomentForGroup(String)
-    case map
     case passport
     case earn
     case storefront(String)
@@ -102,9 +87,6 @@ enum SocialRoute: Hashable {
     case scan
     case inbox
     case messages
-    case now
-    case nearby
-    case nearbyMap
     case place(SocialPlace)
     case identity
     case invite

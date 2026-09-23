@@ -348,16 +348,6 @@
         }
       }
     },
-    "%lld %@ · %lld subscribers · %lld booked" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ · %3$lld subscribers · %4$lld booked"
-          }
-        }
-      }
-    },
     "%lld %@ from %@" : {
       "localizations" : {
         "en" : {
@@ -374,16 +364,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@ together"
-          }
-        }
-      }
-    },
-    "%lld %@ together · since %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ together · since %3$@"
           }
         }
       }
@@ -469,9 +449,6 @@
         }
       }
     },
-    "%lld Moments together" : {
-
-    },
     "%lld months" : {
 
     },
@@ -514,28 +491,8 @@
     "%lld people are typing" : {
 
     },
-    "%lld places, %lld Moments" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld places, %2$lld Moments"
-          }
-        }
-      }
-    },
     "%lld selected" : {
 
-    },
-    "%lld sets%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld sets%2$@"
-          }
-        }
-      }
     },
     "%lld shared moments · make it a Moment" : {
 
@@ -563,12 +520,6 @@
     "%lld uploads need a retry" : {
 
     },
-    "%lld waiting" : {
-
-    },
-    "%lld/6 chosen" : {
-
-    },
     "%lld%% off" : {
 
     },
@@ -591,9 +542,6 @@
     "+%lld more" : {
 
     },
-    "+%lld more in common" : {
-
-    },
     "×%lld" : {
 
     },
@@ -609,9 +557,6 @@
     "12 words, separated by spaces" : {
 
     },
-    "18+. You can leave any time; leaving removes your profile everywhere." : {
-
-    },
     "499" : {
 
     },
@@ -619,6 +564,9 @@
 
     },
     "A fingerprint of a key that lives only in this iPhone's Keychain. Everything you create is signed with it, so people can tell it's really yours — without any server." : {
+
+    },
+    "A free set is how people find you; a paid one is how you earn." : {
 
     },
     "A GOAL (OPTIONAL)" : {
@@ -634,9 +582,6 @@
 
     },
     "A line about you" : {
-
-    },
-    "A line about you (optional)" : {
 
     },
     "A minute now, then it's just Moments. Skip anything — you can do it later from Settings." : {
@@ -658,9 +603,6 @@
 
     },
     "About" : {
-
-    },
-    "ABOUT" : {
 
     },
     "About MOMENT" : {
@@ -703,9 +645,6 @@
 
     },
     "Add a place to a Moment and it shows up here." : {
-
-    },
-    "Add a side to a Moment first — Meet only uses photos you've actually posted." : {
 
     },
     "Add a venue to a Moment and it shows up here, on the map and on your passport." : {
@@ -819,16 +758,6 @@
     "Anything you want to remember" : {
 
     },
-    "App Store: Apple takes %lld%% first, then you keep %lld%% of what's left. Card checkout is the %lld%% rail." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "App Store: Apple takes %1$lld%% first, then you keep %2$lld%% of what's left. Card checkout is the %3$lld%% rail."
-          }
-        }
-      }
-    },
     "Appearance" : {
 
     },
@@ -836,6 +765,9 @@
 
     },
     "Around you" : {
+
+    },
+    "Ask" : {
 
     },
     "Ask %@" : {
@@ -907,12 +839,6 @@
     "Blocked people (%lld)" : {
 
     },
-    "Bookings" : {
-
-    },
-    "Born" : {
-
-    },
     "BUNDLES" : {
 
     },
@@ -949,15 +875,8 @@
     "Capture something real — a plan, a promise, something a friend wants. Watch MOMENT understand it." : {
 
     },
-    "Card checkout: you keep %lld%% — MOMENT takes %lld%%, your processor takes its own cut." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Card checkout: you keep %1$lld%% — MOMENT takes %2$lld%%, your processor takes its own cut."
-          }
-        }
-      }
+    "Card checkout: you keep %lld%%." : {
+
     },
     "Change" : {
 
@@ -1005,9 +924,6 @@
 
     },
     "Close" : {
-
-    },
-    "Close friend ★" : {
 
     },
     "Close reels" : {
@@ -1097,13 +1013,10 @@
     "Creating…" : {
 
     },
+    "Creator mode" : {
+
+    },
     "Creators" : {
-
-    },
-    "Crossed paths" : {
-
-    },
-    "Crossed paths = same Moment, same venue this month, same ritual, or out right now nearby. Hiding from people you know keeps you out of the stacks of anyone you follow or who follows you." : {
 
     },
     "Current subscribers keep what they already have until it expires. New Moments can't be sold until you set up a plan again." : {
@@ -1205,9 +1118,6 @@
     "Edit" : {
 
     },
-    "Edit Meet profile" : {
-
-    },
     "Edit Moment" : {
 
     },
@@ -1269,9 +1179,6 @@
     "Everything is understood on this iPhone." : {
 
     },
-    "Everywhere" : {
-
-    },
     "Exact date" : {
 
     },
@@ -1279,9 +1186,6 @@
 
     },
     "Expired %@" : {
-
-    },
-    "Explore" : {
 
     },
     "Explore with sample data" : {
@@ -1348,6 +1252,9 @@
 
     },
     "Follow a creator, or post a set of your own — free sets are how people find you." : {
+
+    },
+    "Follow them — new sets show up in your feed." : {
 
     },
     "Follow to see the Moments you're not in." : {
@@ -1430,9 +1337,6 @@
     "Given" : {
 
     },
-    "Go to a ritual, join a NOW, add your side to a night — the overlap is what shows people to you." : {
-
-    },
     "Goa '26, Sarah's 30th, Sunday run…" : {
 
     },
@@ -1499,9 +1403,6 @@
     "Hidden while your screen is being recorded" : {
 
     },
-    "Hide from people I know" : {
-
-    },
     "Hold to record a voice note" : {
 
     },
@@ -1536,9 +1437,6 @@
 
     },
     "I was there" : {
-
-    },
-    "I'm a" : {
 
     },
     "I'm here now" : {
@@ -1616,9 +1514,6 @@
     "It lands in your Inbox, already understood." : {
 
     },
-    "It's a match." : {
-
-    },
     "Join" : {
 
     },
@@ -1655,19 +1550,10 @@
     "Lasts %lld hours" : {
 
     },
-    "Later" : {
-
-    },
     "Leave" : {
 
     },
     "Leave group" : {
-
-    },
-    "Leave Meet" : {
-
-    },
-    "Leave Meet?" : {
 
     },
     "Leave Moment" : {
@@ -1688,22 +1574,10 @@
     "Like" : {
 
     },
-    "Like %@" : {
-
-    },
-    "Likes" : {
-
-    },
-    "Likes you" : {
-
-    },
     "Link per person" : {
 
     },
     "Link to a contact" : {
-
-    },
-    "List" : {
 
     },
     "Listening" : {
@@ -1743,12 +1617,6 @@
 
     },
     "Look around first" : {
-
-    },
-    "Looking for" : {
-
-    },
-    "Looking…" : {
 
     },
     "Made by %@" : {
@@ -1802,32 +1670,7 @@
     "Mark important" : {
 
     },
-    "Matches" : {
-
-    },
     "Media" : {
-
-    },
-    "Meet" : {
-
-    },
-    "Meet · %lld %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Meet · %1$lld %2$@"
-          }
-        }
-      }
-    },
-    "Meet people you've\nactually crossed paths with." : {
-
-    },
-    "Meet people you've crossed paths with" : {
-
-    },
-    "Meet profile" : {
 
     },
     "Memories" : {
@@ -1886,9 +1729,6 @@
 
     },
     "Minimise" : {
-
-    },
-    "Mode" : {
 
     },
     "Model: %@. Stored only in this device's Keychain." : {
@@ -2002,9 +1842,6 @@
     "Name your price" : {
 
     },
-    "Near me" : {
-
-    },
     "Nearby" : {
 
     },
@@ -2068,9 +1905,6 @@
     "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
 
     },
-    "No matches in view. Zoom out or try another word." : {
-
-    },
     "No Moments with everyone yet. Start one — the group is invited automatically." : {
 
     },
@@ -2122,19 +1956,10 @@
     "Nobody — remove person" : {
 
     },
-    "Nobody new who's crossed your path." : {
-
-    },
     "Nobody yet." : {
 
     },
-    "Nobody yet. Likes are sealed to you — nobody else, not even relays, can read them." : {
-
-    },
     "Nobody yet. Share a subscribers-only Moment — the locked preview does the selling." : {
-
-    },
-    "Nobody's out near you right now." : {
 
     },
     "Nobody's out yet" : {
@@ -2164,6 +1989,9 @@
     "Notes" : {
 
     },
+    "Nothing for sale yet." : {
+
+    },
     "Nothing found. Try the street or area." : {
 
     },
@@ -2183,6 +2011,9 @@
 
     },
     "Nothing linked yet." : {
+
+    },
+    "Nothing listed. People can still ask, and you name the price then." : {
 
     },
     "Nothing made yet." : {
@@ -2268,19 +2099,16 @@
     "Only NOW posts where you picked a venue. Your phone's location is never stored or shared — the venue is." : {
 
     },
-    "Only people I've crossed paths with" : {
-
-    },
     "Only the people you invite can see a Moment set to \"People in it\". You can change this any time." : {
-
-    },
-    "Only they can see this. If they like you back, you match and a chat opens." : {
 
     },
     "Open" : {
 
     },
     "Open %@" : {
+
+    },
+    "Open Creator mode" : {
 
     },
     "Open it" : {
@@ -2325,10 +2153,10 @@
     "Owner" : {
 
     },
-    "Paid photo" : {
+    "Paid — confirm it" : {
 
     },
-    "Pass" : {
+    "Paid photo" : {
 
     },
     "Passport" : {
@@ -2382,9 +2210,6 @@
     "People you know" : {
 
     },
-    "PEOPLE YOU WERE THERE WITH" : {
-
-    },
     "People, groups, messages" : {
 
     },
@@ -2418,9 +2243,6 @@
     "PHOTOS & VIDEO" : {
 
     },
-    "Photos from your Moments" : {
-
-    },
     "Pick 5–10 photos from a trip or a night out. MOMENT turns them into your first Moment — on your iPhone, in seconds." : {
 
     },
@@ -2445,9 +2267,6 @@
     "Places near you" : {
 
     },
-    "Places, Moments, @people" : {
-
-    },
     "Plan · %@" : {
 
     },
@@ -2463,12 +2282,6 @@
     "Post" : {
 
     },
-    "Post a free set so people can see what you make, and a paid one for the rest. You set every price." : {
-
-    },
-    "Post a NOW yourself — people who are out tonight see each other here first." : {
-
-    },
     "Post a photo to NOW" : {
 
     },
@@ -2479,6 +2292,9 @@
 
     },
     "Posted" : {
+
+    },
+    "Posts" : {
 
     },
     "PRICE · 30 DAYS" : {
@@ -2515,9 +2331,6 @@
 
     },
     "Promises" : {
-
-    },
-    "Prompts" : {
 
     },
     "Publish set" : {
@@ -2650,9 +2463,6 @@
     "Request · %@" : {
 
     },
-    "Request to follow" : {
-
-    },
     "Requested. They'll confirm." : {
 
     },
@@ -2746,16 +2556,10 @@
     "Saving…" : {
 
     },
-    "Say hi to %@" : {
-
-    },
     "Say something" : {
 
     },
     "Say something (optional)" : {
-
-    },
-    "Say something real (optional)" : {
 
     },
     "Say something with it" : {
@@ -2809,6 +2613,9 @@
     "Section" : {
 
     },
+    "See everything" : {
+
+    },
     "See it" : {
 
     },
@@ -2821,7 +2628,10 @@
     "See what's happening around you" : {
 
     },
-    "See who's out now" : {
+    "See your shop" : {
+
+    },
+    "See your shop the way fans do" : {
 
     },
     "Seen" : {
@@ -2831,9 +2641,6 @@
 
     },
     "Sell what you make" : {
-
-    },
-    "Sell your photos and your time" : {
 
     },
     "Send" : {
@@ -2852,9 +2659,6 @@
 
     },
     "Send it back to %@" : {
-
-    },
-    "Send like" : {
 
     },
     "Send locked" : {
@@ -2881,13 +2685,16 @@
     "Set reminder" : {
 
     },
-    "Set up Meet" : {
+    "Set up in two minutes" : {
 
     },
     "SET UP ONCE" : {
 
     },
     "Set up your profile" : {
+
+    },
+    "Set your subscription" : {
 
     },
     "SETS" : {
@@ -2926,6 +2733,9 @@
     "Share link" : {
 
     },
+    "Share profile" : {
+
+    },
     "Share QR" : {
 
     },
@@ -2960,9 +2770,6 @@
 
     },
     "Show Gift Ideas" : {
-
-    },
-    "Show me" : {
 
     },
     "Show my NOW to people nearby" : {
@@ -3062,6 +2869,9 @@
     "Start an event here" : {
 
     },
+    "Start earning" : {
+
+    },
     "Start selling" : {
 
     },
@@ -3080,35 +2890,16 @@
     "Stop selling?" : {
 
     },
-    "Studio" : {
-
-    },
-    "Studio · %lld %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Studio · %1$lld %2$@"
-          }
-        }
-      }
-    },
     "Subscribe" : {
-
-    },
-    "SUBSCRIBE" : {
 
     },
     "Subscribe · %@" : {
 
     },
-    "Subscribe · %@ / 30 days" : {
+    "SUBSCRIBE · %@" : {
 
     },
     "Subscribe · %@ for 30 days" : {
-
-    },
-    "Subscribed" : {
 
     },
     "SUBSCRIBED" : {
@@ -3123,16 +2914,13 @@
     "Subscribers pay for 30 days at a time and see every Moment you mark for subscribers. No ads, no algorithm between you and them. MOMENT keeps nothing about who paid beyond the receipt." : {
 
     },
-    "SUBSCRIPTION" : {
-
-    },
     "Subscription · %@ / 30 days" : {
 
     },
-    "Subscriptions" : {
+    "Subscription, bundles, goal & payouts" : {
 
     },
-    "Subscriptions & tips" : {
+    "Subscriptions" : {
 
     },
     "Summary" : {
@@ -3189,9 +2977,6 @@
     "The story" : {
 
     },
-    "Their photo" : {
-
-    },
     "They get an invite and can add their side. You can also share a link after." : {
 
     },
@@ -3234,6 +3019,16 @@
     "This week's is in. Next: %@" : {
 
     },
+    "Through Apple: Apple takes %lld%% first. Card checkout is the %lld%% rail." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Through Apple: Apple takes %1$lld%% first. Card checkout is the %2$lld%% rail."
+          }
+        }
+      }
+    },
     "Throw something at me — a screenshot, a voice note, a thought. I'll bring it back when it matters." : {
 
     },
@@ -3270,9 +3065,6 @@
     "Title" : {
 
     },
-    "Tonight" : {
-
-    },
     "TOP SUPPORTERS" : {
 
     },
@@ -3306,9 +3098,6 @@
     "Turn on location for MOMENT in Settings to see nearby places and Moments. Your location is only used on your phone to ask what's close." : {
 
     },
-    "Turn on Meet" : {
-
-    },
     "Type" : {
 
     },
@@ -3334,9 +3123,6 @@
 
     },
     "Understood with Cloud AI" : {
-
-    },
-    "Unfollow" : {
 
     },
     "Unlike" : {
@@ -3441,6 +3227,9 @@
     "Waiting for them to accept %@" : {
 
     },
+    "WAITING ON YOU" : {
+
+    },
     "Want me to tell you when one of these becomes urgent? At most %lld a day, never “come back to the app”. Details stay hidden unless you turn them on." : {
 
     },
@@ -3448,6 +3237,9 @@
 
     },
     "wants" : {
+
+    },
+    "Wants a price" : {
 
     },
     "Watch the cut" : {
@@ -3621,9 +3413,6 @@
     "X" : {
 
     },
-    "You" : {
-
-    },
     "You + %@" : {
 
     },
@@ -3663,9 +3452,6 @@
     "You're on MOMENT Pro." : {
 
     },
-    "Your answer" : {
-
-    },
     "Your API key" : {
 
     },
@@ -3688,9 +3474,6 @@
 
     },
     "Your loop" : {
-
-    },
-    "Your Meet profile is removed everywhere. Matches keep their chats." : {
 
     },
     "Your memories are always yours: viewing, exporting and deleting never require a subscription." : {
@@ -3732,9 +3515,6 @@
     "Your numbers" : {
 
     },
-    "Your other handles" : {
-
-    },
     "Your page, last 30 days" : {
 
     },
@@ -3764,6 +3544,9 @@
 
     },
     "Your role" : {
+
+    },
+    "YOUR SETS" : {
 
     },
     "Your side" : {

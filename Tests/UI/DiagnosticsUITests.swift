@@ -1,23 +1,20 @@
 import XCTest
 
-/// Dumps the accessibility tree of a few screens so failing selectors can be fixed from the log.
+/// Not assertions: dumps the element tree of the main screens when a query stops matching.
+/// Cheap to keep, and the first thing worth reading when a UI test fails for no obvious reason.
 final class DiagnosticsUITests: XCTestCase {
     func testDumpTrees() {
         let app = XCUIApplication()
-        app.launchArguments = ["-uitest", "-reset", "-demo"]
+        app.launchArguments = ["-uitest", "-demo", "-reset"]
         app.launch()
-        let moments = app.buttons["Moments"].firstMatch
-        if moments.waitForExistence(timeout: 20), !moments.isSelected { moments.tap(); sleep(1) }
-        XCTAssertTrue(app.otherElements["feedMoment-m_goa"].firstMatch.waitForExistence(timeout: 30))
-        let card = app.otherElements["feedMoment-m_goa"].firstMatch
-        print("DIAG-CARD-START\n\(card.debugDescription)\nDIAG-CARD-END")
-        card.buttons["open-m_goa"].firstMatch.tap()
-        sleep(3)
-        print("DIAG-AFTER-OPEN-START\n\(app.debugDescription.prefix(6000))\nDIAG-AFTER-OPEN-END")
+        let post = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'post-'")).firstMatch
+        XCTAssertTrue(post.waitForExistence(timeout: 30), "the creator feed should have posts")
+        print("── HOME ──\n" + app.debugDescription)
         app.tabBars.buttons["Profile"].tap()
-        sleep(3)
-        let tree = app.debugDescription
-        let lines = tree.split(separator: "\n").filter { $0.contains("Privacy") || $0.contains("safetyLink") || $0.contains("Edit profile") || $0.contains("NavigationBar") }
-        print("DIAG-PROFILE-START\n\(lines.joined(separator: "\n"))\nDIAG-PROFILE-END")
+        XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
+        print("── PROFILE ──\n" + app.debugDescription)
+        app.tabBars.buttons["Chats"].tap()
+        sleep(2)
+        print("── CHATS ──\n" + app.debugDescription)
     }
 }

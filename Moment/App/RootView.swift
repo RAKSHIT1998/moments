@@ -66,43 +66,43 @@ struct RootView: View {
     }
 }
 
-/// CREATE → Moment / NOW / Event. A small sheet, three choices, no menu wall.
+/// CREATE → what a creator actually publishes. Everything here makes money or leads to it.
 struct CreateSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
-    @State private var next: Kind?
-    enum Kind: String, Identifiable { case moment, now, event, paid; var id: String { rawValue } }
+    @State private var newSet = false
+    @State private var newVideo = false
+    @State private var showMass = false
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: MSpacing.l) {
+            VStack(alignment: .leading, spacing: MSpacing.m) {
                 Text("Create").displayStyle().padding(.top, MSpacing.s)
-                row(.moment, "Moment", "From photos. Invite the people who were there.", .home)
-                row(.now, "NOW", "What you're up to, right now. Gone in hours.", .now)
-                row(.event, "Event", "A QR on the table. People scan, they're in.", .scan)
-                if env.social.myPlan != nil { row(.paid, "For subscribers", "A Moment only paying subscribers can open.", .spark) }
+                row("Photo set", "Free to pull people in, or priced. You set it.", "photo.stack") { newSet = true }
+                row("Video post", "A clip for the reels feed. Free or locked.", "play.rectangle.fill") { newVideo = true }
+                if env.social.isCreator {
+                    row("Message everyone", "One message to every subscriber, in their own chat.", "megaphone.fill") { showMass = true }
+                }
+                row(env.social.myPlan == nil ? "Your subscription" : "Edit subscription", env.social.myPlan == nil ? "One price, 30 days. Your call." : "Price, bundles, goal and payouts.", "crown.fill") { dismiss(); env.pendingTab = .profile }
                 Spacer()
+                Text("Everything you post stays on your storage. Buyers get a key, not a copy from us.")
+                    .font(MFont.footnote).foregroundStyle(MColor.textTertiary)
             }
             .padding(.horizontal, MSpacing.page)
-            .background(LiquidBackdrop())
+            .background(MColor.background)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-            .navigationDestination(item: $next) { kind in
-                switch kind {
-                case .moment: NewMomentView(initial: env.social.remixDraft) { m in env.social.remixDraft = nil; dismiss(); env.social.pendingMomentID = m.id }.socialDestinations()
-                case .paid: NewMomentView(initial: env.social.remixDraft, forSubscribers: true) { m in env.social.remixDraft = nil; dismiss(); env.social.pendingMomentID = m.id }.socialDestinations()
-                case .now: AnyoneUpComposerBody()
-                case .event: StartActivityBody()
-                }
-            }
         }
-        .presentationDetents(next == nil ? [.medium] : [.large], selection: .constant(next == nil ? .medium : .large))
+        .sheet(isPresented: $newSet, onDismiss: { dismiss() }) { EditSetSheet(set: nil) }
+        .sheet(isPresented: $newVideo, onDismiss: { dismiss() }) { EditSetSheet(set: nil) }
+        .sheet(isPresented: $showMass, onDismiss: { dismiss() }) { MassMessageSheet() }
+        .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
     }
 
-    private func row(_ kind: Kind, _ title: String, _ detail: String, _ glyph: MomentGlyph) -> some View {
-        Button { next = kind } label: {
+    private func row(_ title: String, _ detail: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: MSpacing.l) {
-                Glyph(glyph, size: 26).frame(width: 28)
+                Image(systemName: symbol).font(.title3).foregroundStyle(MColor.accent).frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(MFont.headline).foregroundStyle(MColor.textPrimary)
                     Text(detail).font(MFont.footnote).foregroundStyle(MColor.textSecondary)
@@ -116,7 +116,7 @@ struct CreateSheet: View {
         }
         .buttonStyle(.plain)
         .glass(radius: 18)
-        .accessibilityIdentifier("create-\(kind.rawValue)")
+        .accessibilityIdentifier("create-\(title.lowercased().split(separator: " ").first ?? "row")")
     }
 }
 

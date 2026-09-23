@@ -695,58 +695,55 @@ final class ReceiptsAndTypingTests: XCTestCase {
 }
 
 final class ReelBuilderTests: XCTestCase {
-    private func side(_ id: String, _ author: String, _ kind: Contribution.Kind, at: Date, media: Bool = true) -> Contribution {
-        Contribution(id: id, momentID: "m", authorID: author, authorName: author, kind: kind, media: media ? MediaRef(kind: kind == .video ? .video : .photo, localRef: "l", remoteID: id) : nil, caption: "", createdAt: at, originalTimestamp: at, reactionCounts: [:], commentCount: 0, uploadState: .uploaded)
+    private func set(_ id: String, _ creator: String, price: Int, video: Bool = true, visible: Bool = true, at: Date = .now) -> VaultSet {
+        VaultSet(id: id, creatorID: creator, creatorName: creator, title: id, blurb: "", priceMinor: price, currency: "INR", cover: MediaRef(kind: .photo, localRef: "c", remoteID: "c_" + id), itemCount: 1, isVideo: video, createdAt: at, visible: visible)
     }
-    private func moment(_ id: String, members: [String] = ["a"], media: Int = 0, live: Bool = false, locked: Bool = false, teaser: Bool = false, daysAgo: Double = 1) -> SocialMoment {
-        let d = Date().addingTimeInterval(-daysAgo * 86400)
-        var m = SocialMoment(id: id, creatorID: members[0], creatorName: members[0], title: id, description: "", coverRef: nil, createdAt: d, startAt: d, endAt: nil, locationName: nil, coarsePlace: nil, visibility: .publicAll, memberIDs: members, memberNames: members, contributionCount: media, mediaCount: media, commentCount: 0, reactionCounts: [:], shareCount: 0, isLive: live, templateID: nil, remixedFromID: nil, shareURL: nil, allowsReshare: true, allowsDownload: true, allowsContributions: true, isTeaser: teaser)
-        m.isLocked = locked
-        return m
+    private func clip(_ setID: String, _ i: Int = 0) -> VaultItem {
+        VaultItem(id: "\(setID)_\(i)", setID: setID, kind: .video, media: MediaRef(kind: .video, localRef: "v", remoteID: "v_\(setID)_\(i)"), caption: "clip \(i)", index: i)
     }
 
-    func testCutsNeedThreeSidesAndVideosAlwaysBecomeReels() {
-        let t = Date()
-        let sides: [String: [Contribution]] = [
-            "thin": [side("1", "a", .photo, at: t), side("2", "b", .photo, at: t)],                                   // only two → no cut
-            "rich": [side("3", "a", .photo, at: t), side("4", "b", .photo, at: t.addingTimeInterval(60)), side("5", "c", .photo, at: t.addingTimeInterval(120))],
-            "vid":  [side("6", "a", .video, at: t), side("7", "a", .text, at: t, media: false)]                       // video reel, no cut (one visual)
-        ]
-        let reels = ReelBuilder.build(moments: [moment("thin", media: 2), moment("rich", members: ["a", "b", "c"], media: 3), moment("vid", media: 1)], sides: { sides[$0] ?? [] }, me: "z")
-        XCTAssertEqual(Set(reels.map(\.id)), ["c_rich", "v_6"])
-        XCTAssertTrue(reels.first(where: { $0.id == "c_rich" })!.isCut)
-        XCTAssertEqual(reels.first(where: { $0.id == "c_rich" })!.sides.count, 3)
-        XCTAssertFalse(reels.first(where: { $0.id == "v_6" })!.isCut)
+    func testOnlyVideoPostsBecomeReelsAndLockedOnesCarryNoClip() {
+        let items: [String: [VaultItem]] = ["free": [clip("free")], "paid": [clip("paid")], "mine": [clip("mine")]]
+        let reels = ReelBuilder.build(
+            sets: [set("free", "c", price: 0), set("paid", "c", price: 49900), set("photos", "c", price: 0, video: false), set("mine", "me", price: 9900), set("hidden", "c", price: 0, visible: false)],
+            items: { items[$0] ?? [] }, plans: [:], purchases: [], subscribedTo: [], me: "me")
+        XCTAssertEqual(Set(reels.map(\.setID)), ["free", "paid", "mine"], "photo sets and hidden sets are not reels")
+        let paid = try! XCTUnwrap(reels.first { $0.setID == "paid" })
+        XCTAssertTrue(paid.isLocked)
+        XCTAssertNil(paid.video, "the clip never reaches a device that hasn't paid")
+        XCTAssertNotNil(paid.cover, "the cover is what the lock is drawn over")
+        XCTAssertEqual(paid.gate, .buy(priceMinor: 49900, currency: "INR"))
+        XCTAssertNotNil(reels.first { $0.setID == "free" }?.video)
+        XCTAssertNotNil(reels.first { $0.setID == "mine" }?.video, "my own post always plays")
     }
 
-    func testLockedAndUnrevealedTeasersNeverBecomeReels() {
-        let t = Date()
-        let three = [side("1", "a", .photo, at: t), side("2", "b", .photo, at: t), side("3", "c", .photo, at: t)]
-        let reels = ReelBuilder.build(moments: [moment("locked", media: 3, locked: true), moment("teaser", media: 3, teaser: true), moment("mine", members: ["me", "b"], media: 3, teaser: true)], sides: { _ in three }, me: "me")
-        XCTAssertEqual(reels.map(\.id), ["c_mine"], "a teaser you're in is fine; one you're not in stays a mystery")
+    func testBuyingOrSubscribingUnlocksTheClip() {
+        let items: [String: [VaultItem]] = ["bought": [clip("bought")], "subbed": [clip("subbed")]]
+        let reels = ReelBuilder.build(sets: [set("bought", "c", price: 19900), set("subbed", "d", price: 29900)], items: { items[$0] ?? [] }, plans: [:], purchases: ["bought"], subscribedTo: ["d"], me: "me")
+        XCTAssertEqual(reels.filter(\.isLocked).count, 0)
+        XCTAssertEqual(reels.compactMap(\.video).count, 2)
     }
 
-    func testRankingPutsYoursAndLiveFirstAndDemotesSeen() {
-        let t = Date()
-        let three = [side("1", "a", .photo, at: t), side("2", "b", .photo, at: t), side("3", "c", .photo, at: t)]
-        let ms = [moment("old", media: 3, daysAgo: 20), moment("mine", members: ["me", "b", "c"], media: 3, daysAgo: 5), moment("live", media: 3, live: true, daysAgo: 0)]
-        let reels = ReelBuilder.build(moments: ms, sides: { _ in three }, me: "me")
-        XCTAssertEqual(reels.map(\.id), ["c_live", "c_mine", "c_old"])
-        let afterSeen = ReelBuilder.build(moments: ms, sides: { _ in three }, me: "me", seen: ["c_live"])
-        XCTAssertEqual(afterSeen.first?.id, "c_mine", "what you've already watched drops down")
+    func testEveryClipInASetIsItsOwnReelAndSeenOnesDropDown() {
+        let items: [String: [VaultItem]] = ["multi": [clip("multi", 0), clip("multi", 1), clip("multi", 2)]]
+        let reels = ReelBuilder.build(sets: [set("multi", "c", price: 0)], items: { items[$0] ?? [] }, plans: [:], purchases: [], subscribedTo: [], me: "me")
+        XCTAssertEqual(reels.count, 3)
+        XCTAssertEqual(reels.map(\.blurb), ["clip 0", "clip 1", "clip 2"])
+        let old = Date().addingTimeInterval(-86400)
+        let ranked = ReelBuilder.build(sets: [set("new", "c", price: 0), set("old", "c", price: 0, at: old)], items: { [clip($0)] }, plans: [:], purchases: [], subscribedTo: [], me: "me")
+        XCTAssertEqual(ranked.map(\.setID), ["new", "old"])
+        let afterSeen = ReelBuilder.build(sets: [set("new", "c", price: 0), set("old", "c", price: 0, at: old)], items: { [clip($0)] }, plans: [:], purchases: [], subscribedTo: [], me: "me", seen: ["new#0"])
+        XCTAssertEqual(afterSeen.first?.setID, "old", "what you've watched drops")
     }
 
-    @MainActor func testDemoFeedHasVideoReelsAndCuts() async throws {
+    @MainActor func testDemoFeedHasAPlayableVideoPostAndALockedOne() async throws {
         let backend = InMemoryBackend(displayName: "Rakshit")
         await backend.seedDemo()
-        let env = AppEnvironment(storage: try! StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
+        let env = AppEnvironment(storage: try StorageService(inMemory: true), settings: SettingsStore(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!), mediaDirectory: FileManager.default.temporaryDirectory.appending(path: "test-media-\(UUID().uuidString)"), backend: backend)
         await env.social.start()
         await env.social.refreshReels()
-        XCTAssertTrue(env.social.reels.contains { !$0.isCut }, "a real video side is in the feed")
-        XCTAssertTrue(env.social.reels.contains { $0.isCut && $0.momentID == "m_goa" })
-        let goa = try XCTUnwrap(env.social.reels.first { $0.id == "c_m_goa" })
-        XCTAssertGreaterThanOrEqual(Set(goa.sides.map(\.authorID)).count, 2, "a cut is many people's sides")
-        XCTAssertEqual(goa.sides, goa.sides.sorted { ($0.originalTimestamp ?? $0.createdAt) < ($1.originalTimestamp ?? $1.createdAt) })
+        XCTAssertTrue(env.social.reels.contains { !$0.isLocked && $0.video != nil }, "the free video post plays")
+        XCTAssertTrue(env.social.reels.contains { $0.isLocked && $0.video == nil }, "the paid one is a locked card with no clip on this device")
     }
 }
 
@@ -786,8 +783,8 @@ final class StorefrontFlowTests: XCTestCase {
         let (env, backend) = try await env()
         await env.social.loadStorefront("u_public")
         let sets = env.social.sets(of: "u_public")
-        let free = try XCTUnwrap(sets.first { $0.isFree })
-        let paid = try XCTUnwrap(sets.first { !$0.isFree })
+        let free = try XCTUnwrap(sets.first { $0.isFree && !$0.isVideo })
+        let paid = try XCTUnwrap(sets.first { !$0.isFree && !$0.isVideo })
         XCTAssertTrue(env.social.isUnlocked(free)); XCTAssertFalse(env.social.isUnlocked(paid))
         // Free set opens for anyone; the paid one refuses.
         await env.social.loadItems(free.id)
