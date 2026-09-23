@@ -17,6 +17,29 @@ final class MomentUITests: XCTestCase {
     }
 
     /// Home is the creator feed.
+    /// Opens a creator's profile from the feed by id, not by where they happen to rank. The feed is
+    /// ranked, so anything that assumed a fixed order was testing the ranker by accident.
+    ///
+    /// A SwiftUI NavigationLink inside a LazyVStack reports `exists` as soon as it is realised but
+    /// `isHittable` only once it is actually on screen, and XCUITest will not scroll a SwiftUI
+    /// ScrollView by itself — so this scrolls until the link is on screen, then taps its centre.
+    @discardableResult
+    private func openCreator(_ creatorID: String) -> Bool {
+        let link = app.descendants(matching: .any)["creatorLink-\(creatorID)"].firstMatch
+        guard link.waitForExistence(timeout: 20) else { return false }
+        for _ in 0..<25 {
+            if link.isHittable {
+                link.tap()
+                if app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15) { return true }
+                // The tap can land while the row is still settling; one retry is enough.
+                if link.exists && link.isHittable { link.tap() }
+                return app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15)
+            }
+            app.swipeUp()
+        }
+        return false
+    }
+
     private func waitForFeed() {
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'post-'")).firstMatch.waitForExistence(timeout: 30), "the feed shows creators' posts")
     }
@@ -82,11 +105,7 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(about.waitForExistence(timeout: 10))
         // Straight to a creator who sells time.
         app.tabBars.buttons["Home"].tap()
-        let sarah = app.buttons["Sarah Kim"].firstMatch
-        for _ in 0..<10 where !(sarah.exists && sarah.isHittable) { app.swipeUp(); sleep(1) }
-        guard sarah.exists && sarah.isHittable else { return XCTFail("couldn't reach a creator who sells calls") }
-        sarah.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
+        guard openCreator("u_sarah") else { return XCTFail("couldn't reach a creator who sells calls") }
         let shop = app.buttons["shopLink"].firstMatch
         for _ in 0..<8 where !(shop.exists && shop.isHittable) { app.swipeUp() }
         XCTAssertTrue(shop.exists, "a creator selling time has a shop")
@@ -178,11 +197,7 @@ final class MomentUITests: XCTestCase {
     func testProfileAndBlock() {
         waitForFeed()
         // Straight from a post to the creator's page.
-        let sarah = app.buttons["Sarah Kim"].firstMatch
-        for _ in 0..<10 where !(sarah.exists && sarah.isHittable) { app.swipeUp(); sleep(1) }
-        XCTAssertTrue(sarah.exists && sarah.isHittable)
-        sarah.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
+        XCTAssertTrue(openCreator("u_sarah"), "a creator to open from the feed")
         XCTAssertTrue(app.buttons["subscribeBox"].waitForExistence(timeout: 8), "a creator page leads with the subscription")
         let menu = app.buttons["profileMenu"].firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
@@ -245,10 +260,7 @@ final class MomentUITests: XCTestCase {
         waitForFeed()
         snap("12-locked")
         // Subscribing happens on the creator's page.
-        let creator = app.buttons["Sunset Society"].firstMatch
-        for _ in 0..<12 where !(creator.exists && creator.isHittable) { app.swipeUp(); sleep(1) }
-        XCTAssertTrue(creator.exists && creator.isHittable, "a creator to subscribe to")
-        creator.tap()
+        XCTAssertTrue(openCreator("u_public"), "a creator to subscribe to")
         let box = app.buttons["subscribeBox"].firstMatch
         XCTAssertTrue(box.waitForExistence(timeout: 15), "their page leads with the subscription")
         box.tap()

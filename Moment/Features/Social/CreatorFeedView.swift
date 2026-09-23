@@ -72,7 +72,9 @@ struct CreatorPostCard: View {
         HStack(spacing: MSpacing.s) {
             NavigationLink(value: SocialRoute.profile(post.creatorID)) { AvatarView(userID: post.creatorID, name: post.creatorName, size: 40) }.buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 1) {
-                NavigationLink(value: SocialRoute.profile(post.creatorID)) { Text(post.creatorName).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary) }.buttonStyle(.plain)
+                NavigationLink(value: SocialRoute.profile(post.creatorID)) { Text(post.creatorName).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("creatorLink-\(post.creatorID)")
                 Text(post.title).font(MFont.caption).foregroundStyle(MColor.textSecondary).lineLimit(1)
             }
             Spacer()
@@ -82,8 +84,24 @@ struct CreatorPostCard: View {
         .padding(.horizontal, MSpacing.m).padding(.vertical, MSpacing.s)
     }
 
+    /// A 4:5 cover on a tall phone makes a card that doesn't fit on the screen — you could never see a
+    /// post's price and its cover at the same time, which is the one thing this feed exists to show.
+    /// Capping the height keeps the whole card on screen and lets the next post peek in under it.
+    private var coverHeight: CGFloat {
+        min(UIScreen.main.bounds.width * 5 / 4, UIScreen.main.bounds.height * 0.52)
+    }
+
     @ViewBuilder private var media: some View {
-        let cover = SocialImage(ref: post.cover).aspectRatio(4/5, contentMode: .fill).frame(maxWidth: .infinity)
+        // A `.fill` image is larger than its box in one axis, so it has to sit *inside* something
+        // whose size is already decided — otherwise it widens the card past the screen edge, which
+        // silently moves every tap target in the card with it. An empty container of the exact size
+        // with the image as an overlay is the only arrangement where the layout can't be pushed around.
+        let cover = Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: coverHeight)
+            .overlay { SocialImage(ref: post.cover).aspectRatio(contentMode: .fill) }
+            .clipped()
+            .contentShape(Rectangle())
         if post.isLocked {
             ZStack {
                 cover.blur(radius: 26).clipped()

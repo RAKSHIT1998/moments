@@ -22,6 +22,8 @@ final class SettingsStore {
         meshEnabled = defaults.object(forKey: "meshEnabled") as? Bool ?? true
         webCheckoutEnabled = defaults.bool(forKey: "webCheckoutEnabled")
         checkoutBaseURL = defaults.string(forKey: "checkoutBaseURL") ?? ""
+        seenPostIDs = defaults.stringArray(forKey: "seenPostIDs") ?? []
+        openedFreeFrom = defaults.stringArray(forKey: "openedFreeFrom") ?? []
         turnURL = defaults.string(forKey: "turnURL") ?? ""
         turnUsername = defaults.string(forKey: "turnUsername") ?? ""
         turnCredential = defaults.string(forKey: "turnCredential") ?? ""
@@ -92,6 +94,10 @@ final class SettingsStore {
     /// out to from the app in storefronts where Apple allows it; off by default.
     var webCheckoutEnabled: Bool { didSet { defaults.set(webCheckoutEnabled, forKey: "webCheckoutEnabled") } }
     var checkoutBaseURL: String { didSet { defaults.set(checkoutBaseURL, forKey: "checkoutBaseURL") } }
+    /// Posts already opened, so the feed doesn't lead with what you just looked at. Ids only, on this
+    /// phone, capped — a reading position, not a history anyone could mine.
+    var seenPostIDs: [String] { didSet { defaults.set(seenPostIDs, forKey: "seenPostIDs") } }
+    var openedFreeFrom: [String] { didSet { defaults.set(openedFreeFrom, forKey: "openedFreeFrom") } }
     /// A TURN server of the user's own, for calls on networks that block direct connections. Empty by
     /// default: MOMENT runs none, so those calls fail honestly rather than routing through a stranger.
     var turnURL: String { didSet { defaults.set(turnURL, forKey: "turnURL") } }

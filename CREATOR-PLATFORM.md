@@ -34,6 +34,34 @@ Beyond the subscription and the sets, a fan can **ask** for a photo, a voice or 
 
 Money is only ever counted on `accepted` and `done` (`Booking.Status.isPaid`), so a price on the table is never revenue. Creators can still publish a fixed menu (`BookingOffer`) for the things they always sell at the same price — both paths end in the same request.
 
+## What the feed shows first
+
+The feed is ranked, not chronological, and the objective is stated rather than implied: **of the posts
+a viewer could pay for right now, which should they see first?** There is no watch-time signal, no
+infinite-scroll objective, and nothing that rewards a creator for posting more often than they have
+things to say. `CreatorFeedRanker` scores each post from things that actually happened on this phone —
+follows, purchases, subscriptions, opens — and none of it leaves the device.
+
+| Signal | Worth | Why |
+|---|---|---|
+| Freshness | up to **+2.0**, decaying over 5 days | News, but the floor is zero so a back catalogue stays reachable rather than going negative |
+| You subscribe to them | **+3.0** | You bought the relationship; the feed honours it |
+| You've bought a set from them | **+2.0** | Money is the only engagement this product counts |
+| You follow them, never paid | **+1.2** | Interest, not commitment |
+| Free post, creator you don't pay | **+1.0** | Free work is how someone gets found |
+| Locked post, creator whose work you've never opened | **−1.5** | A cold ask is the weakest thing in a feed, not the strongest |
+| Already opened | **×0.35** | Pushed down, never hidden |
+| A set you bought outright | **×0.6** | Your library, not your news |
+
+Affinity terms don't stack — the strongest true one wins, because someone who subscribes *and* follows
+isn't twice as interested. A subscribers-only post from a creator you subscribe to keeps its **full**
+score: it is what the subscription was for, and demoting it as "already owned" would defeat the thing
+the viewer pays monthly for. (That bug existed and a test caught it.)
+
+Finally `spread(_:)` makes one pass so no creator holds two consecutive slots while another has
+something waiting. A prolific creator still leads if they've earned it — they just don't lead twice
+in a row.
+
 ## Calls
 
 A call is the one thing on the platform with a clock, so the rules are written down rather than implied.

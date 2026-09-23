@@ -170,7 +170,8 @@ struct VaultSetView: View {
         .background(LiquidBackdrop())
         .navigationTitle(set?.title ?? "Set")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await env.social.loadItems(setID) }
+        // "Seen" means opened, not tapped — so the feed only demotes a post you actually looked at.
+        .task { await env.social.loadItems(setID); env.social.markSetSeen(setID) }
     }
 }
 

@@ -90,6 +90,38 @@ final class NotificationService {
         center.removePendingNotificationRequests(withIdentifiers: ["reminder-\(memoryID.uuidString)", "surface-\(memoryID.uuidString)"])
     }
 
+    /// Calls people paid for. These sit outside the daily budget on purpose: the budget exists to stop
+    /// the app nagging about things it merely thinks are interesting, and a call somebody bought at a
+    /// time they chose is neither a guess nor optional. Two per call — a heads-up and the start — and
+    /// they say who and when, never what was booked, because a lock screen is read over shoulders.
+    func scheduleCallReminders(_ bookings: [Booking], me: String, now: Date = .now) async {
+        guard settings.notificationsEnabled else { return }
+        // Rebuild from scratch each time, so a cancelled or moved call never leaves a ghost behind.
+        let existing = await center.pendingNotificationRequests()
+            .map(\.identifier).filter { $0.hasPrefix("call-") }
+        center.removePendingNotificationRequests(withIdentifiers: existing)
+
+        for b in bookings where b.isJoinable && b.startsAt > now {
+            let them = b.creatorID == me ? b.buyerName : b.creatorName
+            let fires: [(String, Date, String)] = [
+                ("soon", b.startsAt.addingTimeInterval(-5 * 60), "in 5 minutes"),
+                ("now", b.startsAt, "now")
+            ]
+            for (suffix, when, phrase) in fires where when > now {
+                let content = UNMutableNotificationContent()
+                content.title = b.kind == .videoCall ? "Video call \(phrase)" : "Voice call \(phrase)"
+                content.body = "\(them) · \(b.paidMinutes) minutes"
+                content.sound = .default
+                content.interruptionLevel = .timeSensitive
+                content.threadIdentifier = "calls"
+                content.userInfo = ["bookingID": b.id]
+                let trigger = UNCalendarNotificationTrigger(
+                    dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: when), repeats: false)
+                try? await center.add(UNNotificationRequest(identifier: "call-\(b.id)-\(suffix)", content: content, trigger: trigger))
+            }
+        }
+    }
+
     func cancelAll() {
         center.removeAllPendingNotificationRequests()
         center.removeAllDeliveredNotifications()

@@ -1204,3 +1204,93 @@ final class CallBackendTests: XCTestCase {
         var first: (CallSignal, String)? { items.first }
     }
 }
+
+// MARK: - Feed ranking
+
+final class CreatorFeedRankerTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func post(_ id: String, creator: String, hoursAgo: Double = 1, locked: Bool = false, price: Int = 19900) -> CreatorPost {
+        let set = VaultSet(id: id, creatorID: creator, creatorName: creator, title: id, blurb: "", priceMinor: locked ? price : 0,
+                           currency: "INR", cover: nil, itemCount: 3, isVideo: false,
+                           createdAt: now.addingTimeInterval(-hoursAgo * 3600), visible: true)
+        return CreatorPost(id: id, creatorID: creator, creatorName: creator, title: id, blurb: "", cover: nil,
+                           itemCount: 3, isVideo: false, createdAt: set.createdAt,
+                           gate: locked ? .buy(priceMinor: price, currency: "INR") : .open, source: .set(set))
+    }
+    private func rank(_ posts: [CreatorPost], _ ctx: FeedContext) -> [String] {
+        CreatorFeedRanker.rank(posts, context: ctx, now: now).map(\.id)
+    }
+
+    func testACreatorYouPayForComesBeforeAStranger() {
+        let ctx = FeedContext(me: "me", subscribedTo: ["paid"])
+        // The stranger's post is newer, and still loses: the subscription is the stronger claim.
+        let order = rank([post("stranger", creator: "x", hoursAgo: 0), post("paid", creator: "paid", hoursAgo: 40)], ctx)
+        XCTAssertEqual(order.first, "paid", "a subscription you pay for was outranked by a stranger")
+    }
+
+    func testHavingBoughtFromSomeoneBeatsMerelyFollowing() {
+        let ctx = FeedContext(me: "me", following: ["followed"], boughtFrom: ["bought"])
+        let order = rank([post("f", creator: "followed", locked: true), post("b", creator: "bought", locked: true)], ctx)
+        XCTAssertEqual(order.first, "b", "money is the stronger signal and should rank first")
+    }
+
+    func testAStrangersFreePostBeatsAStrangersLockedOne() {
+        let ctx = FeedContext(me: "me")
+        let order = rank([post("cold", creator: "a", locked: true), post("free", creator: "b")], ctx)
+        XCTAssertEqual(order.first, "free", "a cold ask outranked the free work that earns the ask")
+    }
+
+    func testOpeningSomeonesFreeWorkWarmsUpTheirLockedPosts() {
+        let cold = FeedContext(me: "me")
+        let warm = FeedContext(me: "me", openedFreeFrom: ["a"])
+        let p = post("locked", creator: "a", locked: true)
+        XCTAssertGreaterThan(CreatorFeedRanker.score(p, context: warm, now: now),
+                             CreatorFeedRanker.score(p, context: cold, now: now),
+                             "a creator whose free work you opened is no longer a cold ask")
+    }
+
+    func testSomethingAlreadySeenIsPushedDownButNotHidden() {
+        let ctx = FeedContext(me: "me", following: ["a"], seen: ["old"])
+        let order = rank([post("old", creator: "a", hoursAgo: 0), post("new", creator: "b", hoursAgo: 5)], ctx)
+        XCTAssertEqual(order.first, "new")
+        XCTAssertTrue(order.contains("old"), "a seen post was dropped from the feed instead of demoted")
+    }
+
+    func testFreshnessDecaysToZeroRatherThanGoingNegative() {
+        let ctx = FeedContext(me: "me")
+        let ancient = post("ancient", creator: "a", hoursAgo: 24 * 400)
+        XCTAssertGreaterThanOrEqual(CreatorFeedRanker.score(ancient, context: ctx, now: now), 0,
+                                    "an old post scored negative, which would push it behind things that don't exist")
+    }
+
+    func testNoCreatorTakesTwoSlotsInARowWhileAnotherHasSomethingToShow() {
+        let ctx = FeedContext(me: "me", subscribedTo: ["loud"])
+        let posts = [post("l1", creator: "loud", hoursAgo: 0), post("l2", creator: "loud", hoursAgo: 1),
+                     post("l3", creator: "loud", hoursAgo: 2), post("q1", creator: "quiet", hoursAgo: 3)]
+        let order = rank(posts, ctx)
+        XCTAssertEqual(order.first, "l1", "the strongest post should still lead")
+        XCTAssertNotEqual(order[1], "l2", "one creator took two slots in a row while another was waiting")
+        XCTAssertEqual(Set(order), Set(["l1", "l2", "l3", "q1"]), "spreading dropped or duplicated a post")
+    }
+
+    func testSpreadingNeverLosesAPost() {
+        let posts = (0..<12).map { post("p\($0)", creator: $0 < 9 ? "same" : "other\($0)") }
+        let out = CreatorFeedRanker.spread(posts)
+        XCTAssertEqual(out.count, posts.count)
+        XCTAssertEqual(Set(out.map(\.id)), Set(posts.map(\.id)))
+    }
+
+    func testYourOwnPostsAreNeverTreatedAsAColdAsk() {
+        let ctx = FeedContext(me: "me")
+        let mine = post("mine", creator: "me", locked: true)
+        XCTAssertGreaterThan(CreatorFeedRanker.score(mine, context: ctx, now: now), 0,
+                             "the creator's own post was demoted as if they had to buy it")
+    }
+
+    func testRankingIsStableForIdenticalInput() {
+        let ctx = FeedContext(me: "me", following: ["a", "b"])
+        let posts = [post("x", creator: "a", hoursAgo: 2), post("y", creator: "b", hoursAgo: 2)]
+        XCTAssertEqual(rank(posts, ctx), rank(posts, ctx), "the same feed ordered differently twice")
+    }
+}

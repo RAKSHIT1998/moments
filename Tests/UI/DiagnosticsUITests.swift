@@ -17,4 +17,26 @@ final class DiagnosticsUITests: XCTestCase {
         sleep(2)
         print("── CHATS ──\n" + app.debugDescription)
     }
+
+    /// Tapping a creator's name in the feed should open their page. Dumps what's on screen before and
+    /// after, so a tap that lands but doesn't navigate is visible rather than guessed at.
+    func testTapCreatorLinkFromFeed() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitest", "-demo", "-reset"]
+        app.launch()
+        let post = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'post-'")).firstMatch
+        XCTAssertTrue(post.waitForExistence(timeout: 30))
+        let link = app.descendants(matching: .any)["creatorLink-u_sarah"].firstMatch
+        var swipes = 0
+        while !link.isHittable && swipes < 25 { app.swipeUp(); swipes += 1 }
+        print("── swipes: \(swipes), exists: \(link.exists), hittable: \(link.isHittable), frame: \(link.frame) ──")
+        print("── BEFORE TAP ──\n" + app.debugDescription)
+        link.tap()
+        sleep(3)
+        print("── AFTER TAP ──\n" + app.debugDescription)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = "after-creator-tap"
+        add(shot)
+    }
 }

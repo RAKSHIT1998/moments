@@ -114,6 +114,8 @@ final class SocialService {
     // MARK: - Session
 
     func start() async {
+        seenPosts = Set(settings.seenPostIDs)
+        openedFreeFrom = Set(settings.openedFreeFrom)
         accountStatus = await backend.accountStatus()
         guard accountStatus == .available else { return }
         do {
@@ -1263,8 +1265,16 @@ final class SocialService {
     private(set) var busyByCreator: [String: [DateInterval]] = [:]
     var myAvailability: CreatorAvailability { availabilityByCreator[myID] ?? CreatorAvailability(creatorID: myID) }
 
-    /// Just the bookings, without pulling the whole storefront.
-    func refreshBookings() async { myBookings = (try? await backend.myBookings()) ?? [] }
+    /// Set by AppEnvironment. Optional so the service stays constructible in tests without a
+    /// notification centre.
+    var notifications: NotificationService?
+
+    /// Just the bookings, without pulling the whole storefront. Re-arms the call reminders every time,
+    /// because a call that was moved or declined must not keep its old alarm.
+    func refreshBookings() async {
+        myBookings = (try? await backend.myBookings()) ?? []
+        await notifications?.scheduleCallReminders(myBookings, me: myID)
+    }
 
     func loadAvailability(_ creatorID: String) async {
         availabilityByCreator[creatorID] = (try? await backend.availability(for: creatorID)) ?? CreatorAvailability(creatorID: creatorID, windows: [], acceptingBookings: false)
@@ -1332,7 +1342,36 @@ final class SocialService {
         let sets = ids.flatMap { setsByCreator[$0] ?? [] }
         var plans: [String: CreatorPlan] = [:]
         for id in ids { if let p = creatorPlans[id] { plans[id] = p } }
-        creatorFeed = CreatorFeedBuilder.build(sets: sets, plans: plans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked)
+        let built = CreatorFeedBuilder.build(sets: sets, plans: plans, purchases: Set(myPurchases.map(\.setID)), subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)), me: myID, blocked: blocked)
+        creatorFeed = CreatorFeedRanker.rank(built, context: feedContext)
+    }
+
+    /// What this phone knows about the viewer, for ranking. Built from things that actually happened;
+    /// never sent anywhere.
+    var feedContext: FeedContext {
+        FeedContext(me: myID,
+                    following: graph.following,
+                    subscribedTo: Set(mySubscriptions.filter(\.isActive).map(\.creatorID)),
+                    boughtFrom: Set(myPurchases.map(\.creatorID)),
+                    seen: seenPosts,
+                    purchasedSets: Set(myPurchases.map(\.setID)),
+                    openedFreeFrom: openedFreeFrom)
+    }
+    /// Posts opened in this session and the ones remembered from before, so the feed doesn't lead with
+    /// what you just looked at.
+    private(set) var seenPosts: Set<String> = []
+    private(set) var openedFreeFrom: Set<String> = []
+
+    /// Called when a set is actually opened. Free work from someone new is worth remembering
+    /// separately: it's what tells the feed a cold ask from that creator is no longer cold.
+    func markSetSeen(_ setID: String) {
+        seenPosts.insert("s_" + setID)
+        if let set = setsByCreator.values.flatMap({ $0 }).first(where: { $0.id == setID }),
+           set.creatorID != myID, isUnlocked(set) {
+            openedFreeFrom.insert(set.creatorID)
+        }
+        settings.seenPostIDs = Array(seenPosts.suffix(400))
+        settings.openedFreeFrom = Array(openedFreeFrom.suffix(200))
     }
 
     // MARK: - Reels

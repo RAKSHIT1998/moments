@@ -10,7 +10,7 @@ MOMENT is a decentralised creator platform: creators post photo sets and video c
 Moment/Social/
   SocialModels.swift      value types that cross the backend boundary (VaultSet, CreatorPlan, Booking, …)
   SocialBackend.swift     protocol + RelationshipGraph, ContentModeration
-  CreatorFeed.swift       CreatorFeedBuilder — turns sets + plans + purchases into gated posts
+  CreatorFeed.swift       CreatorFeedBuilder (gates) + CreatorFeedRanker (what you see first)
   Reels.swift             ReelBuilder — the video-post feed, locked clips included
   CloudKitBackend.swift   production: private DB custom zone, CKShare for buyers/subscribers,
                           public DB for profiles / follows / storefront windows / reports, CKAssets for media,
@@ -36,7 +36,7 @@ Simulator and tests use `InMemoryBackend`; on a device signed into iCloud the ap
 
 ## The app
 
-Tabs are **Home · Create · Chats · Profile**. Home is the **creator feed**: a column of posts from people you follow or pay, where a locked one shows its cover blurred with *Unlock for ₹X* or *Subscribe · ₹X* on it — nothing is teased without naming the price. `CreatorFeedBuilder` decides each post's gate (`open` / `buy` / `subscribe`) and never shows a lock it can't explain. **Reels** (from the Home header) is the video-post feed: free and bought clips play, paid ones are a locked card whose clip was never sent to the device. **Create** offers a photo set, a video post, a message to every subscriber, and your subscription. **Profile** is a creator page — a banner, the numbers that matter, then **Posts** and **About**; your own page leads with *Start earning* / *Creator mode*.
+Tabs are **Home · Create · Chats · Profile**. Home is the **creator feed**: a column of posts from people you follow or pay, where a locked one shows its cover blurred with *Unlock for ₹X* or *Subscribe · ₹X* on it — nothing is teased without naming the price. `CreatorFeedBuilder` decides each post's gate (`open` / `buy` / `subscribe`) and never shows a lock it can't explain. `CreatorFeedRanker` then orders it: creators you pay for first, a stranger's free work above a stranger's locked post, already-seen pushed down, and no creator taking two slots in a row. The weights are in `CREATOR-PLATFORM.md` — there is no watch-time signal and nothing leaves the phone. **Reels** (from the Home header) is the video-post feed: free and bought clips play, paid ones are a locked card whose clip was never sent to the device. **Create** offers a photo set, a video post, a message to every subscriber, and your subscription. **Profile** is a creator page — a banner, the numbers that matter, then **Posts** and **About**; your own page leads with *Start earning* / *Creator mode*.
 
 ## Messaging
 

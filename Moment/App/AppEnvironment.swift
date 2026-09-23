@@ -74,6 +74,7 @@ final class AppEnvironment {
         self.location = LocationService()
         social.subscriptions = subscriptions
         social.identity = identity
+        social.notifications = notifications
         actions.onChange = { [weak self] in self?.surface.noteDataChanged() }
         search.changeToken = { [weak self] in self?.surface.changeToken ?? 0 }
         importer.onChange = { [weak self] in self?.surface.noteDataChanged() }
