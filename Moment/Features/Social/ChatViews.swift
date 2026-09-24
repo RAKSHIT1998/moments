@@ -154,7 +154,7 @@ struct ChatView: View {
     let conversationID: String
     @State private var text = ""
     @State private var pickerItem: PhotosPickerItem?
-    @State private var showMomentPicker = false
+    @State private var showPhotoPicker = false
     @State private var replyTo: DirectMessage?
     @State private var reactTarget: DirectMessage?
     @State private var showPPV = false
@@ -225,7 +225,7 @@ struct ChatView: View {
         .task { await env.social.loadMessages(conversationID); env.social.markRead(conversationID) }
         .onChange(of: pickerItem) { _, item in Task { if let item, let d = try? await item.loadTransferable(type: Data.self) { _ = await env.social.send(conversationID: conversationID, text: "", photo: d, replyTo: replyTo?.id); replyTo = nil; pickerItem = nil } } }
         .sheet(isPresented: $showPPV) { PayPerViewComposer(conversationID: conversationID, buyerID: otherID) }
-        .sheet(isPresented: $showMomentPicker) { MomentPickerSheet { m in Task { _ = await env.social.send(conversationID: conversationID, text: m.title, momentID: m.id); showMomentPicker = false } } }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .overlay { if let t = reactTarget { reactionPicker(for: t) } }
         .modifier(SocialErrorAlert())
     }
@@ -319,30 +319,22 @@ struct ChatView: View {
 
     // MARK: Composer
 
+    /// The composer floats: a glass pill over the thread rather than a bar bolted to the bottom, so the
+    /// last message stays visible while you type instead of being pushed behind opaque chrome.
+    ///
+    /// The three separate attachment buttons that used to sit in front of the field are one "+" menu.
+    /// Two of them were rarely used and one of them — "Share a Moment" — pointed at a feature the
+    /// product no longer has.
     private var composer: some View {
         VStack(spacing: 6) {
-            if let r = replyTo {
-                HStack {
-                    RoundedRectangle(cornerRadius: 2).fill(MColor.accent).frame(width: 3, height: 28)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Replying to \(r.authorID == env.social.myID ? "yourself" : r.authorName)").font(.caption.weight(.semibold))
-                        Text(r.text.isEmpty ? "Photo / Moment" : r.text).font(MFont.caption).lineLimit(1).foregroundStyle(MColor.textSecondary)
-                    }
-                    Spacer()
-                    Button { replyTo = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(MColor.textTertiary) }
-                }
-                .padding(.horizontal, MSpacing.m).padding(.vertical, 6).glass(radius: 12)
-            }
+            if let r = replyTo { replyChip(r) }
             HStack(spacing: MSpacing.s) {
-                Button { showMomentPicker = true } label: { Image(systemName: "rectangle.stack.badge.plus").font(.title3) }.frame(width: 36, height: 36).accessibilityLabel("Share a Moment")
-                PhotosPicker(selection: $pickerItem, matching: .images) { Image(systemName: "photo").font(.title3) }.frame(width: 36, height: 36)
-                if env.social.isCreator, conversation?.isGroup != true {
-                    Button { showPPV = true } label: { Image(systemName: "lock.fill").font(.title3).foregroundStyle(MColor.accent) }
-                        .frame(width: 36, height: 36).accessibilityLabel("Send a locked photo").accessibilityIdentifier("ppvButton")
-                }
-                TextField("Message", text: $text, axis: .vertical).lineLimit(1...5).focused($focused).textFieldStyle(.plain)
-                    .padding(.horizontal, MSpacing.m).padding(.vertical, 9)
-                    .glass(radius: 20)
+                attachMenu
+                TextField("Message", text: $text, axis: .vertical)
+                    .lineLimit(1...5)
+                    .focused($focused)
+                    .textFieldStyle(.plain)
+                    .padding(.vertical, 6)
                     .accessibilityIdentifier("messageField")
                     .onChange(of: text) { _, t in if !t.isEmpty { env.social.noteTyping(conversationID) } }
                 if text.isBlank {
@@ -351,20 +343,62 @@ struct ChatView: View {
                         Task { if let d = try? Data(contentsOf: url) { _ = await env.social.send(conversationID: conversationID, text: "", voice: d, replyTo: r) }; try? FileManager.default.removeItem(at: url) }
                     }
                 } else {
-                    Button { let t = text, r = replyTo?.id; text = ""; replyTo = nil; Task { _ = await env.social.send(conversationID: conversationID, text: t, replyTo: r) } } label: {
-                        Image(systemName: "arrow.up").font(.headline).foregroundStyle(.white).frame(width: 36, height: 36)
+                    Button {
+                        let t = text, r = replyTo?.id; text = ""; replyTo = nil
+                        Task { _ = await env.social.send(conversationID: conversationID, text: t, replyTo: r) }
+                    } label: {
+                        Image(systemName: MSymbol.send).font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
+                            .frame(width: 34, height: 34)
                             .background(Circle().fill(MColor.accent))
+                            .shadow(color: MColor.accent.opacity(0.4), radius: 8, y: 3)
                     }
+                    .buttonStyle(PressScaleStyle())
                     .accessibilityLabel("Send").accessibilityIdentifier("sendMessage")
                 }
             }
+            .padding(.leading, 6)
+            .padding(.trailing, 6)
+            .padding(.vertical, 5)
+            .glassPill(prominent: true)
         }
-        .padding(.horizontal, MSpacing.m).padding(.vertical, MSpacing.s)
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, MSpacing.m)
+        .padding(.bottom, MSpacing.s)
+    }
+
+    /// One button instead of three. A locked photo is the creator's earner, so it is named as money
+    /// rather than hidden behind an icon.
+    private var attachMenu: some View {
+        Menu {
+            Button { showPhotoPicker = true } label: { Label("Photo", systemImage: MSymbol.attach) }
+            if env.social.isCreator, conversation?.isGroup != true {
+                Button { showPPV = true } label: { Label("Locked photo — they pay to open it", systemImage: MSymbol.locked) }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(MColor.accent)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(MColor.accent.opacity(0.14)))
+        }
+        .accessibilityLabel("Add")
+        .accessibilityIdentifier("attachButton")
+    }
+
+    private func replyChip(_ r: DirectMessage) -> some View {
+        HStack {
+            RoundedRectangle(cornerRadius: 2).fill(MColor.accent).frame(width: 3, height: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Replying to \(r.authorID == env.social.myID ? "yourself" : r.authorName)").font(.caption.weight(.semibold))
+                Text(r.text.isEmpty ? "Photo" : r.text).font(MFont.caption).lineLimit(1).foregroundStyle(MColor.textSecondary)
+            }
+            Spacer()
+            Button { replyTo = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(MColor.textTertiary) }
+        }
+        .padding(.horizontal, MSpacing.m).padding(.vertical, 6)
+        .glassPill()
     }
 }
 
-/// Reused by chat and by "Ask about the gap": pick one of my Moments.
 struct MomentPickerSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss

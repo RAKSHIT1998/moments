@@ -17,6 +17,11 @@ final class MomentUITests: XCTestCase {
     }
 
     /// Home is the creator feed.
+    /// The tab bar is a custom floating pill, not a UITabBar, so it is addressed by identifier.
+    private func tab(_ name: String) -> XCUIElement {
+        app.descendants(matching: .any)["tab-\(name)"].firstMatch
+    }
+
     /// Opens a creator's profile from the feed by id, not by where they happen to rank. The feed is
     /// ranked, so anything that assumed a fixed order was testing the ranker by accident.
     ///
@@ -100,11 +105,11 @@ final class MomentUITests: XCTestCase {
     /// Buying a call means picking from the creator's hours — not typing any time you like.
     func testBookingACallOffersOnlyTheCreatorsHours() {
         waitForFeed()
-        app.tabBars.buttons["Profile"].tap()
+        tab("Profile").tap()
         let about = app.buttons["About"].firstMatch
         XCTAssertTrue(about.waitForExistence(timeout: 10))
         // Straight to a creator who sells time.
-        app.tabBars.buttons["Home"].tap()
+        tab("Home").tap()
         guard openCreator("u_sarah") else { return XCTFail("couldn't reach a creator who sells calls") }
         let shop = app.buttons["shopLink"].firstMatch
         for _ in 0..<8 where !(shop.exists && shop.isHittable) { app.swipeUp() }
@@ -127,7 +132,7 @@ final class MomentUITests: XCTestCase {
     /// A creator's hours are the only place they say when they're free.
     func testACreatorSetsTheHoursCallsCanLandIn() {
         waitForFeed()
-        app.tabBars.buttons["Profile"].tap()
+        tab("Profile").tap()
         let studio = app.descendants(matching: .any)["Open Creator mode"].firstMatch
         let earn = app.descendants(matching: .any)["Start earning"].firstMatch
         if studio.waitForExistence(timeout: 8) { studio.tap() } else if earn.exists { earn.tap() } else { return XCTFail("no way into Creator mode") }
@@ -147,7 +152,7 @@ final class MomentUITests: XCTestCase {
 
     func testCreateSheetIsAboutPosts() {
         waitForFeed()
-        app.tabBars.buttons["Create"].tap()
+        tab("Create").tap()
         XCTAssertTrue(app.descendants(matching: .any)["create-photo"].firstMatch.waitForExistence(timeout: 10), "a photo set is the first thing you can make")
         XCTAssertTrue(app.descendants(matching: .any)["create-video"].firstMatch.exists)
         snap("07-create")
@@ -161,13 +166,19 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["inboxButton"].waitForExistence(timeout: 10))
         app.buttons["inboxButton"].tap()
         XCTAssertTrue(app.navigationBars["Notifications"].waitForExistence(timeout: 10))
-        app.tabBars.buttons["Chats"].tap()
+        tab("Chats").tap()
         let chat = app.descendants(matching: .any)["chat-conv_rahul"].firstMatch
         XCTAssertTrue(chat.waitForExistence(timeout: 10))
         chat.tap()
         XCTAssertTrue(app.descendants(matching: .any)["message-d1"].firstMatch.waitForExistence(timeout: 10))
         let field = app.textFields["messageField"].firstMatch.exists ? app.textFields["messageField"].firstMatch : app.textViews["messageField"].firstMatch
-        field.tap(); field.typeText("sending it now")
+        XCTAssertTrue(field.waitForExistence(timeout: 8))
+        // The composer floats over the thread, so it is already on screen and there is nothing to
+        // scroll it into — `.tap()` asks for a scroll anyway and fails. Tap where it is.
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // Focus arrives a beat after the tap; type into the app so the event goes to whatever has it.
+        for _ in 0..<10 where !app.keyboards.element.exists { usleep(300_000) }
+        app.typeText("sending it now")
         app.buttons["sendMessage"].tap()
         XCTAssertTrue(app.staticTexts["sending it now"].waitForExistence(timeout: 8))
         // Reply + react on a message.
@@ -204,13 +215,13 @@ final class MomentUITests: XCTestCase {
         menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["Block"].waitForExistence(timeout: 5))
         app.buttons["Block"].tap()
-        app.tabBars.buttons["Home"].tap()
+        tab("Home").tap()
         XCTAssertFalse(app.descendants(matching: .any)["post-s_set_sarah_kitchen"].firstMatch.waitForExistence(timeout: 3), "a blocked creator's posts leave the feed")
     }
 
     func testSafetySettingsAndPrivateMemoryStillWork() {
         waitForFeed()
-        app.tabBars.buttons["Profile"].tap()
+        tab("Profile").tap()
         let about = app.buttons["About"].firstMatch
         XCTAssertTrue(about.waitForExistence(timeout: 10))
         about.tap(); sleep(1)
@@ -276,7 +287,7 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["subscribeBox"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["subscribeBox"].firstMatch.isEnabled, "the button says subscribed and can't be pressed again")
         // Creator side: set up a plan and see the earnings screen.
-        app.tabBars.buttons["Profile"].tap()
+        tab("Profile").tap()
         let studio = app.descendants(matching: .any)["studioLink"].firstMatch
         XCTAssertTrue(studio.waitForExistence(timeout: 10))
         studio.tap()
@@ -305,13 +316,13 @@ final class MomentUITests: XCTestCase {
         app.buttons["reelsLink"].firstMatch.tap(); sleep(3); snap("03-reels")
         if app.buttons["Close reels"].firstMatch.exists { app.buttons["Close reels"].firstMatch.tap() } else { app.swipeDown() }
         sleep(1)
-        app.tabBars.buttons["Create"].tap(); sleep(1); snap("07-create"); app.buttons["Cancel"].firstMatch.tap()
-        app.tabBars.buttons["Chats"].tap(); sleep(2); snap("08b-chats")
-        app.tabBars.buttons["Profile"].tap(); sleep(2); snap("09-profile")
+        tab("Create").tap(); sleep(1); snap("07-create"); app.buttons["Cancel"].firstMatch.tap()
+        tab("Chats").tap(); sleep(2); snap("08b-chats")
+        tab("Profile").tap(); sleep(2); snap("09-profile")
         if app.buttons["studioLink"].firstMatch.waitForExistence(timeout: 5) {
             app.buttons["studioLink"].firstMatch.tap(); sleep(2); snap("09b-creator-mode")
         }
-        app.tabBars.buttons["Home"].tap(); app.buttons["inboxButton"].tap(); sleep(1); snap("11-inbox")
+        tab("Home").tap(); app.buttons["inboxButton"].tap(); sleep(1); snap("11-inbox")
     }
 
     private func snap(_ name: String) {

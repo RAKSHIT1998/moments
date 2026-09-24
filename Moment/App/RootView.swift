@@ -42,18 +42,28 @@ struct RootView: View {
     @State private var showCreate = false
     @State private var lastTab: RootTab = .home
 
+    /// The system tab bar is a slab welded to the bottom edge. `FloatingTabBar` is a glass pill that
+    /// content scrolls under, so a feed reads as one column instead of stopping at a hard line — and the
+    /// bar sits inside the safe area rather than on top of the last row of every list.
+    ///
+    /// The TabView underneath is kept (with its own bar hidden) because it is what preserves each tab's
+    /// navigation stack. Swapping it for a switch would throw that away and make Back behave differently
+    /// depending on which tab you were in.
     private var mainTabs: some View {
         TabView(selection: $tab) {
-            Tab(value: .home) { SocialHomeView() } label: { Label { Text(RootTab.home.label) } icon: { Image(uiImage: MomentGlyph.home.image()) } }
-            Tab(value: .create) { Color.clear } label: { Label { Text(RootTab.create.label) } icon: { Image(uiImage: MomentGlyph.create.image()) } }
-            Tab(value: .chats) { ChatsView() } label: { Label { Text(RootTab.chats.label) } icon: { Image(uiImage: MomentGlyph.reply.image()) } }
-                .badge(env.social.unreadChats)
-            Tab(value: .profile) { NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() } } label: { Label { Text(RootTab.profile.label) } icon: { Image(uiImage: MomentGlyph.profile.image()) } }
+            Tab(value: .home) { SocialHomeView().toolbar(.hidden, for: .tabBar) } label: { Text(RootTab.home.label) }
+            Tab(value: .create) { Color.clear.toolbar(.hidden, for: .tabBar) } label: { Text(RootTab.create.label) }
+            Tab(value: .chats) { ChatsView().toolbar(.hidden, for: .tabBar) } label: { Text(RootTab.chats.label) }
+            Tab(value: .profile) {
+                NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() }
+                    .toolbar(.hidden, for: .tabBar)
+            } label: { Text(RootTab.profile.label) }
         }
         .tint(MColor.textPrimary)
-        // Liquid glass bars: content scrolls under translucent chrome.
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
+        .overlay(alignment: .bottom) {
+            FloatingTabBar(selection: $tab, unreadChats: env.social.unreadChats) { showCreate = true }
+                .padding(.bottom, 6)
+        }
         .onChange(of: tab) { old, new in
             // The centre "+" is an action, not a place: open the create sheet and stay where you were.
             if new == .create { showCreate = true; tab = old == .create ? .home : old } else { lastTab = new }

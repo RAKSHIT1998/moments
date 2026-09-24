@@ -10,10 +10,10 @@ final class DiagnosticsUITests: XCTestCase {
         let post = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'post-'")).firstMatch
         XCTAssertTrue(post.waitForExistence(timeout: 30), "the creator feed should have posts")
         print("── HOME ──\n" + app.debugDescription)
-        app.tabBars.buttons["Profile"].tap()
+        app.descendants(matching: .any)["tab-Profile"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["profileHeader"].waitForExistence(timeout: 15))
         print("── PROFILE ──\n" + app.debugDescription)
-        app.tabBars.buttons["Chats"].tap()
+        app.descendants(matching: .any)["tab-Chats"].firstMatch.tap()
         sleep(2)
         print("── CHATS ──\n" + app.debugDescription)
     }

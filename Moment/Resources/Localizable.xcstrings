@@ -53,6 +53,16 @@
         }
       }
     },
+    "%@ · %lld min" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld min"
+          }
+        }
+      }
+    },
     "%@ / 30 days" : {
 
     },
@@ -93,6 +103,19 @@
 
     },
     "%@ isn't selling anything yet." : {
+
+    },
+    "%@ keeps %@ of that." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ keeps %2$@ of that."
+          }
+        }
+      }
+    },
+    "%@ left" : {
 
     },
     "%@ memor%@" : {
@@ -137,6 +160,16 @@
     },
     "%@ was there too. Send it to them?" : {
 
+    },
+    "%@ with %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ with %2$@"
+          }
+        }
+      }
     },
     "%@, %@" : {
       "localizations" : {
@@ -260,7 +293,29 @@
     "%lld chosen" : {
 
     },
+    "%lld min" : {
+
+    },
+    "%lld min gap between calls" : {
+
+    },
+    "%lld min paid" : {
+
+    },
     "%lld minutes" : {
+
+    },
+    "%lld minutes · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld minutes · %2$@"
+          }
+        }
+      }
+    },
+    "%lld minutes · starts when you both join" : {
 
     },
     "%lld Moment%@ remembered for you this month." : {
@@ -344,6 +399,9 @@
     "499" : {
 
     },
+    "A buyer in another country sees these hours converted to theirs. You never do the maths." : {
+
+    },
     "A fingerprint of a key that lives only in this iPhone's Keychain. Everything you create is signed with it, so people can tell it's really yours — without any server." : {
 
     },
@@ -401,6 +459,9 @@
     "Add “%@” to your calendar?" : {
 
     },
+    "Add %lld minutes" : {
+
+    },
     "Add a line about you" : {
 
     },
@@ -410,6 +471,9 @@
     "Add another memory" : {
 
     },
+    "Add hours" : {
+
+    },
     "Add my side" : {
 
     },
@@ -417,6 +481,12 @@
 
     },
     "Add person" : {
+
+    },
+    "Add time" : {
+
+    },
+    "Add time to keep talking" : {
 
     },
     "Add to Calendar" : {
@@ -497,6 +567,9 @@
     "Asked. You'll get a price in your chat." : {
 
     },
+    "At least %lldh notice" : {
+
+    },
     "At the right time" : {
 
     },
@@ -545,6 +618,9 @@
     "Blocking hides them from you everywhere, immediately. Reports are read by whoever runs the relay; we hold nothing centrally." : {
 
     },
+    "Book up to %lld days ahead" : {
+
+    },
     "Bought once, kept. You keep %lld%% on card checkout, and the photos stay on your storage — buyers get a key." : {
 
     },
@@ -555,6 +631,9 @@
 
     },
     "Calendar" : {
+
+    },
+    "CALLS" : {
 
     },
     "Cancel" : {
@@ -653,6 +732,9 @@
     "Copy message" : {
 
     },
+    "Couldn't connect" : {
+
+    },
     "Couldn't export" : {
 
     },
@@ -699,6 +781,9 @@
 
     },
     "Date" : {
+
+    },
+    "Day" : {
 
     },
     "Decline" : {
@@ -774,6 +859,12 @@
 
     },
     "ELSEWHERE" : {
+
+    },
+    "End call" : {
+
+    },
+    "End this call?" : {
 
     },
     "Estimate after App Store fees (%lld%%) and MOMENT's share; you keep %lld%% of the net. Paid out monthly to the details below." : {
@@ -884,6 +975,9 @@
       }
     },
     "Free sets are how people find you." : {
+
+    },
+    "From" : {
 
     },
     "from %@" : {
@@ -1037,6 +1131,15 @@
     "It lands in your Inbox, already understood." : {
 
     },
+    "Join" : {
+
+    },
+    "Join now" : {
+
+    },
+    "Join the call" : {
+
+    },
     "Keep" : {
 
     },
@@ -1068,6 +1171,9 @@
 
     },
     "Leave this group?" : {
+
+    },
+    "left" : {
 
     },
     "Let it go" : {
@@ -1203,6 +1309,9 @@
     "Message me" : {
 
     },
+    "Minutes" : {
+
+    },
     "Model: %@. Stored only in this device's Keychain." : {
 
     },
@@ -1311,6 +1420,9 @@
     "No gift ideas yet. When someone says “I really want…”, MOMENT saves it for their birthday." : {
 
     },
+    "No hours yet. Add one — say Thursday evening — and calls can only ever land inside it." : {
+
+    },
     "No one blocked." : {
 
     },
@@ -1333,6 +1445,9 @@
 
     },
     "No thanks" : {
+
+    },
+    "No times open right now. Their hours may be full, or booked out." : {
 
     },
     "Nobody — remove person" : {
@@ -1372,6 +1487,9 @@
 
     },
     "Nothing is charged now. They can decline, and so can you when you see the price." : {
+
+    },
+    "Nothing is charged until they accept. The call happens in MOMENT, and the clock only starts when you're both connected." : {
 
     },
     "Nothing is charged until they accept. They can decline; you can cancel." : {
@@ -1460,6 +1578,9 @@
     "Open" : {
 
     },
+    "Open call" : {
+
+    },
     "Open Creator mode" : {
 
     },
@@ -1475,7 +1596,13 @@
     "Open Studio" : {
 
     },
+    "Opens %@" : {
+
+    },
     "Opens every subscribers-only post for 30 days. %lld right now." : {
+
+    },
+    "Opens in %@" : {
 
     },
     "Optional" : {
@@ -1527,6 +1654,9 @@
 
     },
     "People booking you" : {
+
+    },
+    "People can book the call offers you've priced, inside these hours." : {
 
     },
     "People must be approved before they can follow you or see anything you post to followers." : {
@@ -1686,6 +1816,9 @@
     "Remixed from %@" : {
 
     },
+    "Remove %@" : {
+
+    },
     "Remove demo data" : {
 
     },
@@ -1743,13 +1876,16 @@
     "Right now" : {
 
     },
-    "Room %@" : {
+    "Rules" : {
 
     },
     "Run setup again" : {
 
     },
     "Sales" : {
+
+    },
+    "Same rate as the booking: %@ a minute." : {
 
     },
     "Same template, your memories." : {
@@ -1798,6 +1934,9 @@
 
     },
     "Say what you want. They'll name a price for it — you pay only if you accept." : {
+
+    },
+    "Screenshots and recordings come out blank" : {
 
     },
     "Screenshots of chats become quotes, photos become the moments, and the people and places come along. 5–30 photos works best." : {
@@ -1971,6 +2110,9 @@
     "Show Upcoming Plans" : {
 
     },
+    "Shown in your time. They're on %@." : {
+
+    },
     "Shown on your profile with the real total tipped this month. Nothing is padded." : {
 
     },
@@ -2086,6 +2228,19 @@
     "System permission: %@" : {
 
     },
+    "Taking bookings" : {
+
+    },
+    "Talked for %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Talked for %1$@ · %2$@"
+          }
+        }
+      }
+    },
     "Terms of Use" : {
 
     },
@@ -2093,6 +2248,9 @@
 
     },
     "Thank you. Everything is unlocked." : {
+
+    },
+    "That booking isn't here any more." : {
 
     },
     "That's a good thing. When a promise goes stale, a birthday gets close, or a plan's time is near, it shows up here." : {
@@ -2107,6 +2265,9 @@
     "The chat stays with the people in it." : {
 
     },
+    "The clock starts when you're both connected" : {
+
+    },
     "The creator made this one free." : {
 
     },
@@ -2117,6 +2278,12 @@
 
     },
     "The story" : {
+
+    },
+    "There are %@ left. Ending now doesn't refund the rest." : {
+
+    },
+    "They haven't set hours yet — pick a time and they'll confirm or suggest another." : {
 
     },
     "They see a locked tile with the price. Screenshots of it come out blank on iPhone, and every view carries their MOMENT ID." : {
@@ -2141,6 +2308,9 @@
 
     },
     "This one comes with %@'s subscription rather than a separate price." : {
+
+    },
+    "This one's window has passed." : {
 
     },
     "This permanently deletes your MOMENT memories and stored media from this device. There is no hidden copy." : {
@@ -2177,7 +2347,16 @@
     "TIME YOU SELL" : {
 
     },
+    "Time zone" : {
+
+    },
+    "Time's up" : {
+
+    },
     "Timeline" : {
+
+    },
+    "Times are yours" : {
 
     },
     "Tip" : {
@@ -2190,6 +2369,9 @@
 
     },
     "Title" : {
+
+    },
+    "To" : {
 
     },
     "TOP SUPPORTERS" : {
@@ -2417,6 +2599,9 @@
     "When should I bring this back?" : {
 
     },
+    "When you're free" : {
+
+    },
     "When?" : {
 
     },
@@ -2465,6 +2650,15 @@
     "You can also tell me things: “Remember that Rahul likes Japanese food.”" : {
 
     },
+    "You can join five minutes early." : {
+
+    },
+    "You can join now" : {
+
+    },
+    "You haven't lost the booking — it's still confirmed, and the clock never started." : {
+
+    },
     "You keep %lld%% on card checkout. They pay only if they accept." : {
 
     },
@@ -2495,10 +2689,19 @@
     "Your archive fills in as you capture." : {
 
     },
+    "Your call" : {
+
+    },
     "Your data" : {
 
     },
     "Your handles" : {
+
+    },
+    "Your hours" : {
+
+    },
+    "Your hours are kept. Nobody can book a new call until you switch this back on." : {
 
     },
     "Your key is ready." : {

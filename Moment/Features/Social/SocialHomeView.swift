@@ -34,36 +34,57 @@ struct SocialHomeView: View {
                         .background(.white.opacity(0.25), in: Capsule())
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, MSpacing.page).padding(.vertical, 10)
+                .padding(.horizontal, MSpacing.l).padding(.vertical, 11)
                 .frame(maxWidth: .infinity)
-                .background(MColor.accent)
+                .background(Capsule().fill(MColor.accent))
+                .shadow(color: MColor.accent.opacity(0.4), radius: 12, y: 5)
+                .padding(.horizontal, MSpacing.m)
+                .padding(.bottom, MSpacing.s)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("joinCallBanner")
         }
     }
 
-    /// Wordmark, the people you pay, and the two inboxes.
+    /// Wordmark on the left, the two places you go from here on the right — floating, so the feed
+    /// passes under it rather than starting below a hard line.
     private var header: some View {
-        HStack(spacing: MSpacing.l) {
-            Wordmark(size: 19)
-            Spacer()
-            NavigationLink(value: SocialRoute.reels(nil)) { Image(systemName: "play.rectangle.fill").font(.title3) }
-                .accessibilityLabel("Reels").accessibilityIdentifier("reelsLink")
+        HStack(spacing: MSpacing.m) {
+            Wordmark(size: 17)
+            Spacer(minLength: MSpacing.m)
+            headerButton(MSymbol.reels, "Reels", id: "reelsLink", route: .reels(nil))
             if env.social.isCreator {
-                Button { showNew = true } label: { Image(systemName: "plus.square").font(.title3) }
+                Button { showNew = true } label: { headerGlyph(MSymbol.photoSet) }
+                    .buttonStyle(.plain)
                     .accessibilityLabel("New post").accessibilityIdentifier("newPostLink")
             }
-            NavigationLink(value: SocialRoute.inbox) {
-                Image(systemName: "bell").font(.title3)
-                    .overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 3, y: -2) } }
-            }
-            .accessibilityLabel("Notifications").accessibilityIdentifier("inboxButton")
+            headerButton(env.social.unreadActivity > 0 ? MSymbol.notificationsOn : MSymbol.notifications,
+                         "Notifications", id: "inboxButton", route: .inbox,
+                         dot: env.social.unreadActivity > 0)
         }
-        .foregroundStyle(MColor.textPrimary)
-        .padding(.horizontal, MSpacing.page)
+        .padding(.leading, MSpacing.l)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
+        .glassPill(prominent: true)
+        .padding(.horizontal, MSpacing.m)
         .padding(.bottom, MSpacing.s)
-        .background(.bar)
+    }
+
+    private func headerButton(_ symbol: String, _ label: String, id: String, route: SocialRoute, dot: Bool = false) -> some View {
+        NavigationLink(value: route) { headerGlyph(symbol, dot: dot) }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label).accessibilityIdentifier(id)
+    }
+
+    private func headerGlyph(_ symbol: String, dot: Bool = false) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 17, weight: .medium))
+            .foregroundStyle(dot ? MColor.accent : MColor.textPrimary)
+            .frame(width: 36, height: 36)
+            .background(Circle().fill(MColor.textPrimary.opacity(0.06)))
+            .overlay(alignment: .topTrailing) {
+                if dot { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: -1, y: 1) }
+            }
     }
 }
 
