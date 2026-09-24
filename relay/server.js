@@ -16,7 +16,9 @@
 //                    ["EOSE", <id>]                   end of stored events for <id>
 //                    ["OK", <eventId>, <bool>, <msg>]
 const { WebSocketServer } = require('ws');
-const { createHash, verify, createPublicKey } = require('crypto');
+const { createHash, verify, createPublicKey, timingSafeEqual } = require('crypto');
+const http = require('http');
+const path = require('path');
 const fs = require('fs');
 
 const PORT = Number(process.env.PORT || 7447);
@@ -24,8 +26,32 @@ const DATA = process.env.DATA || './events.jsonl';
 const MAX_EVENT_BYTES = 2 * 1024 * 1024;   // sides carry base64 media ≤1280px
 const RETAIN_DAYS = Number(process.env.RETAIN_DAYS || 365);
 
+// Operator console. Off unless you set a token, and bound to localhost unless you say otherwise —
+// put it behind your own TLS/SSH rather than opening it to the internet.
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const ADMIN_PORT = Number(process.env.ADMIN_PORT || 7448);
+const ADMIN_HOST = process.env.ADMIN_HOST || '127.0.0.1';
+const REFUSED = process.env.REFUSED || path.join(path.dirname(DATA), 'refused.json');
+
 const events = new Map();        // id → event
 const deleted = new Set();
+// Authors and events this relay declines to carry. Local to this relay: the content still exists on
+// every other relay and on the phones that hold it. A relay can stop being a party to something;
+// it cannot delete it from the world, and this console never pretends otherwise.
+const refusedAuthors = new Set();
+const refusedEvents = new Set();
+function loadRefusals() {
+  try {
+    const r = JSON.parse(fs.readFileSync(REFUSED, 'utf8'));
+    (r.authors || []).forEach(a => refusedAuthors.add(a));
+    (r.events || []).forEach(e => refusedEvents.add(e));
+  } catch {}
+}
+function saveRefusals() {
+  try { fs.writeFileSync(REFUSED, JSON.stringify({ authors: [...refusedAuthors], events: [...refusedEvents] }, null, 2)); }
+  catch (e) { console.error('could not save refusals:', e.message); }
+}
+const isRefused = (e) => refusedAuthors.has(e.author) || refusedEvents.has(e.id);
 
 function canonical(e) {
   const tags = Object.keys(e.tags || {}).sort().map(k => `${k}=${e.tags[k]}`).join('&');
@@ -57,6 +83,7 @@ function matches(f, e) {
 function ingest(e) {
   if (events.has(e.id)) return 'duplicate';
   if (!isValid(e)) return 'invalid signature';
+  if (isRefused(e)) return 'refused by this relay';
   if (e.kind === 'delete' && e.tags?.target) {
     const t = events.get(e.tags.target);
     if (!t || t.author === e.author) deleted.add(e.tags.target);
@@ -66,11 +93,14 @@ function ingest(e) {
   return null;
 }
 
+loadRefusals();
 // Load
 if (fs.existsSync(DATA)) {
   for (const line of fs.readFileSync(DATA, 'utf8').split('\n')) {
     if (!line) continue;
-    try { const e = JSON.parse(line); if (isValid(e)) { events.set(e.id, e); if (e.kind === 'delete' && e.tags?.target) deleted.add(e.tags.target); } } catch {}
+    // Refusals are loaded first, so anything this relay has declined never comes back into memory on
+    // a restart. Without this the console would say "dropped" and the next restart would undo it.
+    try { const e = JSON.parse(line); if (isValid(e) && !isRefused(e)) { events.set(e.id, e); if (e.kind === 'delete' && e.tags?.target) deleted.add(e.tags.target); } } catch {}
   }
 }
 // Retention: drop expired NOW posts and anything older than RETAIN_DAYS
@@ -107,7 +137,7 @@ wss.on('connection', ws => {
       }
     } else if (type === 'REQ' && typeof a === 'string') {
       subs.get(ws).set(a, b);
-      for (const e of events.values()) { if (!deleted.has(e.id) && matches(b, e)) ws.send(JSON.stringify(['EVENT', e])); }
+      for (const e of events.values()) { if (!deleted.has(e.id) && !isRefused(e) && matches(b, e)) ws.send(JSON.stringify(['EVENT', e])); }
       ws.send(JSON.stringify(['EOSE', a]));
     } else if (type === 'CLOSE') {
       subs.get(ws).delete(a);
@@ -116,3 +146,142 @@ wss.on('connection', ws => {
   ws.on('close', () => subs.delete(ws));
 });
 console.log(`MOMENT relay on ws://0.0.0.0:${PORT} — ${events.size} events`);
+
+// ---- Operator console -------------------------------------------------------------
+// What an operator can honestly do on a network with no centre:
+//   * read the reports that reached this relay — somebody has to, and nothing else could
+//   * see what this relay is carrying and what it is earning the platform
+//   * refuse to carry an author or an event *here*
+// What no console can do, and this one never claims: delete something from the network, ban a person
+// globally, or read a paid set. The media is sealed under keys that never touch a relay.
+function adminJSON(res, code, body) {
+  const s = JSON.stringify(body);
+  res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-length': Buffer.byteLength(s) });
+  res.end(s);
+}
+function authorised(req) {
+  const given = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (!ADMIN_TOKEN || !given) return false;
+  const a = Buffer.from(given), b = Buffer.from(ADMIN_TOKEN);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+const payload = (e) => { try { return JSON.parse(e.content); } catch { return null; } };
+/// Newest profile per author, for putting a name next to a key.
+function profiles() {
+  const out = new Map();
+  for (const e of events.values()) {
+    if (e.kind !== 'profile') continue;
+    const prev = out.get(e.author);
+    if (!prev || prev.createdAt < e.createdAt) out.set(e.author, { createdAt: e.createdAt, ...(payload(e) || {}) });
+  }
+  return out;
+}
+function summary() {
+  const byKind = {};
+  let bytes = 0, oldest = Infinity, newest = 0;
+  for (const e of events.values()) {
+    byKind[e.kind] = (byKind[e.kind] || 0) + 1;
+    bytes += Buffer.byteLength(e.content || '');
+    oldest = Math.min(oldest, e.createdAt); newest = Math.max(newest, e.createdAt);
+  }
+  return {
+    events: events.size, bytes, byKind,
+    oldest: Number.isFinite(oldest) ? oldest : null, newest: newest || null,
+    deleted: deleted.size, peers: subs.size,
+    refusedAuthors: refusedAuthors.size, refusedEvents: refusedEvents.size,
+    retainDays: RETAIN_DAYS, uptimeSeconds: Math.round(process.uptime()), port: PORT
+  };
+}
+/// Reports, newest first, with whatever this relay knows about the target.
+function reports() {
+  const who = profiles();
+  const name = (id) => (id && who.get(id)?.displayName) || null;
+  return [...events.values()]
+    .filter(e => e.kind === 'report' && !isRefused(e))
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map(e => {
+      const p = payload(e) || {};
+      return {
+        id: e.id, at: e.createdAt,
+        reporter: e.author, reporterName: name(e.author),
+        targetUserID: p.targetUserID || null, targetName: name(p.targetUserID),
+        targetMomentID: p.targetMomentID || null,
+        reason: p.reason || 'unspecified', details: p.details || '',
+        targetRefused: p.targetUserID ? refusedAuthors.has(p.targetUserID) : false,
+        // Reports against the same target, so a pattern is visible rather than one row at a time.
+        alsoReported: [...events.values()].filter(x => x.kind === 'report' && (payload(x) || {}).targetUserID === p.targetUserID).length
+      };
+    });
+}
+/// Money that crossed this relay. Purchase and subscription events carry their amounts in the clear —
+/// that is how a platform fee can be computed at all without a server holding the content.
+function revenue(sinceDays = 30) {
+  const since = Date.now() / 1000 - sinceDays * 86400;
+  let salesMinor = 0, sales = 0, subs_ = 0, tips = 0, currency = null;
+  for (const e of events.values()) {
+    if (e.createdAt < since || isRefused(e)) continue;
+    const p = payload(e) || {};
+    if (e.kind === 'vaultBuy') { sales++; salesMinor += Number(p.amountMinor || 0); currency ||= p.currency; }
+    if (e.kind === 'subscribe') subs_++;
+    if (e.kind === 'tip') tips++;
+  }
+  return {
+    sinceDays, sales, salesMinor, subscriptions: subs_, tips, currency: currency || 'INR',
+    platformFeeMinor: Math.round(salesMinor * 0.10),
+    note: 'Sales seen by this relay only, and only on the web rail. App Store purchases never pass through here, and a phone that synced over the mesh may never have told this relay anything.'
+  };
+}
+
+if (ADMIN_TOKEN) {
+  const consoleFile = path.join(__dirname, 'console', 'index.html');
+  http.createServer((req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      // The page itself is not secret; every call it makes needs the token.
+      fs.readFile(consoleFile, (err, data) => {
+        if (err) return adminJSON(res, 404, { error: 'console not installed' });
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+        res.end(data);
+      });
+      return;
+    }
+    if (!url.pathname.startsWith('/api/')) return adminJSON(res, 404, { error: 'not found' });
+    if (!authorised(req)) return adminJSON(res, 401, { error: 'bad or missing token' });
+
+    if (req.method === 'GET' && url.pathname === '/api/summary') return adminJSON(res, 200, summary());
+    if (req.method === 'GET' && url.pathname === '/api/reports') return adminJSON(res, 200, { reports: reports() });
+    if (req.method === 'GET' && url.pathname === '/api/revenue') {
+      return adminJSON(res, 200, revenue(Number(url.searchParams.get('days') || 30)));
+    }
+    if (req.method === 'GET' && url.pathname === '/api/refusals') {
+      return adminJSON(res, 200, { authors: [...refusedAuthors], events: [...refusedEvents] });
+    }
+    if (req.method === 'POST' && url.pathname === '/api/refuse') {
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 64_000) req.destroy(); });
+      req.on('end', () => {
+        let b; try { b = JSON.parse(body); } catch { return adminJSON(res, 400, { error: 'bad json' }); }
+        const { author, event: eventID, undo } = b;
+        if (!author && !eventID) return adminJSON(res, 400, { error: 'pass an author or an event' });
+        if (undo) {
+          if (author) refusedAuthors.delete(author);
+          if (eventID) refusedEvents.delete(eventID);
+        } else {
+          if (author) refusedAuthors.add(author);
+          if (eventID) refusedEvents.add(eventID);
+        }
+        // Stop serving it now, not just from the next restart.
+        let dropped = 0;
+        if (!undo) for (const [id, e] of events) if (isRefused(e)) { events.delete(id); dropped++; }
+        saveRefusals();
+        adminJSON(res, 200, { ok: true, dropped, authors: refusedAuthors.size, events: refusedEvents.size });
+      });
+      return;
+    }
+    adminJSON(res, 404, { error: 'not found' });
+  }).listen(ADMIN_PORT, ADMIN_HOST, () => {
+    console.log(`operator console on http://${ADMIN_HOST}:${ADMIN_PORT} — token required`);
+  });
+} else {
+  console.log('operator console disabled (set ADMIN_TOKEN to enable)');
+}

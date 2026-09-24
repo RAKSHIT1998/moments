@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOMENT relay — operator console</title>
+<style>
+  :root { --bg:#0e0e12; --fg:#f2f2f5; --muted:#9a9aa5; --rim:rgba(255,255,255,.14); --glass:rgba(255,255,255,.05);
+          --accent:#22b6ff; --danger:#ff5468; --ok:#3ddc84; --warn:#ffb020; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f7f7f9; --fg:#14141a; --muted:#61616b; --rim:rgba(0,0,0,.12); --glass:rgba(0,0,0,.035); }
+  }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 -apple-system,system-ui,Inter,sans-serif }
+  header { display:flex; align-items:center; gap:12px; padding:16px 22px; border-bottom:1px solid var(--rim); position:sticky; top:0;
+           background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(14px); z-index:5; flex-wrap:wrap }
+  header b { letter-spacing:.14em; font-weight:800 }
+  header .sp { flex:1 }
+  main { max-width:1000px; margin:0 auto; padding:22px }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:30px 0 12px; font-weight:650 }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px }
+  .card { background:var(--glass); border:1px solid var(--rim); border-radius:14px; padding:14px 16px }
+  .card .n { font-size:25px; font-weight:750; letter-spacing:-.02em }
+  .card .l { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-top:3px }
+  table { width:100%; border-collapse:collapse; font-size:14px }
+  th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:8px 10px; font-weight:650 }
+  td { padding:11px 10px; border-top:1px solid var(--rim); vertical-align:top }
+  tr.refused td { opacity:.45 }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; word-break:break-all }
+  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--rim); color:var(--muted) }
+  .tag.hot { color:var(--danger); border-color:color-mix(in srgb,var(--danger) 45%,transparent) }
+  button { font:inherit; border-radius:10px; border:1px solid var(--rim); background:var(--glass); color:var(--fg); padding:7px 13px; cursor:pointer }
+  button.danger { color:var(--danger); border-color:color-mix(in srgb,var(--danger) 45%,transparent) }
+  button.primary { background:var(--accent); color:#00121c; border:0; font-weight:650 }
+  input { font:inherit; padding:9px 12px; border-radius:10px; border:1px solid var(--rim); background:var(--glass); color:var(--fg); min-width:260px }
+  .note { color:var(--muted); font-size:13px; border-left:2px solid var(--rim); padding:2px 0 2px 12px; margin:10px 0 0 }
+  .empty { color:var(--muted); padding:26px; text-align:center; border:1px dashed var(--rim); border-radius:14px }
+  .err { color:var(--danger) }
+  .gate { max-width:440px; margin:14vh auto; padding:26px; border:1px solid var(--rim); border-radius:18px; background:var(--glass) }
+  .hide { display:none }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <b style="letter-spacing:.14em">MOMENT RELAY</b>
+  <h1 style="font-size:19px;margin:10px 0 6px">Operator console</h1>
+  <p class="note" style="margin-bottom:16px">The token is the one you set as <code>ADMIN_TOKEN</code> when you started the relay. It is kept in this browser's session only, and never written to disk.</p>
+  <input id="token" type="password" placeholder="ADMIN_TOKEN" autocomplete="off">
+  <div style="height:10px"></div>
+  <button class="primary" id="enter">Open console</button>
+  <div id="gateErr" class="err" style="margin-top:10px"></div>
+</div>
+
+<div id="app" class="hide">
+  <header>
+    <b>MOMENT RELAY</b>
+    <span class="tag" id="uptime">—</span>
+    <span class="sp"></span>
+    <button id="refresh">Refresh</button>
+    <button id="lock">Lock</button>
+  </header>
+  <main>
+    <div class="note">
+      This is one relay's console, not a platform's. You can read what reached <em>this</em> relay and
+      refuse to carry it <em>here</em>. Nothing on this page deletes anything from the network: the
+      events live on every other relay and on the phones that made them, and paid media is sealed under
+      keys no relay has ever held.
+    </div>
+
+    <h2>Reports waiting on you</h2>
+    <div id="reports"></div>
+
+    <h2>This relay</h2>
+    <div class="cards" id="summary"></div>
+    <div id="kinds" style="margin-top:14px"></div>
+
+    <h2>Money seen here <span style="text-transform:none;letter-spacing:0">(last 30 days)</span></h2>
+    <div class="cards" id="revenue"></div>
+    <div class="note" id="revenueNote"></div>
+
+    <h2>Refused on this relay</h2>
+    <div id="refusals"></div>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const short = k => k ? esc(k.slice(0, 10)) + '…' : '—';
+const when = t => t ? new Date(t * 1000).toLocaleString() : '—';
+const money = (minor, cur) => {
+  try { return new Intl.NumberFormat(undefined, { style:'currency', currency: cur || 'INR', maximumFractionDigits: 0 }).format((minor||0)/100); }
+  catch { return ((minor||0)/100).toFixed(0); }
+};
+const token = () => sessionStorage.getItem('moment.admin.token') || '';
+
+async function api(path, opts = {}) {
+  const r = await fetch('/api/' + path, {
+    ...opts,
+    headers: { ...(opts.headers||{}), 'authorization': 'Bearer ' + token(), ...(opts.body ? {'content-type':'application/json'} : {}) }
+  });
+  if (r.status === 401) { lock(); throw new Error('unauthorised'); }
+  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || ('HTTP ' + r.status));
+  return r.json();
+}
+
+function lock() {
+  sessionStorage.removeItem('moment.admin.token');
+  $('#app').classList.add('hide'); $('#gate').classList.remove('hide');
+}
+
+$('#enter').onclick = async () => {
+  sessionStorage.setItem('moment.admin.token', $('#token').value.trim());
+  try {
+    await api('summary');
+    $('#gate').classList.add('hide'); $('#app').classList.remove('hide');
+    load();
+  } catch (e) { $('#gateErr').textContent = 'That token was refused.'; sessionStorage.removeItem('moment.admin.token'); }
+};
+$('#token').addEventListener('keydown', e => { if (e.key === 'Enter') $('#enter').click(); });
+$('#refresh').onclick = () => load();
+$('#lock').onclick = () => lock();
+
+async function load() {
+  try {
+    const [s, r, rev, ref] = await Promise.all([api('summary'), api('reports'), api('revenue?days=30'), api('refusals')]);
+    renderSummary(s); renderReports(r.reports); renderRevenue(rev); renderRefusals(ref);
+  } catch (e) { if (e.message !== 'unauthorised') alert(e.message); }
+}
+
+function renderSummary(s) {
+  const hrs = Math.floor(s.uptimeSeconds / 3600), mins = Math.round((s.uptimeSeconds % 3600) / 60);
+  $('#uptime').textContent = `up ${hrs}h ${mins}m · port ${s.port}`;
+  const mb = (s.bytes / 1e6).toFixed(1);
+  $('#summary').innerHTML = [
+    ['Events stored', s.events.toLocaleString()],
+    ['Content', mb + ' MB'],
+    ['Connected peers', s.peers],
+    ['Retention', s.retainDays + ' days'],
+    ['Oldest event', s.oldest ? new Date(s.oldest*1000).toLocaleDateString() : '—'],
+    ['People refused', s.refusedAuthors],
+    ['Events refused', s.refusedEvents]
+  ].map(([l, n]) => `<div class="card"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`).join('');
+  const kinds = Object.entries(s.byKind).sort((a,b) => b[1]-a[1]);
+  $('#kinds').innerHTML = kinds.length
+    ? `<table><thead><tr><th>Kind</th><th>Count</th></tr></thead><tbody>${
+        kinds.map(([k,n]) => `<tr><td><code>${esc(k)}</code></td><td>${n.toLocaleString()}</td></tr>`).join('')}</tbody></table>`
+    : '';
+}
+
+function renderReports(rows) {
+  if (!rows.length) {
+    $('#reports').innerHTML = `<div class="empty">No reports have reached this relay.<br><span style="font-size:13px">If the app is live and this stays empty for long, check that reports are actually being published — silence here is not the same as nothing being wrong.</span></div>`;
+    return;
+  }
+  $('#reports').innerHTML = `<table><thead><tr>
+      <th>When</th><th>Reason</th><th>About</th><th>Details</th><th></th></tr></thead><tbody>${
+    rows.map(r => `<tr class="${r.targetRefused ? 'refused' : ''}">
+      <td>${esc(when(r.at))}</td>
+      <td><span class="tag ${r.alsoReported > 1 ? 'hot' : ''}">${esc(r.reason)}</span>
+          ${r.alsoReported > 1 ? `<div style="font-size:11px;color:var(--danger);margin-top:4px">${r.alsoReported} reports about this person</div>` : ''}</td>
+      <td>${r.targetName ? `<div>${esc(r.targetName)}</div>` : ''}<code>${short(r.targetUserID)}</code>
+          ${r.targetMomentID ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">post <code>${short(r.targetMomentID)}</code></div>` : ''}</td>
+      <td style="max-width:280px">${esc(r.details) || '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${r.targetUserID
+            ? (r.targetRefused
+                ? `<button data-undo="${esc(r.targetUserID)}">Carry again</button>`
+                : `<button class="danger" data-refuse="${esc(r.targetUserID)}">Stop carrying</button>`)
+            : ''}</td>
+    </tr>`).join('')}</tbody></table>`;
+  wireRefuseButtons();
+}
+
+function renderRevenue(v) {
+  $('#revenue').innerHTML = [
+    ['Set sales', v.sales.toLocaleString()],
+    ['Sales value', money(v.salesMinor, v.currency)],
+    ['Platform 10%', money(v.platformFeeMinor, v.currency)],
+    ['Subscriptions', v.subscriptions.toLocaleString()],
+    ['Tips', v.tips.toLocaleString()]
+  ].map(([l, n]) => `<div class="card"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`).join('');
+  $('#revenueNote').textContent = v.note;
+}
+
+function renderRefusals(r) {
+  const rows = [...r.authors.map(a => ['person', a]), ...r.events.map(e => ['event', e])];
+  $('#refusals').innerHTML = rows.length
+    ? `<table><thead><tr><th>What</th><th>Key</th><th></th></tr></thead><tbody>${
+        rows.map(([kind, key]) => `<tr><td>${kind}</td><td><code>${esc(key)}</code></td>
+          <td><button data-undo="${esc(key)}" data-kind="${kind}">Carry again</button></td></tr>`).join('')}</tbody></table>`
+    : `<div class="empty">This relay is carrying everything it has been sent.</div>`;
+  wireRefuseButtons();
+}
+
+function wireRefuseButtons() {
+  document.querySelectorAll('[data-refuse]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Stop carrying everything from this person on this relay?\n\nTheir events are dropped here and refused in future. They still exist on other relays and on the phones that hold them — this is not a global ban, and it is not a deletion.`)) return;
+    await api('refuse', { method: 'POST', body: JSON.stringify({ author: b.dataset.refuse }) });
+    load();
+  });
+  document.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => {
+    const body = b.dataset.kind === 'event' ? { event: b.dataset.undo, undo: true } : { author: b.dataset.undo, undo: true };
+    await api('refuse', { method: 'POST', body: JSON.stringify(body) });
+    load();
+  });
+}
+
+if (token()) { $('#gate').classList.add('hide'); $('#app').classList.remove('hide'); load(); }
+</script>
+</body>
+</html>

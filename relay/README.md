@@ -43,3 +43,33 @@ JSON arrays over WebSocket:
 
 Put it behind TLS (Caddy/nginx → `wss://`), set `DATA=/var/lib/moment/events.jsonl` and
 `RETAIN_DAYS`. It's stateless apart from that file, so run as many as you like.
+
+## Operator console
+
+Set `ADMIN_TOKEN` and the relay also serves a console on `127.0.0.1:7448`:
+
+```
+ADMIN_TOKEN=$(openssl rand -hex 24) DATA=/var/lib/moment/events.jsonl node server.js
+```
+
+It is **off unless the token is set**, and bound to localhost unless you change `ADMIN_HOST` — reach it
+over an SSH tunnel (`ssh -L 7448:127.0.0.1:7448 you@relay`) rather than opening it to the internet.
+Every API call needs `Authorization: Bearer <token>`; the page itself is not secret, the calls are.
+
+What it is for:
+
+- **Reports.** The app's Report button publishes a signed `report` event. This is the only thing that
+  reads them, and somebody has to — an App Store review will ask how reported content gets handled.
+  Repeat targets are counted, so a pattern shows up as a pattern.
+- **What this relay is carrying** — event counts by kind, storage, retention, connected peers.
+- **Money that crossed this relay.** `vaultBuy` and `subscribe` carry their amounts in the clear, which
+  is how a platform fee can be worked out at all without a server holding the content. Web rail only:
+  App Store purchases never pass through a relay, and a phone that synced over the mesh may never have
+  told this relay anything.
+- **Refusing to carry** an author or an event, here. Dropped from storage immediately and refused on
+  arrival afterwards; the list is kept in `refused.json` next to the event log.
+
+What it deliberately cannot do, because no relay can: delete anything from the network, ban a person
+globally, or read a paid set. Refusing an author stops *this* relay being a party to their content —
+it still exists on every other relay and on the phones that hold it. The console says so on its face,
+because an operator who believes otherwise will make bad decisions with it.

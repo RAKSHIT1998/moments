@@ -16,7 +16,7 @@ git clone … && cd relay && npm install
 DATA=/var/lib/moment/events.jsonl RETAIN_DAYS=365 PORT=7447 node server.js   # run under systemd/pm2
 ```
 Put Caddy in front for TLS: `relay.moment.social { reverse_proxy localhost:7447 }` → `wss://relay.moment.social`.
-Then set `NetworkMode.defaultRelays` in `Moment/Services/SettingsStore.swift` to `["wss://relay.moment.social"]` so fresh installs have one relay out of the box (they can add more; you can run more). The relay stores signed events only; it cannot read paid sets, likes, or chats. Retention and abuse: `RETAIN_DAYS`, plus `report` events arrive here — read them.
+Then set `NetworkMode.defaultRelays` in `Moment/Services/SettingsStore.swift` to `["wss://relay.moment.social"]` so fresh installs have one relay out of the box (they can add more; you can run more). The relay stores signed events only; it cannot read paid sets, likes, or chats. Retention and abuse: `RETAIN_DAYS`, plus `report` events arrive here — read them in the **operator console** (`ADMIN_TOKEN=... node server.js`, then tunnel to `127.0.0.1:7448`; see `relay/README.md`). That console is also the only moderation surface that exists, so plan to actually watch it.
 
 ## 2. Website + web app (day 2)
 `web/` is static. Deploy on Vercel (project already connected): root = `web`. Check:
@@ -63,7 +63,7 @@ Native Android (Kotlin/Compose) is the real second product: the protocol (`Signe
 ## 7. Launch day
 - Seed the relay: get 5–10 real creators posting, each with one free set and one locked one — the free cover is what pulls people in.
 - The growth loop is the **Replay video** share + the QR on the table. Every Replay ends with the invite link; every event host gets a QR.
-- Watch: relay disk/retention, `report` events, App Store review replies, TestFlight crash logs (no third‑party crash SDK by design).
+- Watch: the operator console (reports, disk, retention), App Store review replies, TestFlight crash logs (no third‑party crash SDK by design).
 
 ## Costs (monthly, small)
 Relay VM $5–10 · Vercel free · Apple $8 · domain $1. Nothing scales with users except relay storage (events are small; media is thumbnails).
