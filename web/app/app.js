@@ -14,6 +14,14 @@ const ago = (t) => {
 const initials = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
 async function boot() {
+  if (typeof nacl === 'undefined') {
+    // Without the signing library there is no identity, and every screen here depends on one.
+    // Say so, rather than leaving a blank page and no reason.
+    $('#view').innerHTML = `<div class="banner warn"><strong>MOMENT Web couldn't start.</strong>
+      Its signing library didn't load, so this browser has no identity to sign with. Reload, and if it
+      keeps happening the file <code>vendor-nacl-fast.min.js</code> is missing from the server.</div>`;
+    return;
+  }
   me = await Identity.load(); myID = await me.momentID(); $('#idPill').textContent = myID;
   if (localStorage.getItem('moment.profile.name') == null) localStorage.setItem('moment.profile.name', 'You');
   connect();

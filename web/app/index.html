@@ -10,7 +10,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="../logo.png">
 <link rel="apple-touch-icon" href="../logo.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js" integrity="sha512-/zZ39+w4lQuknmLPKiAujyf/E8ypDzmpP8m2DIWK8W2UahC+hLc9MOB0TLBHy7mDBi3s1EcCd+SjtNvC6b58aQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- tweetnacl 1.0.3, vendored rather than fetched from a CDN. This app's identity *is* its key, so it
+     cannot start without this file: a CDN that is blocked, slow or serving something unexpected would
+     leave a blank page, and an offline PWA can't rely on a third party being reachable at all. Kept in
+     the service worker's cache list for the same reason. Verify with:
+       openssl dgst -sha512 -binary web/app/vendor-nacl-fast.min.js | openssl base64 -A
+       # aLSwsdjU35MF6PERT7Pic3+X6qL7O+Us8hYQl/gjrPoV4JXUNoCF2Ys3/vfJSiBW1QNxz2WTr4tEo5VcOdHt/g== -->
+<script src="vendor-nacl-fast.min.js"></script>
 <style>
   :root { --bg:#0b0b0f; --fg:#f5f5f7; --muted:#9a9aa3; --glass:rgba(255,255,255,.08); --rim:rgba(255,255,255,.18); --accent:#22b6ff; --danger:#ff4d5e; --ok:#3ddc84; }
   @media (prefers-color-scheme: light) {
@@ -21,7 +27,9 @@
   body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 -apple-system,system-ui,Inter,sans-serif; padding-bottom:84px; -webkit-font-smoothing:antialiased }
   header { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; padding:14px 16px; backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 70%,transparent); border-bottom:1px solid var(--rim) }
   header b { font-weight:900; letter-spacing:.14em; font-size:15px } header .sp { flex:1 }
-  .pill { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--rim); color:var(--fg); font-size:13px; text-decoration:none; cursor:pointer }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--rim); color:var(--fg); font-size:13px; text-decoration:none; cursor:pointer; white-space:nowrap }
+  /* The MOMENT ID is long and the header is not where it needs to be read in full — it's on You. */
+  #idPill { max-width:42vw; overflow:hidden; text-overflow:ellipsis; display:inline-block; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px }
   .pill.on { background:var(--accent); color:#00121c; border-color:transparent; font-weight:600 }
   .pill.warn { color:var(--danger) }
   main { max-width:620px; margin:0 auto; padding:16px }
@@ -33,7 +41,9 @@
   .who .av img { width:100%; height:100%; object-fit:cover }
   .who a { color:inherit; text-decoration:none; font-weight:600; font-size:15px }
   .who .when { color:var(--muted); font-size:13px }
-  .shot { position:relative; display:block; width:100%; aspect-ratio:4/5; background:#00000030 }
+  /* Cap the cover so a whole post — cover, title and price — fits on one screen and the next one
+     peeks in under it. A 4:5 cover on a phone is taller than the viewport on its own. */
+  .shot { position:relative; display:block; width:100%; aspect-ratio:4/5; max-height:52vh; background:#00000030 }
   .shot img, .shot video { display:block; width:100%; height:100%; object-fit:cover }
   .shot.locked img { filter:blur(26px); transform:scale(1.1) }
   .lockface { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#fff; text-shadow:0 1px 8px rgba(0,0,0,.6) }
