@@ -42,28 +42,26 @@ struct RootView: View {
     @State private var showCreate = false
     @State private var lastTab: RootTab = .home
 
-    /// The system tab bar is a slab welded to the bottom edge. `FloatingTabBar` is a glass pill that
-    /// content scrolls under, so a feed reads as one column instead of stopping at a hard line — and the
-    /// bar sits inside the safe area rather than on top of the last row of every list.
+    /// The system tab bar, carrying the same SF Symbols the rest of the app uses.
     ///
-    /// The TabView underneath is kept (with its own bar hidden) because it is what preserves each tab's
-    /// navigation stack. Swapping it for a switch would throw that away and make Back behave differently
-    /// depending on which tab you were in.
+    /// A floating glass pill was tried here and reverted. It looked better, but as an overlay it has no
+    /// layout presence and landed on top of the chat composer — the message box was invisible and
+    /// untappable, confirmed on screen. Reserving space for it four different ways (an inset on the
+    /// TabView, a spacer inside each tab, per-screen padding, the bar itself as a per-tab safe-area
+    /// inset) moved the composer not one point, because a view pushed inside a tab's NavigationStack
+    /// does not pick the inset up. Worth another go with a working machine and a real device; not worth
+    /// shipping a bar that hides the thing people type into.
     private var mainTabs: some View {
         TabView(selection: $tab) {
-            Tab(value: .home) { SocialHomeView().toolbar(.hidden, for: .tabBar) } label: { Text(RootTab.home.label) }
-            Tab(value: .create) { Color.clear.toolbar(.hidden, for: .tabBar) } label: { Text(RootTab.create.label) }
-            Tab(value: .chats) { ChatsView().toolbar(.hidden, for: .tabBar) } label: { Text(RootTab.chats.label) }
-            Tab(value: .profile) {
-                NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() }
-                    .toolbar(.hidden, for: .tabBar)
-            } label: { Text(RootTab.profile.label) }
+            Tab(value: .home) { SocialHomeView() } label: { Label(RootTab.home.label, systemImage: MSymbol.home.off) }
+            Tab(value: .create) { Color.clear } label: { Label(RootTab.create.label, systemImage: MSymbol.create.off) }
+            Tab(value: .chats) { ChatsView() } label: { Label(RootTab.chats.label, systemImage: MSymbol.chats.off) }
+                .badge(env.social.unreadChats)
+            Tab(value: .profile) { NavigationStack { SocialProfileView(userID: env.social.myID).socialDestinations() } } label: { Label(RootTab.profile.label, systemImage: MSymbol.profile.off) }
         }
-        .tint(MColor.textPrimary)
-        .overlay(alignment: .bottom) {
-            FloatingTabBar(selection: $tab, unreadChats: env.social.unreadChats) { showCreate = true }
-                .padding(.bottom, 6)
-        }
+        .tint(MColor.accent)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .onChange(of: tab) { old, new in
             // The centre "+" is an action, not a place: open the create sheet and stay where you were.
             if new == .create { showCreate = true; tab = old == .create ? .home : old } else { lastTab = new }

@@ -17,10 +17,7 @@ final class MomentUITests: XCTestCase {
     }
 
     /// Home is the creator feed.
-    /// The tab bar is a custom floating pill, not a UITabBar, so it is addressed by identifier.
-    private func tab(_ name: String) -> XCUIElement {
-        app.descendants(matching: .any)["tab-\(name)"].firstMatch
-    }
+    private func tab(_ name: String) -> XCUIElement { app.tabBars.buttons[name] }
 
     /// Opens a creator's profile from the feed by id, not by where they happen to rank. The feed is
     /// ranked, so anything that assumed a fixed order was testing the ranker by accident.
@@ -175,10 +172,8 @@ final class MomentUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 8))
         // The composer floats over the thread, so it is already on screen and there is nothing to
         // scroll it into — `.tap()` asks for a scroll anyway and fails. Tap where it is.
-        field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        // Focus arrives a beat after the tap; type into the app so the event goes to whatever has it.
-        for _ in 0..<10 where !app.keyboards.element.exists { usleep(300_000) }
-        app.typeText("sending it now")
+        field.tap()
+        field.typeText("sending it now")
         app.buttons["sendMessage"].tap()
         XCTAssertTrue(app.staticTexts["sending it now"].waitForExistence(timeout: 8))
         // Reply + react on a message.

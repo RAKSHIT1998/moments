@@ -330,11 +330,16 @@ struct ChatView: View {
             if let r = replyTo { replyChip(r) }
             HStack(spacing: MSpacing.s) {
                 attachMenu
+                // The field carries its own rounded background rather than sharing one big pill with
+                // the buttons. That is what makes its padded area part of the field for hit testing —
+                // inside a shared pill the tappable region collapses to the 22pt text line and the
+                // field stops reporting as hittable at all.
                 TextField("Message", text: $text, axis: .vertical)
                     .lineLimit(1...5)
                     .focused($focused)
                     .textFieldStyle(.plain)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, MSpacing.m).padding(.vertical, 10)
+                    .glass(radius: 20)
                     .accessibilityIdentifier("messageField")
                     .onChange(of: text) { _, t in if !t.isEmpty { env.social.noteTyping(conversationID) } }
                 if text.isBlank {
@@ -356,13 +361,11 @@ struct ChatView: View {
                     .accessibilityLabel("Send").accessibilityIdentifier("sendMessage")
                 }
             }
-            .padding(.leading, 6)
-            .padding(.trailing, 6)
-            .padding(.vertical, 5)
-            .glassPill(prominent: true)
         }
         .padding(.horizontal, MSpacing.m)
+        .padding(.top, MSpacing.s)
         .padding(.bottom, MSpacing.s)
+        .background(.ultraThinMaterial)
     }
 
     /// One button instead of three. A locked photo is the creator's earner, so it is named as money
