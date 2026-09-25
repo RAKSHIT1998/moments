@@ -85,6 +85,7 @@
 		583CFE3683952204501544B0 /* demo_56.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 76FFA0F2F1DF5B89038E1E73 /* demo_56.jpg */; };
 		586AC5418F64B115245013E9 /* Date+Moment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD173617B88BAEBA6AC862A /* Date+Moment.swift */; };
 		594597866315601C8697C453 /* CaptureSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0620243E0CB2098944EEF87F /* CaptureSheet.swift */; };
+		59D9486E68DF3F86A6339EB2 /* ChatShop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C8D2CCF804F22DF2C0CEF9 /* ChatShop.swift */; };
 		5A733AFBAC4AAA1F94FFCE16 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 46DD6A0A48D1EF7D82CC70EC /* PrivacyInfo.xcprivacy */; };
 		5B86E601328808E95D70AD37 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AC135FC7C893FF68D687949B /* PrivacyInfo.xcprivacy */; };
 		5C0A475C535BCBC8D0CAC375 /* VoiceCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E4BBA9B7EA42F86B87BD7 /* VoiceCaptureView.swift */; };
@@ -371,6 +372,7 @@
 		668FCB0BEBD20F6BED6AC0EF /* Cards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cards.swift; sourceTree = "<group>"; };
 		67765F7A5F2854C70E7E520A /* Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		685D3C92DAF2096F4BF4FE53 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		68C8D2CCF804F22DF2C0CEF9 /* ChatShop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatShop.swift; sourceTree = "<group>"; };
 		6A99C4BE24B47D02F84A2A2E /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		6AB026A89ABD957575E6BC6E /* ShareInboxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInboxService.swift; sourceTree = "<group>"; };
 		6B6A9618EA482B37A036B78D /* SignedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignedEvent.swift; sourceTree = "<group>"; };
@@ -897,6 +899,7 @@
 			children = (
 				E910A156710B465D511CB9E5 /* AvailabilityViews.swift */,
 				DF291F702948C7342FABFB72 /* CallViews.swift */,
+				68C8D2CCF804F22DF2C0CEF9 /* ChatShop.swift */,
 				25C73214F55C33504B00EF9E /* ChatViews.swift */,
 				504A0C0A7CC917A1E39DEEE2 /* CreatorFeedView.swift */,
 				C734CDCEC75C965DFE2F3F0B /* CreatorViews.swift */,
@@ -1348,6 +1351,7 @@
 				961B5290CC4E0CE943747C56 /* CaptureResultView.swift in Sources */,
 				594597866315601C8697C453 /* CaptureSheet.swift in Sources */,
 				BE284946BB6F24660A216F11 /* Cards.swift in Sources */,
+				59D9486E68DF3F86A6339EB2 /* ChatShop.swift in Sources */,
 				22692008C0BA998F4DB05EB9 /* ChatViews.swift in Sources */,
 				7C9B33D9A9F6FC4BDF31E97A /* CloudKitBackend.swift in Sources */,
 				60055EC2744563371C87C806 /* Components.swift in Sources */,

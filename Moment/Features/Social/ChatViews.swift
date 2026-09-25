@@ -9,73 +9,185 @@ struct ChatsView: View {
     @State private var query = ""
     @State private var showNew = false
     @State private var open: Conversation?
+    @State private var filter: Filter = .all
+    @State private var searching = false
+    @FocusState private var searchFocused: Bool
+
+    /// Chats on a creator platform sort into three piles that mean different things. "Waiting" is the
+    /// one that costs money to ignore.
+    enum Filter: String, CaseIterable, Identifiable {
+        case all, paying, waiting
+        var id: String { rawValue }
+        var label: String { switch self { case .all: "All"; case .paying: "Paying"; case .waiting: "Waiting" } }
+    }
 
     private var list: [Conversation] {
         let q = query.lowercased().trimmed
-        return env.social.conversations.filter { q.isEmpty || displayName($0).lowercased().contains(q) || $0.lastMessage.lowercased().contains(q) }
+        return env.social.conversations
+            .filter { q.isEmpty || displayName($0).lowercased().contains(q) || $0.lastMessage.lowercased().contains(q) }
+            .filter { c in
+                switch filter {
+                case .all: true
+                case .paying: pays(c)
+                case .waiting: waitingOnMe(c)
+                }
+            }
     }
+
+    /// Someone who subscribes to me or has bought from me. Worth knowing before you reply.
+    private func pays(_ c: Conversation) -> Bool {
+        guard !c.isGroup else { return false }
+        let id = otherID(c)
+        return env.social.subscribers.contains { $0.subscriberID == id && $0.isActive }
+            || env.social.mySales.contains { $0.buyerID == id }
+            || env.social.myBookings.contains { $0.buyerID == id && $0.status.isPaid }
+    }
+    /// They asked for something and I haven't answered — an unanswered ask is an unmade sale.
+    private func waitingOnMe(_ c: Conversation) -> Bool {
+        guard !c.isGroup else { return env.social.isUnread(c) }
+        let id = otherID(c)
+        return env.social.myBookings.contains { $0.buyerID == id && ($0.status == .asked || $0.status == .requested) }
+            || env.social.isUnread(c)
+    }
+
+    private var waitingCount: Int { env.social.conversations.filter(waitingOnMe).count }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: MSpacing.s) {
-                    if env.social.conversations.isEmpty && env.social.hasLoadedOnce {
-                        VStack(spacing: MSpacing.m) {
-                            Text("Nobody yet.").font(MFont.title)
-                            Text("Message a friend, or open your group's chat. Every chat is encrypted between the people in it — no server reads it.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary).multilineTextAlignment(.center)
-                            Button("New message") { showNew = true }.buttonStyle(GlassButtonStyle(filled: true))
-                        }
-                        .padding(MSpacing.xl).frame(maxWidth: .infinity).glass().padding(.top, MSpacing.xl)
-                    }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: MSpacing.s) {
-                            NavigationLink(value: SocialRoute.groups) {
-                                HStack(spacing: 6) { Image(systemName: "person.3"); Text("Groups").font(.subheadline.weight(.semibold)) }
-                                    .foregroundStyle(MColor.textPrimary)
-                                    .padding(.horizontal, 14).padding(.vertical, 9)
-                            }
-                            .buttonStyle(.plain).glassPill()
-                            .accessibilityIdentifier("groupsLink")
-                            ForEach(env.social.groups) { g in
-                                Button { Task { if let c = await env.social.groupConversation(g) { open = c } } } label: {
-                                    HStack(spacing: 6) { Text(g.emoji); Text(g.name).font(.subheadline.weight(.semibold)).foregroundStyle(MColor.textPrimary) }
-                                        .padding(.horizontal, 14).padding(.vertical, 9)
-                                }
-                                .buttonStyle(.plain).glassPill()
-                                .accessibilityIdentifier("groupChat-\(g.id)")
-                            }
-                        }
-                        .padding(.horizontal, MSpacing.page).padding(.vertical, 4)
-                    }
+                    if env.social.conversations.isEmpty && env.social.hasLoadedOnce { emptyState }
                     ForEach(list) { c in
                         Button { open = c } label: { row(c) }.buttonStyle(.plain)
                             .accessibilityIdentifier("chat-\(c.id)")
+                    }
+                    if !list.isEmpty && list.count < env.social.conversations.count && !query.isEmpty {
+                        Text("No other chats match.").font(MFont.caption).foregroundStyle(MColor.textTertiary).padding(.top, MSpacing.m)
+                    }
+                    if list.isEmpty && !env.social.conversations.isEmpty {
+                        Text(filter == .waiting ? "Nothing waiting on you." : "Nobody here yet.")
+                            .font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                            .frame(maxWidth: .infinity).padding(.vertical, MSpacing.xxl)
                     }
                 }
                 .padding(.horizontal, MSpacing.page)
                 .padding(.bottom, 90)
             }
             .background(LiquidBackdrop())
-            .searchable(text: $query, prompt: "People, groups, messages")
+            .safeAreaInset(edge: .top, spacing: 0) { VStack(spacing: 0) { header; filterBar } }
+            // The title is set even though the bar is hidden: it is what the pushed thread's back
+            // button says. Without it, going into a chat gives you a button labelled "Back".
             .navigationTitle("Chats")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showNew = true } label: { Image(systemName: "square.and.pencil") }.accessibilityLabel("New message").accessibilityIdentifier("newMessage")
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink(value: SocialRoute.inbox) {
-                        Image(systemName: "bell").overlay(alignment: .topTrailing) { if env.social.unreadActivity > 0 { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: 2, y: -2) } }
-                    }
-                    .accessibilityLabel("Activity").accessibilityIdentifier("chatsInboxButton")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $open) { c in ChatView(conversationID: c.id) }
             .sheet(isPresented: $showNew) { NewMessageSheet { c in showNew = false; open = c } }
             .socialDestinations()
             .refreshable { await env.social.refreshInbox() }
-            .task { await env.social.refreshInbox(); await env.social.refreshGroups() }
+            .task { await env.social.refreshInbox(); await env.social.refreshGroups(); await env.social.refreshStorefront() }
         }
         .modifier(SocialErrorAlert())
+    }
+
+    /// Title, search and the two actions on one line. The stock arrangement — a large title, then a
+    /// search bar, then the filters — pushed the first conversation a third of the way down the screen
+    /// before anyone had read a word of it.
+    private var header: some View {
+        HStack(spacing: MSpacing.s) {
+            if searching {
+                Image(systemName: "magnifyingglass").foregroundStyle(MColor.textTertiary)
+                TextField("People, groups, messages", text: $query)
+                    .textFieldStyle(.plain).focused($searchFocused)
+                    .accessibilityIdentifier("chatSearchField")
+                Button { query = ""; searching = false; searchFocused = false } label: {
+                    Text("Cancel").font(.subheadline)
+                }
+                .buttonStyle(.plain).foregroundStyle(MColor.accent)
+            } else {
+                Text("Chats").font(.system(.title2, weight: .bold)).tracking(-0.4)
+                Spacer()
+                headerGlyph("magnifyingglass", "Search", id: "chatSearch") { searching = true; searchFocused = true }
+                NavigationLink(value: SocialRoute.inbox) {
+                    glyph(env.social.unreadActivity > 0 ? MSymbol.notificationsOn : MSymbol.notifications,
+                          dot: env.social.unreadActivity > 0)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Activity").accessibilityIdentifier("chatsInboxButton")
+                headerGlyph("square.and.pencil", "New message", id: "newMessage") { showNew = true }
+            }
+        }
+        .padding(.horizontal, MSpacing.page)
+        .padding(.top, MSpacing.s)
+        .padding(.bottom, searching ? MSpacing.s : 2)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: searching)
+    }
+
+    private func headerGlyph(_ symbol: String, _ label: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { glyph(symbol) }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label).accessibilityIdentifier(id)
+    }
+
+    private func glyph(_ symbol: String, dot: Bool = false) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundStyle(dot ? MColor.accent : MColor.textPrimary)
+            .frame(width: 36, height: 36)
+            .background(Circle().fill(MColor.textPrimary.opacity(0.06)))
+            .overlay(alignment: .topTrailing) {
+                if dot { Circle().fill(MColor.danger).frame(width: 8, height: 8).offset(x: -1, y: 1) }
+            }
+    }
+
+    /// Filters and groups on one line, so the list starts near the top of the screen instead of a
+    /// third of the way down it.
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: MSpacing.s) {
+                ForEach(Filter.allCases) { f in
+                    Button { filter = f } label: {
+                        HStack(spacing: 5) {
+                            Text(f.label).font(.subheadline.weight(.semibold))
+                            if f == .waiting, waitingCount > 0 {
+                                Text("\(waitingCount)").font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(Capsule().fill(filter == f ? Color.white.opacity(0.25) : MColor.danger))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .foregroundStyle(filter == f ? .white : MColor.textPrimary)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background { if filter == f { Capsule().fill(MColor.accent) } }
+                    }
+                    .buttonStyle(.plain)
+                    .modifier(PillWhenUnselected(selected: filter == f))
+                    .accessibilityIdentifier("chatFilter-\(f.label)")
+                }
+                Spacer(minLength: MSpacing.s)
+                // Every group already has a row in the list below, so it isn't repeated as a pill here;
+                // doing that ran the bar past the right edge and left the last group unreachable. This
+                // is the way in to making and managing them.
+                NavigationLink(value: SocialRoute.groups) {
+                    HStack(spacing: 6) { Image(systemName: MSymbol.following); Text("Groups").font(.subheadline.weight(.semibold)) }
+                        .foregroundStyle(MColor.textPrimary)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                }
+                .buttonStyle(.plain).glassPill()
+                .accessibilityIdentifier("groupsLink")
+            }
+            .padding(.horizontal, MSpacing.page)
+            .padding(.vertical, MSpacing.s)
+        }
+        .background(.bar)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: MSpacing.m) {
+            Text("Nobody yet.").font(MFont.title)
+            Text("Your prices live in here too — open a chat and a fan can buy a photo, a call or your time without leaving it. Every chat is encrypted between the two of you; no server reads it.")
+                .font(MFont.subheadline).foregroundStyle(MColor.textSecondary).multilineTextAlignment(.center)
+            Button("New message") { showNew = true }.buttonStyle(GlassButtonStyle(filled: true))
+        }
+        .padding(MSpacing.xl).frame(maxWidth: .infinity).glass().padding(.top, MSpacing.xl)
     }
 
     private func displayName(_ c: Conversation) -> String {
@@ -86,28 +198,58 @@ struct ChatsView: View {
 
     private func row(_ c: Conversation) -> some View {
         let unread = env.social.isUnread(c)
+        let paying = pays(c)
+        let waiting = waitingOnMe(c) && !c.isGroup
         return HStack(spacing: MSpacing.m) {
-            if c.isGroup {
-                ZStack { Circle().fill(MColor.accentSoft); Text(c.emoji ?? "👥").font(.title2) }.frame(width: 52, height: 52)
-            } else {
-                AvatarView(userID: otherID(c), name: displayName(c), size: 52)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                HStack {
-                    Text(displayName(c)).font(.subheadline.weight(unread ? .bold : .semibold)).foregroundStyle(MColor.textPrimary)
-                    Spacer()
-                    Text(c.updatedAt.formatted(.relative(presentation: .named))).font(MFont.caption).foregroundStyle(MColor.textTertiary)
+            ZStack(alignment: .bottomTrailing) {
+                if c.isGroup {
+                    ZStack { Circle().fill(MColor.accentSoft); Text(c.emoji ?? "👥").font(.title2) }.frame(width: 54, height: 54)
+                } else {
+                    AvatarView(userID: otherID(c), name: displayName(c), size: 54)
                 }
+                // A crown means this person pays you. It is the single most useful thing to know
+                // before deciding whether to reply.
+                if paying {
+                    Image(systemName: MSymbol.subscription)
+                        .font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+                        .frame(width: 20, height: 20)
+                        .background(Circle().fill(MColor.accent))
+                        .overlay(Circle().strokeBorder(MColor.background, lineWidth: 2))
+                        .offset(x: 3, y: 3)
+                        .accessibilityLabel("Pays you")
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    if unread { Circle().fill(MColor.accent).frame(width: 8, height: 8) }
-                    Text(c.lastMessage.isEmpty ? (c.isGroup ? "\(c.participantIDs.count) people" : "Say hi") : c.lastMessage).font(MFont.subheadline).foregroundStyle(unread ? MColor.textPrimary : MColor.textSecondary).lineLimit(1)
+                    Text(displayName(c)).font(.callout.weight(unread ? .bold : .semibold)).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(c.updatedAt.formatted(.relative(presentation: .named))).font(.caption2).foregroundStyle(MColor.textTertiary)
+                }
+                Text(c.lastMessage.isEmpty ? (c.isGroup ? "\(c.participantIDs.count) people" : "Say hi") : c.lastMessage)
+                    .font(MFont.subheadline).foregroundStyle(unread ? MColor.textPrimary : MColor.textSecondary).lineLimit(1)
+                if waiting {
+                    Label("Waiting on you", systemImage: MSymbol.clock)
+                        .font(.caption2.weight(.semibold)).foregroundStyle(MColor.danger)
                 }
             }
         }
-        .padding(MSpacing.m)
+        .padding(.horizontal, MSpacing.m).padding(.vertical, MSpacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glass(radius: 18, tint: unread ? MColor.accent : nil)
+        .glass(radius: 20)
+        // Unread is a bar down the leading edge, not a tint over the whole card. When most of the
+        // inbox is unread — which for a creator it is — tinting every row just makes a wall of blue.
+        .overlay(alignment: .leading) {
+            if unread {
+                Capsule().fill(MColor.accent).frame(width: 3, height: 26).padding(.leading, 5)
+            }
+        }
     }
+}
+
+/// A chip that is glass when it isn't the selected one, and a solid accent capsule when it is.
+private struct PillWhenUnselected: ViewModifier {
+    let selected: Bool
+    func body(content: Content) -> some View { if selected { content } else { content.glassPill() } }
 }
 
 /// Pick a person (or a group) to start with.
@@ -158,6 +300,10 @@ struct ChatView: View {
     @State private var replyTo: DirectMessage?
     @State private var reactTarget: DirectMessage?
     @State private var showPPV = false
+    @State private var booking: BookingOffer?
+    @State private var asking = false
+    @State private var editingOffer: BookingOffer?
+    @State private var addingOffer = false
     @FocusState private var focused: Bool
 
     private var conversation: Conversation? { env.social.conversations.first { $0.id == conversationID } }
@@ -205,6 +351,15 @@ struct ChatView: View {
             }
             composer
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if conversation?.isGroup != true, !otherID.isEmpty {
+                CreatorShopBar(creatorID: otherID, creatorName: title,
+                               onBook: { booking = $0 },
+                               onAsk: { asking = true },
+                               onEdit: { o in if let o { editingOffer = o } else { addingOffer = true } },
+                               onLockedPhoto: { showPPV = true })
+            }
+        }
         .background(LiquidBackdrop())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -222,9 +377,17 @@ struct ChatView: View {
                 } label: { Image(systemName: "ellipsis.circle") }
             }
         }
-        .task { await env.social.loadMessages(conversationID); env.social.markRead(conversationID) }
+        .task {
+            await env.social.loadMessages(conversationID); env.social.markRead(conversationID)
+            // The rate card needs both sides' prices: theirs to buy, mine to sell with.
+            if !otherID.isEmpty { await env.social.loadStorefront(otherID); await env.social.loadCreatorPlan(otherID) }
+        }
         .onChange(of: pickerItem) { _, item in Task { if let item, let d = try? await item.loadTransferable(type: Data.self) { _ = await env.social.send(conversationID: conversationID, text: "", photo: d, replyTo: replyTo?.id); replyTo = nil; pickerItem = nil } } }
         .sheet(isPresented: $showPPV) { PayPerViewComposer(conversationID: conversationID, buyerID: otherID) }
+        .sheet(item: $booking) { o in BookSheet(offer: o) }
+        .sheet(isPresented: $asking) { AskSheet(creatorID: otherID, creatorName: title) }
+        .sheet(item: $editingOffer) { o in EditOfferSheet(offer: o) }
+        .sheet(isPresented: $addingOffer) { EditOfferSheet(offer: BookingOffer(id: "", creatorID: env.social.myID, creatorName: env.social.displayName, kind: .photo, minutes: 0, priceMinor: 0, currency: "INR", note: "", active: true)) }
         .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .overlay { if let t = reactTarget { reactionPicker(for: t) } }
         .modifier(SocialErrorAlert())

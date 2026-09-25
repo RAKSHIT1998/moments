@@ -190,9 +190,9 @@ final class MomentUITests: XCTestCase {
             fire.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
         XCTAssertTrue(reacted.waitForExistence(timeout: 8), "reaction appears under the message")
-        // Group chat opens from the groups strip.
+        // A group opens from its own row in the list, like every other conversation.
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        let group = app.descendants(matching: .any)["groupChat-g_boys"].firstMatch
+        let group = app.descendants(matching: .any)["chat-cg_g_boys"].firstMatch
         XCTAssertTrue(group.waitForExistence(timeout: 8))
         group.tap()
         XCTAssertTrue(app.staticTexts["Goa again in Dec?"].waitForExistence(timeout: 10))

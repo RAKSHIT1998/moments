@@ -39,4 +39,25 @@ final class DiagnosticsUITests: XCTestCase {
         shot.name = "after-creator-tap"
         add(shot)
     }
+
+    /// Screens for eyeballing a redesign. Not assertions — pictures.
+    func testCaptureRedesign() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitest", "-demo", "-reset"]
+        app.launch()
+        let post = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'post-'")).firstMatch
+        XCTAssertTrue(post.waitForExistence(timeout: 30))
+
+        func snap(_ name: String) {
+            let a = XCTAttachment(screenshot: app.screenshot()); a.lifetime = .keepAlways; a.name = name; add(a)
+            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/redesign-\(name).png"))
+        }
+        app.tabBars.buttons["Chats"].tap()
+        sleep(2); snap("chats")
+        let chat = app.descendants(matching: .any)["chat-conv_sarah"].firstMatch
+        if chat.waitForExistence(timeout: 8) { chat.tap() } else {
+            app.descendants(matching: .any)["chat-conv_rahul"].firstMatch.tap()
+        }
+        sleep(3); snap("thread")
+    }
 }
