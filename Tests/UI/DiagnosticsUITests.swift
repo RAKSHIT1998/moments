@@ -60,6 +60,14 @@ final class DiagnosticsUITests: XCTestCase {
         let earn = app.descendants(matching: .any)["Start earning"].firstMatch
         if studio.waitForExistence(timeout: 5) { studio.tap() } else if earn.exists { earn.tap() }
         sleep(3); snap("creator-mode")
+        app.tabBars.buttons["Profile"].tap(); sleep(2)
+        let about = app.buttons["About"].firstMatch
+        if about.waitForExistence(timeout: 8) { about.tap(); sleep(1) }
+        for _ in 0..<8 where !app.buttons["myMemories"].exists { app.swipeUp() }
+        if app.buttons["myMemories"].waitForExistence(timeout: 5) {
+            app.buttons["myMemories"].tap(); sleep(4); snap("private-layer")
+            if app.buttons["memoriesDone"].waitForExistence(timeout: 5) { app.buttons["memoriesDone"].tap() }
+        }
         app.tabBars.buttons["Chats"].tap()
         sleep(2); snap("chats")
         let chat = app.descendants(matching: .any)["chat-conv_sarah"].firstMatch

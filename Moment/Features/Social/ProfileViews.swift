@@ -483,13 +483,18 @@ struct PrivateMemoryHubView: View {
             #endif
         }
         .overlay(alignment: .top) {
-            HStack {
-                Label("Private · on-device", systemImage: "lock.fill").font(MFont.caption).foregroundStyle(MColor.textSecondary)
-                Spacer()
-                Button("Done") { dismiss() }.font(.subheadline.weight(.semibold)).accessibilityIdentifier("memoriesDone")
+            HStack(spacing: MSpacing.m) {
+                Label("Private · on-device", systemImage: "lock.fill")
+                    .font(.caption.weight(.medium)).foregroundStyle(MColor.textSecondary)
+                Spacer(minLength: MSpacing.s)
+                Button("Done") { dismiss() }
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityIdentifier("memoriesDone")
             }
-            .padding(.horizontal, MSpacing.l).padding(.vertical, 6)
-            .background(.bar)
+            .padding(.leading, MSpacing.l).padding(.trailing, MSpacing.m)
+            .padding(.vertical, 9)
+            .glassPill(prominent: true)
+            .padding(.horizontal, MSpacing.m)
         }
     }
 }

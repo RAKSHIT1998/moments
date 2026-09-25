@@ -72,6 +72,35 @@
   .empty { text-align:center; padding:48px 20px; color:var(--muted) }
   .banner-top { display:block; width:100%; height:120px; object-fit:cover; border-radius:16px 16px 0 0 }
   a.link { color:var(--accent) }
+
+  /* Discover: a grid of creators, the way a shop front looks. */
+  .search { display:flex; gap:8px; align-items:center; padding:10px 14px; border-radius:999px;
+            background:var(--glass); border:1px solid var(--rim); margin:0 0 14px }
+  .search input { border:0; background:transparent; padding:0; font-size:15px }
+  .search input:focus { outline:none }
+  .grid-creators { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px }
+  .creator-card { border-radius:18px; overflow:hidden; background:var(--glass); border:1px solid var(--rim);
+                  text-decoration:none; color:inherit; display:block }
+  .creator-card .top { position:relative; aspect-ratio:1/1; background:#00000022 }
+  .creator-card .top img { width:100%; height:100%; object-fit:cover; display:block }
+  .creator-card .av { position:absolute; left:10px; bottom:-16px; width:40px; height:40px; border-radius:50%;
+                      background:var(--accent); color:#00121c; display:grid; place-items:center; font-weight:700;
+                      font-size:14px; border:2px solid var(--bg) }
+  .creator-card .meta { padding:22px 12px 12px }
+  .creator-card .nm { font-weight:650; font-size:14px; line-height:1.2 }
+  .creator-card .hd { font-size:12px; color:var(--muted) }
+  .creator-card .pr { font-size:12px; color:var(--accent); font-weight:650; margin-top:5px }
+
+  /* Requests: what you asked for and where it got to. */
+  .req { border-radius:16px; background:var(--glass); border:1px solid var(--rim); padding:14px; margin:0 0 10px }
+  .req .st { font-size:11px; text-transform:uppercase; letter-spacing:.07em; font-weight:700 }
+  .st.asked { color:var(--warn) } .st.quoted { color:var(--accent) }
+  .st.accepted, .st.done { color:var(--ok) } .st.declined, .st.refunded { color:var(--danger) }
+  .st.requested { color:var(--muted) }
+  .offer-row { display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+               padding:12px 14px; border-radius:14px; border:1px solid var(--rim); background:var(--glass);
+               color:inherit; font:inherit; cursor:pointer; margin-bottom:8px }
+  .offer-row .price { margin-left:auto; color:var(--accent); font-weight:700; white-space:nowrap }
 </style>
 </head>
 <body>
@@ -83,7 +112,8 @@
 <main id="view"></main>
 <nav class="tabs">
   <a href="#/feed" data-tab="feed">Home</a>
-  <a href="#/creators" data-tab="creators">Creators</a>
+  <a href="#/discover" data-tab="discover">Discover</a>
+  <a href="#/requests" data-tab="requests">Requests</a>
   <a href="#/unlocked" data-tab="unlocked">Unlocked</a>
   <a href="#/you" data-tab="you">You</a>
 </nav>

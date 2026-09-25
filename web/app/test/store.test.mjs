@@ -65,6 +65,22 @@ const subEvent = (buyer, creator, at) =>
 
 const fresh = (events) => { const s = new Store(); for (const e of events) s.ingest(e); return s; };
 
+/// `Payloads.Offer` — what a creator will do, and for how much.
+const offerEvent = (author, offerID, kind, priceMinor, over = {}, at) =>
+  ev('offer', author, { offer: offerID },
+     { offer: { id: offerID, creatorID: author, creatorName: over.creatorName || 'Sarah Kim', kind,
+                minutes: over.minutes ?? 0, priceMinor, currency: 'INR', note: '', active: over.active !== false } }, at);
+
+/// `Payloads.BookingBody` — a request and where it got to.
+const bookingEvent = (author, over = {}, at) => {
+  const b = { id: over.id || 'bk1', offerID: over.offerID || '', creatorID: over.creatorID || 'sarah',
+              creatorName: 'Sarah Kim', buyerID: over.buyerID || ME, buyerName: 'Me',
+              kind: over.kind || 'photo', minutes: over.minutes ?? 0, amountMinor: over.amountMinor ?? 0,
+              currency: 'INR', startsAt: 1_800_000_000, status: over.status || 'asked', note: over.note || '',
+              rail: 'web', reference: null, roomID: '', createdAt: at ?? 1_700_000_000 };
+  return ev('booking', author, { booking: b.id, to: b.creatorID }, { booking: b }, at);
+};
+
 // --- tests ----------------------------------------------------------------------
 const tests = {
   'a free set is open to everyone'() {
@@ -159,6 +175,72 @@ const tests = {
   'items stay null without the key, rather than throwing'() {
     const s = fresh([setEvent('sarah', { priceMinor: 100 })]);
     return s.items(s.sets('sarah')[0]).then(items => assert.equal(items, null));
+  },
+
+  'offers come back in shopping order, not price order'() {
+    const s = fresh([
+      offerEvent('sarah', 'o_custom', 'custom', 29900),
+      offerEvent('sarah', 'o_voice', 'voiceCall', 49900, { minutes: 10 }),
+      offerEvent('sarah', 'o_photo', 'photo', 9900)
+    ]);
+    assert.deepEqual(s.offers('sarah').map(o => o.kind), ['photo', 'voiceCall', 'custom']);
+  },
+
+  'a paused offer is not on sale'() {
+    const s = fresh([offerEvent('sarah', 'o1', 'photo', 9900, { active: false })]);
+    assert.equal(s.offers('sarah').length, 0);
+  },
+
+  'a later offer event replaces the earlier one'() {
+    const s = fresh([
+      offerEvent('sarah', 'o1', 'photo', 9900, {}, 100),
+      offerEvent('sarah', 'o1', 'photo', 19900, {}, 200)
+    ]);
+    assert.equal(s.offers('sarah')[0].priceMinor, 19900);
+  },
+
+  'my requests and requests to me both show; other people\'s do not'() {
+    const s = fresh([
+      bookingEvent(ME, { id: 'mine' }),
+      bookingEvent('sarah', { id: 'tome', creatorID: ME, buyerID: 'sarah' }),
+      bookingEvent('x', { id: 'theirs', creatorID: 'y', buyerID: 'x' })
+    ]);
+    const ids = s.bookings().map(b => b.id);
+    assert.ok(ids.includes('mine'));
+    assert.ok(ids.includes('tome'));
+    assert.ok(!ids.includes('theirs'), 'a request between two other people was visible');
+  },
+
+  'only the creator can quote — a buyer cannot price their own request'() {
+    // The buyer publishes a "quoted" event for their own booking, trying to set the price to zero.
+    const s = fresh([
+      bookingEvent(ME, { id: 'b1', creatorID: 'sarah' }, 100),
+      bookingEvent(ME, { id: 'b1', creatorID: 'sarah', status: 'quoted', amountMinor: 0 }, 200)
+    ]);
+    assert.equal(s.bookings()[0].status, 'asked', 'a buyer quoted their own request');
+  },
+
+  'the creator quoting does move it'() {
+    const s = fresh([
+      bookingEvent(ME, { id: 'b1', creatorID: 'sarah' }, 100),
+      bookingEvent('sarah', { id: 'b1', creatorID: 'sarah', status: 'quoted', amountMinor: 49900 }, 200)
+    ]);
+    const b = s.bookings()[0];
+    assert.equal(b.status, 'quoted');
+    assert.equal(b.amountMinor, 49900);
+  },
+
+  'search finds a creator by name or by handle, and never myself'() {
+    const s = fresh([
+      profileEvent('sarah', 'Sarah Kim'),
+      setEvent('sarah'),
+      profileEvent(ME, 'Me Myself'),
+      setEvent(ME)
+    ]);
+    assert.equal(s.searchCreators('sarah').length, 1);
+    assert.equal(s.searchCreators('@sarah').length, 1, 'handle search should ignore the @');
+    assert.equal(s.searchCreators('nobody').length, 0);
+    assert.ok(!s.searchCreators('').some(c => c.id === ME), 'I turned up in my own search results');
   },
 
   'prices are formatted, not printed raw'() {

@@ -31,7 +31,7 @@
     "“I really want these New Balance 530 😍”" : {
 
     },
-    "“Useful” and “Not useful” quietly tune which kinds of Moments show up first." : {
+    "“Useful” and “Not useful” quietly tune what shows up first." : {
 
     },
     "@" : {
@@ -221,6 +221,9 @@
         }
       }
     },
+    "%@'s prices" : {
+
+    },
     "%@/month" : {
 
     },
@@ -293,6 +296,16 @@
     "%lld chosen" : {
 
     },
+    "%lld memor%@ brought back for you this month." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld memor%2$@ brought back for you this month."
+          }
+        }
+      }
+    },
     "%lld min" : {
 
     },
@@ -318,30 +331,13 @@
     "%lld minutes · starts when you both join" : {
 
     },
-    "%lld Moment%@ remembered for you this month." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld Moment%2$@ remembered for you this month."
-          }
-        }
-      }
-    },
     "%lld months" : {
 
     },
-    "%lld new Moment%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld new Moment%2$@"
-          }
-        }
-      }
+    "%lld new things to review" : {
+
     },
-    "%lld new Moments to review" : {
+    "%lld new to review" : {
 
     },
     "%lld open" : {
@@ -387,7 +383,7 @@
     "0" : {
 
     },
-    "1 new Moment to review" : {
+    "1 new thing to review" : {
 
     },
     "1 person" : {
@@ -550,6 +546,9 @@
 
     },
     "Ask for a price" : {
+
+    },
+    "Ask for something else" : {
 
     },
     "ASK FOR SOMETHING ELSE" : {
@@ -877,9 +876,6 @@
         }
       }
     },
-    "Every Moment lands here with its source, in the order it happened." : {
-
-    },
     "Every post you share carries a link back to your page. This is the direct one." : {
 
     },
@@ -887,6 +883,9 @@
 
     },
     "Everything is understood on this iPhone." : {
+
+    },
+    "Everything you capture lands here with its source, in the order it happened." : {
 
     },
     "Everything you post stays on your storage. Buyers get a key, not a copy from us." : {
@@ -1218,6 +1217,9 @@
     "Lock MOMENT with %@" : {
 
     },
+    "Locked photo" : {
+
+    },
     "Locked photo — they pay to open it" : {
 
     },
@@ -1303,9 +1305,6 @@
         }
       }
     },
-    "Message a friend, or open your group's chat. Every chat is encrypted between the people in it — no server reads it." : {
-
-    },
     "Message all subscribers" : {
 
     },
@@ -1346,9 +1345,6 @@
 
     },
     "Moments" : {
-
-    },
-    "Moments MOMENT brought back this month that you acted on." : {
 
     },
     "More" : {
@@ -1429,6 +1425,9 @@
     "No one blocked." : {
 
     },
+    "No other chats match." : {
+
+    },
     "No password, no email. A key on this iPhone signs everything you make. This is its ID:" : {
 
     },
@@ -1454,6 +1453,9 @@
 
     },
     "Nobody — remove person" : {
+
+    },
+    "Nobody here yet." : {
 
     },
     "Nobody yet." : {
@@ -1519,10 +1521,16 @@
     "Nothing to tidy up." : {
 
     },
+    "Nothing waiting on you." : {
+
+    },
     "Nothing yet." : {
 
     },
     "Nothing yet. Subscriptions, unlocks, tips and requests land here." : {
+
+    },
+    "Nothing yet. The three steps below are how it starts." : {
 
     },
     "Notifications" : {
@@ -1584,9 +1592,6 @@
     "Open call" : {
 
     },
-    "Open Creator mode" : {
-
-    },
     "Open it" : {
 
     },
@@ -1645,6 +1650,9 @@
 
     },
     "PAYOUT" : {
+
+    },
+    "Pays you" : {
 
     },
     "Pending Promises" : {
@@ -1717,9 +1725,6 @@
 
     },
     "Post a video" : {
-
-    },
-    "Posts" : {
 
     },
     "PRICE · 30 DAYS" : {
@@ -1963,9 +1968,6 @@
     "Search My Memories" : {
 
     },
-    "Section" : {
-
-    },
     "See everything" : {
 
     },
@@ -2042,6 +2044,9 @@
 
     },
     "Set up your profile" : {
+
+    },
+    "Set your prices" : {
 
     },
     "Set your subscription" : {
@@ -2557,6 +2562,9 @@
     "What is this?" : {
 
     },
+    "What MOMENT brought back this month that you acted on." : {
+
+    },
     "What MOMENT remembers" : {
 
     },
@@ -2576,6 +2584,9 @@
 
     },
     "What to remember" : {
+
+    },
+    "What you charge" : {
 
     },
     "What you post lives in your own iCloud (private database) and, once someone buys or subscribes, in theirs. Deleting a post stops new keys going out; copies people already opened are theirs." : {
@@ -2638,6 +2649,9 @@
     "With" : {
 
     },
+    "Worth keeping" : {
+
+    },
     "Write it down. It's the only way to move your identity to a new phone — we can't recover it for you." : {
 
     },
@@ -2689,6 +2703,9 @@
     "You're set up." : {
 
     },
+    "Your account" : {
+
+    },
     "Your API key" : {
 
     },
@@ -2734,13 +2751,10 @@
     "Your memory store couldn't be opened" : {
 
     },
-    "Your Moment" : {
-
-    },
     "Your MOMENT ID" : {
 
     },
-    "Your month in Moments" : {
+    "Your month" : {
 
     },
     "Your name" : {
@@ -2770,6 +2784,9 @@
           }
         }
       }
+    },
+    "Your prices live in here too — open a chat and a fan can buy a photo, a call or your time without leaving it. Every chat is encrypted between the two of you; no server reads it." : {
+
     },
     "Your profile is stored in your own iCloud. Only what you publish is public." : {
 

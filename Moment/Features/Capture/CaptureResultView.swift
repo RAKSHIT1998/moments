@@ -51,7 +51,9 @@ struct CaptureResultView: View {
                     .accessibilityIdentifier("captureSave")
                 Button("Discard") { discardAll() }.font(MFont.subheadline).foregroundStyle(MColor.textSecondary).frame(minHeight: MTouch.minimum)
             }
-            .padding(MSpacing.l)
+            .padding(.horizontal, MSpacing.page)
+            .padding(.top, MSpacing.m)
+            .padding(.bottom, MSpacing.m)
             .background(.bar)
         }
         .sheet(item: $editing) { m in MemoryEditView(memory: m) }

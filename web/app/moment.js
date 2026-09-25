@@ -208,6 +208,58 @@ export class Store {
     return out.sort((a, b) => b.createdAt - a.createdAt);
   }
 
+  /// What a creator sells besides sets: a photo, a call, their time. Same `offer` events the app
+  /// writes; a later event for the same id replaces it, and a null offer is a delete.
+  offers(author) {
+    const latest = new Map();
+    for (const e of this.kind('offer')) {
+      if (author && e.author !== author) continue;
+      const p = Events.payload(e); if (!p) continue;
+      const id = e.tags?.offer || p.offer?.id;
+      if (!p.offer) { latest.delete(id); continue; }
+      latest.set(id, { ...p.offer, creatorID: e.author });
+    }
+    const order = ['photo', 'videoCall', 'voiceCall', 'meet', 'custom'];
+    return [...latest.values()].filter(o => o.active !== false)
+      .sort((a, b) => (order.indexOf(a.kind) - order.indexOf(b.kind)) || (a.priceMinor - b.priceMinor));
+  }
+
+  /// Requests, mine and the ones sent to me. The newest event for a booking id wins, which is how the
+  /// app moves one through asked → quoted → requested → accepted.
+  bookings() {
+    const latest = new Map();
+    for (const e of this.kind('booking')) {
+      const b = Events.payload(e)?.booking; if (!b) continue;
+      const mine = b.buyerID === Identity.author || b.creatorID === Identity.author;
+      if (!mine) continue;
+      // Only the two people in it can move it, and only the creator can quote or accept.
+      if (e.author !== b.buyerID && e.author !== b.creatorID) continue;
+      if ((b.status === 'quoted' || b.status === 'accepted') && e.author !== b.creatorID) continue;
+      const prev = latest.get(b.id);
+      if (!prev || prev.at <= e.createdAt) latest.set(b.id, { at: e.createdAt, booking: b });
+    }
+    return [...latest.values()].map(x => x.booking).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  /// Creators matching a name or @handle. Empty query returns everyone this browser knows.
+  searchCreators(query = '') {
+    const q = query.trim().toLowerCase().replace(/^@/, '');
+    return this.creators()
+      .filter(id => id !== Identity.author)
+      .map(id => {
+        const p = this.profile(id) || {};
+        const sets = this.sets(id);
+        return {
+          id, name: p.displayName || 'Creator', handle: p.handle || '', bio: p.bio || '',
+          plan: this.plan(id), sets,
+          cover: sets.find(s => s.cover)?.cover || null,
+          free: sets.filter(s => !s.priceMinor && !s.subscribersOnly).length
+        };
+      })
+      .filter(c => !q || c.name.toLowerCase().includes(q) || c.handle.toLowerCase().includes(q))
+      .sort((a, b) => b.sets.length - a.sets.length);
+  }
+
   /// The photos inside a set, if this browser holds the key. Returns null when it doesn't —
   /// which is the honest answer, not an error.
   async items(set) {

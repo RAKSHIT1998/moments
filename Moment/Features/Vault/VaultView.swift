@@ -28,7 +28,7 @@ struct VaultView: View {
                     Text("Your life, remembered.").displayStyle().accessibilityAddTraits(.isHeader)
                 }
                 if env.surface.inboxCount > 0 {
-                    NavigationLink(value: Route.review) { shortcutRow("Review", "\(env.surface.inboxCount) new Moment\(env.surface.inboxCount == 1 ? "" : "s") waiting", "tray.full") }.buttonStyle(PressScaleStyle()).accessibilityIdentifier("vaultReview")
+                    NavigationLink(value: Route.review) { shortcutRow("Review", "\(env.surface.inboxCount) waiting", "tray.full") }.buttonStyle(PressScaleStyle()).accessibilityIdentifier("vaultReview")
                 }
                 NavigationLink(value: Route.moments) {
                     let mine = env.stories.stories(includeReceived: false).count
@@ -49,7 +49,7 @@ struct VaultView: View {
                 if memories.isEmpty {
                     VStack(alignment: .leading, spacing: MSpacing.s) {
                         Text("Your archive fills in as you capture.").font(MFont.headline)
-                        Text("Every Moment lands here with its source, in the order it happened.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                        Text("Everything you capture lands here with its source, in the order it happened.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     }.momentCard()
                 } else {
                     ForEach(months, id: \.self) { month in
@@ -133,7 +133,7 @@ struct ReviewView: View {
                             .swipeActions(edge: .trailing) { Button("Dismiss", role: .destructive) { dismiss(m) } }
                             .swipeActions(edge: .leading) { Button("Save") { save(m) }.tint(MColor.success) }
                         }
-                    } header: { Text("\(items.count) new Moment\(items.count == 1 ? "" : "s")") }
+                    } header: { Text("\(items.count) new to review") }
                 }
                 .scrollContentBackground(.hidden)
                 .background(AmbientBackdrop(intensity: 0.4).ignoresSafeArea())
@@ -181,7 +181,7 @@ struct MemoryStatsView: View {
                 VStack(alignment: .leading, spacing: MSpacing.s) {
                     Text("Memories remembered").eyebrowStyle()
                     Text("\(env.surface.resurfacedThisMonth())").font(.system(size: 56, weight: .bold, design: .rounded)).tracking(-1)
-                    Text("Moments MOMENT brought back this month that you acted on.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
+                    Text("What MOMENT brought back this month that you acted on.").font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
                     Text("\(env.storage.profile().usefulMemoriesResurfaced) all time").font(MFont.caption).foregroundStyle(MColor.textTertiary)
                 }.momentCard()
                 VStack(spacing: MSpacing.m) {
@@ -219,7 +219,7 @@ struct HomeSettingsView: View {
             }
             Section {
                 Button("Reset what MOMENT learned from your feedback") { settings.categoryFeedback = [:]; env.toast("Reset.") }
-            } footer: { Text("“Useful” and “Not useful” quietly tune which kinds of Moments show up first.") }
+            } footer: { Text("“Useful” and “Not useful” quietly tune what shows up first.") }
         }
         .navigationTitle("Home")
         .onChange(of: settings.homeDensity) { _, _ in Task { await env.surface.refresh(scheduleNotifications: false) } }

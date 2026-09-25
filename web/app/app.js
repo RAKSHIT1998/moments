@@ -34,14 +34,15 @@ function connect() {
   const urls = relays(); if (!urls.length) return;
   relay = new Relay(urls, (e) => {
     store.ingest(e);
-    if (['vaultSet', 'plan', 'profile', 'vaultBuy', 'subscribe', 'follow', 'unfollow', 'links', 'vaultKey'].includes(e.kind)) schedule();
+    if (['vaultSet', 'plan', 'profile', 'vaultBuy', 'subscribe', 'follow', 'unfollow', 'links', 'vaultKey', 'offer', 'booking'].includes(e.kind)) schedule();
   });
   relay.onStatus = () => { const n = relay.connected; $('#relayStatus').textContent = n ? `${n} relay${n > 1 ? 's' : ''}` : 'connecting…'; };
   relay.connect();
   // Everything this client needs: who people are, what they sell, and anything addressed to me.
-  relay.subscribe('world', { kinds: ['profile', 'vaultSet', 'plan', 'links'] });
+  relay.subscribe('world', { kinds: ['profile', 'vaultSet', 'plan', 'links', 'offer'] });
   relay.subscribe('mine', { authors: [Identity.author] });
-  relay.subscribe('forme', { kinds: ['vaultKey', 'grant'], '#to': [Identity.author] });
+  relay.subscribe('forme', { kinds: ['vaultKey', 'grant', 'booking'], '#to': [Identity.author] });
+  relay.subscribe('myreq', { kinds: ['booking'], authors: [Identity.author] });
   publishProfile();
 }
 
@@ -53,7 +54,28 @@ async function publishProfile() {
     bio: localStorage.getItem('moment.profile.bio') || '',
     privateAccount: false, momentID: myID, agreePK: Identity.agreePK
   };
-  relay.publish(await Events.make('profile', {}, JSON.stringify(p)));
+  await publish(await Events.make('profile', {}, JSON.stringify(p)));
+}
+
+/// Publish, and keep a copy.
+///
+/// A relay forwards an event to every subscriber *except* the socket that sent it — which is correct
+/// for a relay and wrong for the client, because it means nothing you do ever comes back to you. A
+/// follow, a request, a profile edit would all vanish until some other relay echoed them. So the
+/// store is told first, then the wire.
+async function publish(event) {
+  store.ingest(event);
+  relay?.publish(event);
+  schedule();
+  return event;
+}
+
+/// Re-renders only the grid, so typing in the search field doesn't rebuild the page under the cursor.
+function rerenderDiscoverOnly() {
+  const grid = document.querySelector('.grid-creators');
+  const results = store.searchCreators(discoverQuery);
+  if (grid) { grid.innerHTML = results.map(creatorCard).join(''); }
+  else rerender();
 }
 
 /// Events arrive in bursts; redraw once per frame rather than once per event.
@@ -72,7 +94,8 @@ async function rerender() {
   const h = current, v = $('#view');
   if (h.startsWith('#/u/')) v.innerHTML = await creatorPage(decodeURIComponent(h.slice(4)));
   else if (h.startsWith('#/s/')) v.innerHTML = await setPage(decodeURIComponent(h.slice(4)));
-  else if (h.startsWith('#/creators')) v.innerHTML = creatorsPage();
+  else if (h.startsWith('#/discover') || h.startsWith('#/creators')) v.innerHTML = discoverPage();
+  else if (h.startsWith('#/requests')) v.innerHTML = requestsPage();
   else if (h.startsWith('#/unlocked')) v.innerHTML = await unlockedPage();
   else if (h.startsWith('#/you')) v.innerHTML = youPage();
   else v.innerHTML = feedPage();
@@ -184,29 +207,132 @@ async function creatorPage(id) {
              <p class="tiny" style="margin:8px 0 0">${esc(plan.pitch || plan.title || '')}</p>`}
       </div>` : ''}
     </div>
+    ${requestBlock(id, name)}
     ${sets.length ? sets.map(s => {
       const gate = store.gate(s, purchases, subs);
       return gate ? postCard({ ...s, gate, creatorName: name }) : '';
     }).join('') : `<div class="empty">Nothing published yet.</div>`}`;
 }
 
-// ---- Creators this browser knows -------------------------------------------------
-function creatorsPage() {
+/// The creator's rate card on their page: the same offers the app shows in a DM.
+function requestBlock(id, name) {
+  const offers = store.offers(id);
+  const rows = offers.map(o => `<button class="offer-row" data-offer="${esc(o.id)}" data-creator="${esc(id)}">
+      <span>${esc(KINDS[o.kind] || o.kind)}${o.minutes ? ` · ${o.minutes} min` : ''}</span>
+      <span class="price">${esc(Money.label(o.priceMinor, o.currency))}</span>
+    </button>`).join('');
+  return `<div class="card">
+      <h3>Ask ${esc(name.split(' ')[0] || name)} for something</h3>
+      ${rows || `<p class="muted">They haven't listed prices. Ask anyway — they name one for your request.</p>`}
+      <button class="offer-row" data-ask="${esc(id)}" style="margin-bottom:0">
+        <span>Something else</span><span class="price">They name a price</span>
+      </button>
+    </div>`;
+}
+
+// ---- Discover: the grid, and finding someone by name or @handle ---------------------
+let discoverQuery = '';
+
+function discoverPage() {
   if (!relays().length) return noRelay();
-  const ids = store.creators().filter(id => id !== Identity.author);
-  if (!ids.length) return `<div class="empty"><p>No creators yet.</p><p class="tiny">They appear as their posts reach the relays you're on.</p></div>`;
-  const following = store.following();
-  return ids.map(id => {
-    const name = store.name(id), plan = store.plan(id), n = store.sets(id).length;
-    return `<div class="card"><div class="row" style="justify-content:space-between">
-      <a href="#/u/${encodeURIComponent(id)}" style="text-decoration:none;color:inherit" class="row">
-        <div class="av" style="width:40px;height:40px">${esc(initials(name))}</div>
-        <div><div style="font-weight:650">${esc(name)}</div>
-          <div class="tiny">${n} post${n === 1 ? '' : 's'}${plan ? ` · ${esc(Money.label(plan.priceMinor, plan.currency))}/mo` : ''}</div></div>
-      </a>
-      <button class="pill ${following.has(id) ? 'on' : ''}" data-follow="${esc(id)}">${following.has(id) ? 'Following' : 'Follow'}</button>
-    </div></div>`;
-  }).join('');
+  const results = store.searchCreators(discoverQuery);
+  const search = `<div class="search">
+      <span>🔍</span>
+      <input id="creatorSearch" placeholder="Search name or @handle" value="${esc(discoverQuery)}" autocomplete="off">
+    </div>`;
+  if (!results.length) {
+    return search + `<div class="empty"><p>${discoverQuery ? 'Nobody by that name.' : 'No creators yet.'}</p>
+      <p class="tiny">${discoverQuery ? 'Try part of a display name instead of the handle.'
+        : 'They appear as their posts reach the relays you are on.'}</p></div>`;
+  }
+  return search + `<div class="grid-creators">${results.map(creatorCard).join('')}</div>`;
+}
+
+function creatorCard(c) {
+  const cover = c.cover
+    ? `<img src="${c.cover}" alt="" loading="lazy">`
+    : `<div style="width:100%;height:100%;background:linear-gradient(140deg,var(--accent),transparent)"></div>`;
+  const price = c.plan ? `${esc(Money.label(c.plan.priceMinor, c.plan.currency))}/mo`
+                       : (c.free ? `${c.free} free` : `${c.sets.length} post${c.sets.length === 1 ? '' : 's'}`);
+  return `<a class="creator-card" href="#/u/${encodeURIComponent(c.id)}">
+      <div class="top">${cover}<div class="av">${esc(initials(c.name))}</div></div>
+      <div class="meta">
+        <div class="nm">${esc(c.name)}</div>
+        ${c.handle ? `<div class="hd">@${esc(c.handle)}</div>` : ''}
+        <div class="pr">${price}</div>
+      </div>
+    </a>`;
+}
+
+// ---- Requests: ask for something, and watch what it costs --------------------------
+const KINDS = {
+  photo: 'A photo', videoCall: 'Video call', voiceCall: 'Voice call',
+  meet: 'Meet in person', custom: 'Something else'
+};
+const STATUS_TEXT = {
+  asked: 'Waiting for a price', quoted: 'Price offered', requested: 'Waiting on them',
+  accepted: 'Confirmed', declined: 'Declined', done: 'Done', refunded: 'Refunded'
+};
+
+function requestsPage() {
+  if (!relays().length) return noRelay();
+  const all = store.bookings();
+  const mine = all.filter(b => b.buyerID === Identity.author);
+  const toMe = all.filter(b => b.creatorID === Identity.author);
+  const head = (t) => `<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 0 10px">${t}</h2>`;
+  let out = '';
+  if (toMe.length) out += head('Asked of you') + toMe.map(b => requestCard(b, true)).join('');
+  out += head('You asked for');
+  out += mine.length ? mine.map(b => requestCard(b, false)).join('')
+    : `<div class="empty"><p>Nothing asked for yet.</p>
+       <p class="tiny">Open a creator and ask for a photo, a call, or anything else. They name the price; you pay only if you accept it.</p></div>`;
+  return out;
+}
+
+function requestCard(b, isCreator) {
+  const who = isCreator ? b.buyerName : b.creatorName;
+  const price = b.amountMinor ? Money.label(b.amountMinor, b.currency) : null;
+  return `<div class="req">
+      <div class="row" style="justify-content:space-between">
+        <strong>${esc(KINDS[b.kind] || b.kind)}</strong>
+        <span class="st ${esc(b.status)}">${esc(STATUS_TEXT[b.status] || b.status)}</span>
+      </div>
+      <div class="tiny" style="margin-top:3px">${esc(who || '')}${b.minutes ? ` · ${b.minutes} min` : ''}${price ? ` · ${esc(price)}` : ''}</div>
+      ${b.note ? `<div class="muted" style="margin-top:6px">“${esc(b.note)}”</div>` : ''}
+      ${!isCreator && b.status === 'quoted'
+        ? `<div style="margin-top:10px"><button class="buy" data-accept="${esc(b.id)}">Accept ${esc(price)}</button></div>` : ''}
+      ${isCreator && b.status === 'asked'
+        ? `<div class="tiny" style="margin-top:8px">Name a price in the iPhone app — quoting isn't wired here yet.</div>` : ''}
+    </div>`;
+}
+
+/// Publishes a `booking` event in the shape the app writes, so a request made here shows up there and
+/// the other way round. Dates go out as seconds, which is what JSONEncoder.event does.
+async function sendRequest(creatorID, creatorName, kind, note, offer) {
+  const now = Math.floor(Date.now() / 1000);
+  const booking = {
+    id: 'bk_' + crypto.randomUUID(),
+    offerID: offer ? offer.id : '',
+    creatorID, creatorName: creatorName || 'Creator',
+    buyerID: Identity.author,
+    buyerName: localStorage.getItem('moment.profile.name') || 'You',
+    kind: offer ? offer.kind : kind,
+    minutes: offer ? offer.minutes : 0,
+    amountMinor: offer ? offer.priceMinor : 0,
+    currency: offer ? offer.currency : 'INR',
+    startsAt: now + 86400,
+    status: offer ? 'requested' : 'asked',
+    note: note || '',
+    rail: 'web',
+    reference: null,
+    roomID: '',
+    createdAt: now,
+    connectedAt: null,
+    endedAt: null,
+    extraMinutes: 0
+  };
+  await publish(await Events.make('booking', { booking: booking.id, to: creatorID }, JSON.stringify({ booking })));
+  return booking;
 }
 
 // ---- What you've paid for --------------------------------------------------------
@@ -311,9 +437,29 @@ function wire() {
   });
   document.querySelectorAll('[data-follow]').forEach(b => b.addEventListener('click', async () => {
     const id = b.dataset.follow, on = store.following().has(id);
-    relay?.publish(await Events.make(on ? 'unfollow' : 'follow', { to: id, close: '0' }, JSON.stringify({ ok: '1' })));
-    setTimeout(rerender, 120);
+    await publish(await Events.make(on ? 'unfollow' : 'follow', { to: id, close: '0' }, JSON.stringify({ ok: '1' })));
   }));
+  const q = $('#creatorSearch');
+  if (q) {
+    q.addEventListener('input', () => { discoverQuery = q.value; rerenderDiscoverOnly(); });
+    if (discoverQuery) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  }
+  document.querySelectorAll('[data-offer]').forEach(b => b.addEventListener('click', async () => {
+    const offer = store.offers(b.dataset.creator).find(o => o.id === b.dataset.offer);
+    if (!offer) return;
+    const note = prompt(`Anything they should know? (${KINDS[offer.kind] || offer.kind}, ${Money.label(offer.priceMinor, offer.currency)})`) ?? '';
+    await sendRequest(b.dataset.creator, store.name(b.dataset.creator), offer.kind, note, offer);
+    alert('Asked. It shows under Requests — nothing is charged until they confirm.');
+    location.hash = '#/requests';
+  }));
+  document.querySelectorAll('[data-ask]').forEach(b => b.addEventListener('click', async () => {
+    const note = prompt('What are you asking for?');
+    if (!note) return;
+    await sendRequest(b.dataset.ask, store.name(b.dataset.ask), 'custom', note, null);
+    alert('Asked. They name a price; you pay only if you accept it.');
+    location.hash = '#/requests';
+  }));
+  document.querySelectorAll('[data-accept]').forEach(b => b.addEventListener('click', () => payWall('request', b.dataset.accept)));
   document.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => payWall('set', b.dataset.buy)));
   document.querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', () => payWall('subscription', b.dataset.sub)));
 }
@@ -322,10 +468,10 @@ function wire() {
 /// Saying so is the only honest thing this button can do; pretending to charge would be worse than
 /// not having the button.
 function payWall(what, id) {
-  const name = what === 'set'
-    ? (store.sets(null).find(s => s.id === id)?.title || 'this post')
-    : store.name(id);
-  alert(`Checkout isn't wired up yet.\n\nNothing in MOMENT can take a payment right now — not this browser and not the iPhone app. When it is, this button will charge you for ${name} and the creator's device will hand your key straight to this browser.\n\nIf you've already paid on the app with this same key, the post opens here by itself.`);
+  const name = what === 'set' ? (store.sets(null).find(s => s.id === id)?.title || 'this post')
+             : what === 'request' ? 'this request'
+             : store.name(id);
+  alert(`Checkout isn't wired up yet.\n\nNothing in MOMENT can take a payment right now — not this browser and not the iPhone app. When it is, this button will charge you for ${name} and the creator's device will hand your key straight to this browser.\n\nIf you've already paid on the app with this same key, it opens here by itself.`);
 }
 
 boot();

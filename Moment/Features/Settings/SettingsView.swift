@@ -6,7 +6,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var settings = env.settings
         List {
-            Section("Your Moment") {
+            Section("Your account") {
                 NavigationLink(value: Route.homeSettings) { Label("Home", systemImage: "house") }
                 NavigationLink(value: Route.stats) { Label("Your memory", systemImage: "chart.bar") }
                 NavigationLink(value: Route.subscription) {

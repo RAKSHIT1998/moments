@@ -1,0 +1,4 @@
+// Root build file. The app module is a Trusted Web Activity — a thin Android shell around MOMENT Web.
+plugins {
+    id "com.android.application" version "8.7.2" apply false
+}

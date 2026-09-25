@@ -1,0 +1,42 @@
+plugins { id "com.android.application" }
+
+android {
+    namespace "social.moment.twa"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "social.moment.twa"
+        minSdk 24            // TWA needs Chrome 72+; API 24 covers everything that has it
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+
+        // The one place the site lives. Change these two and the shell points somewhere else.
+        manifestPlaceholders = [
+            hostName           : "moment.social",
+            defaultUrl         : "https://moment.social/app/",
+            launcherName       : "MOMENT",
+            // Must match the PWA's theme-color and background_color, or the splash flashes.
+            statusBarColorRes  : "@color/statusBar",
+            navigationColorRes : "@color/navigationBar",
+            splashScreenRes    : "@color/splash",
+        ]
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // signingConfig is deliberately absent: the upload key is yours, and a key committed to a
+            // repository is a key you have to rotate. See android/README.md.
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Google's TWA support library. It is what makes the Chrome tab full-screen and chrome-less.
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.5.0"
+}

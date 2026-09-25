@@ -257,9 +257,9 @@ struct MemoryDetailView: View {
         Group {
             if let plan = m.plans.first(where: { !$0.isDeleted }) {
                 NavigationLink(value: Route.plan(plan.id)) { Text(plan.status == .idea || plan.status == .discussed ? "Make this a plan" : "Open plan") }
-                    .buttonStyle(PrimaryButtonStyle()).padding(MSpacing.l).background(.bar)
+                    .buttonStyle(PrimaryButtonStyle()).padding(.horizontal, MSpacing.page).padding(.vertical, MSpacing.m).background(.bar)
             } else if m.memoryType == .idea || m.places.contains(where: { EntityRecognizer.knownDestinations.contains($0.name.lowercased()) }) {
-                Button("Turn into a plan") { turnIntoPlan(m) }.buttonStyle(PrimaryButtonStyle()).padding(MSpacing.l).background(.bar)
+                Button("Turn into a plan") { turnIntoPlan(m) }.buttonStyle(PrimaryButtonStyle()).padding(.horizontal, MSpacing.page).padding(.vertical, MSpacing.m).background(.bar)
             }
         }
     }

@@ -82,7 +82,7 @@ struct HomeView: View {
                 Image(systemName: "tray.full").font(.body.weight(.semibold)).foregroundStyle(MColor.accent)
                     .frame(width: 34, height: 34).background(MColor.accentSoft, in: RoundedRectangle(cornerRadius: MRadius.icon, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(env.surface.inboxCount == 1 ? "1 new Moment to review" : "\(env.surface.inboxCount) new Moments to review").font(MFont.headline)
+                    Text(env.surface.inboxCount == 1 ? "1 new thing to review" : "\(env.surface.inboxCount) new things to review").font(MFont.headline)
                     Text("Already understood. Save the ones that matter.").font(MFont.caption).foregroundStyle(MColor.textSecondary)
                 }
                 Spacer()
@@ -137,7 +137,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
             let resurfaced = env.surface.resurfacedThisMonth()
             if resurfaced > 0 {
-                Text("\(resurfaced) Moment\(resurfaced == 1 ? "" : "s") remembered for you this month.")
+                Text("\(resurfaced) memor\(resurfaced == 1 ? "y" : "ies") brought back for you this month.")
                     .font(MFont.footnote).foregroundStyle(MColor.textTertiary)
                     .padding(.top, MSpacing.s)
             }
@@ -387,7 +387,7 @@ struct RecapCard: View {
     @State private var openEditor: UUID?
     var body: some View {
         VStack(alignment: .leading, spacing: MSpacing.m) {
-            Text("Your month in Moments").eyebrowStyle()
+            Text("Your month").eyebrowStyle()
             Text("\(label): \(count) memories worth remembering.").font(MFont.title).tracking(-0.3)
             Text("People, places, the plans you made and the ones that happened. Yours to keep or share.").font(MFont.body).foregroundStyle(MColor.textSecondary)
             HStack(spacing: MSpacing.s) {
@@ -406,7 +406,7 @@ struct DailyBriefCard: View {
     let lines: [String]
     var body: some View {
         VStack(alignment: .leading, spacing: MSpacing.s) {
-            Text("Your Moment").eyebrowStyle()
+            Text("Worth keeping").eyebrowStyle()
             ForEach(lines, id: \.self) { Text($0).font(MFont.body) }
         }
         .momentCard()

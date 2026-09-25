@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- These must match web/app/index.html's theme-color and the manifest's background_color, or the
+     splash and the status bar flash a different colour on every launch. -->
+<resources>
+    <color name="statusBar">#0b0b0f</color>
+    <color name="navigationBar">#0b0b0f</color>
+    <color name="splash">#0b0b0f</color>
+</resources>
