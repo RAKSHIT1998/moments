@@ -70,10 +70,33 @@ struct SocialProfileView: View {
         }
     }
 
+    /// Underline tabs rather than a stock segmented control: the grey pill reads like a settings screen,
+    /// and this page is somebody's shopfront.
     private var sectionPicker: some View {
-        Picker("Section", selection: $section) { Text("Posts").tag(0); Text("About").tag(3) }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("profileSections")
+        HStack(spacing: MSpacing.xl) {
+            tab("Posts", 0)
+            tab("About", 3)
+            Spacer()
+        }
+        .padding(.top, MSpacing.s)
+        .overlay(alignment: .bottom) { Rectangle().fill(MColor.separator).frame(height: 0.5) }
+        .accessibilityIdentifier("profileSections")
+    }
+
+    private func tab(_ title: String, _ index: Int) -> some View {
+        let on = section == index
+        return Button { withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { section = index } } label: {
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.subheadline.weight(on ? .bold : .medium))
+                    .foregroundStyle(on ? MColor.textPrimary : MColor.textSecondary)
+                Capsule().fill(on ? MColor.accent : .clear).frame(height: 2.5)
+            }
+            .fixedSize()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(title)
+        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
     }
 
     @ViewBuilder private var sectionContent: some View {
@@ -107,7 +130,7 @@ struct SocialProfileView: View {
                 if let bannerRef { SocialImage(ref: bannerRef) }
                 else { LinearGradient(colors: [MColor.accent.opacity(0.55), MColor.accent.opacity(0.12)], startPoint: .topLeading, endPoint: .bottomTrailing) }
             }
-            .frame(height: 148).frame(maxWidth: .infinity).clipped()
+            .frame(height: bannerRef == nil ? 96 : 140).frame(maxWidth: .infinity).clipped()
             .overlay(LinearGradient(colors: [.clear, MColor.background], startPoint: .center, endPoint: .bottom))
 
             ZStack {
@@ -166,15 +189,17 @@ struct SocialProfileView: View {
     private var stats: some View {
         HStack(spacing: 0) {
             if isMe {
-                stat("\(env.social.activeSubscriberCount)", "Subscribers")
-                stat("\(sets.count)", "Posts")
-                stat("\(env.social.graph.following.count)", "Following")
+                NavigationLink(value: SocialRoute.subscriptions) { stat("\(env.social.activeSubscriberCount)", "Subscribers") }.buttonStyle(.plain)
+                Button { section = 0 } label: { stat("\(sets.count)", "Posts") }.buttonStyle(.plain)
+                NavigationLink(value: SocialRoute.followers(resolvedID, false)) { stat("\(env.social.graph.following.count)", "Following") }.buttonStyle(.plain)
             } else {
                 stat("\(sets.count)", "Posts")
                 stat("\(sets.filter(\.isFree).count)", "Free")
                 stat("\(sets.count - sets.filter(\.isFree).count)", "Locked")
             }
         }
+        .padding(.vertical, MSpacing.s)
+        .glass(radius: 18)
     }
 
     private var myActions: some View {
@@ -251,7 +276,8 @@ struct SocialProfileView: View {
                     Text(isMe ? "Nothing for sale yet." : "Nothing for sale yet.").font(MFont.headline)
                     Text(isMe ? "A free set is how people find you; a paid one is how you earn." : "Follow them — new sets show up in your feed.")
                         .font(MFont.subheadline).foregroundStyle(MColor.textSecondary)
-                    if isMe { NavigationLink(value: SocialRoute.studio) { Text("Open Creator mode").frame(maxWidth: .infinity) }.buttonStyle(PrimaryButtonStyle()) }
+                    // No second "Open Creator mode" button here: the banner above this tab is already
+                    // that, and two buttons a thumb apart saying the same thing is just noise.
                 }
                 .padding(MSpacing.l).frame(maxWidth: .infinity, alignment: .leading).glass()
             } else {

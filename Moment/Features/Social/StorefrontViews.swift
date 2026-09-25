@@ -343,16 +343,29 @@ struct StudioView: View {
 
     // MARK: The number, and where it came from
 
+    /// Nothing earned yet and nobody subscribed: a 44pt ₹0 over a third of the screen is a discouraging
+    /// way to open, and the setup steps underneath are the useful thing. One line is enough until
+    /// there's something to show.
+    private var hasEarned: Bool {
+        env.social.storefrontEarnings > 0 || env.social.activeSubscriberCount > 0 || !env.social.mySales.isEmpty
+    }
+
     private var earnings: some View {
-        VStack(alignment: .leading, spacing: MSpacing.m) {
+        VStack(alignment: .leading, spacing: hasEarned ? MSpacing.m : MSpacing.s) {
             Text("THIS MONTH").font(MFont.eyebrow).tracking(1).foregroundStyle(.white.opacity(0.8))
             Text(env.social.storefrontEarnings, format: .currency(code: "INR").precision(.fractionLength(0)))
-                .font(.system(size: 44, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                .font(.system(size: hasEarned ? 44 : 30, weight: .bold)).monospacedDigit().foregroundStyle(.white)
                 .accessibilityIdentifier("studioEarnings")
-            HStack(spacing: MSpacing.l) {
-                metric("\(env.social.activeSubscriberCount)", "subscribers")
-                metric("\(env.social.mySales.count)", "sales")
-                metric("\(env.social.myBookings.filter { $0.creatorID == env.social.myID && $0.status.isPaid }.count)", "requests")
+            if !hasEarned {
+                Text("Nothing yet. The three steps below are how it starts.")
+                    .font(MFont.caption).foregroundStyle(.white.opacity(0.85))
+            }
+            if hasEarned {
+                HStack(spacing: MSpacing.l) {
+                    metric("\(env.social.activeSubscriberCount)", "subscribers")
+                    metric("\(env.social.mySales.count)", "sales")
+                    metric("\(env.social.myBookings.filter { $0.creatorID == env.social.myID && $0.status.isPaid }.count)", "requests")
+                }
             }
             if !env.social.earningsBreakdown.isEmpty {
                 VStack(spacing: 6) {
@@ -366,10 +379,12 @@ struct StudioView: View {
                 }
                 .padding(.top, 2)
             }
-            Text(env.social.rail == .web
-                 ? "Card checkout: you keep \(Int((1 - CreatorEconomics.platformFee) * 100))%."
-                 : "Through Apple: Apple takes \(Int(CreatorEconomics.appStoreShare * 100))% first. Card checkout is the \(Int((1 - CreatorEconomics.platformFee) * 100))% rail.")
-                .font(.caption2).foregroundStyle(.white.opacity(0.7))
+            if hasEarned {
+                Text(env.social.rail == .web
+                     ? "Card checkout: you keep \(Int((1 - CreatorEconomics.platformFee) * 100))%."
+                     : "Through Apple: Apple takes \(Int(CreatorEconomics.appStoreShare * 100))% first. Card checkout is the \(Int((1 - CreatorEconomics.platformFee) * 100))% rail.")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.7))
+            }
         }
         .padding(MSpacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)

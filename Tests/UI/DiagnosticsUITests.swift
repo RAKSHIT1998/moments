@@ -52,6 +52,14 @@ final class DiagnosticsUITests: XCTestCase {
             let a = XCTAttachment(screenshot: app.screenshot()); a.lifetime = .keepAlways; a.name = name; add(a)
             try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/redesign-\(name).png"))
         }
+        sleep(2); snap("home")
+        app.swipeUp(); sleep(1); snap("home-scrolled")
+        app.tabBars.buttons["Profile"].tap()
+        sleep(3); snap("profile")
+        let studio = app.descendants(matching: .any)["Open Creator mode"].firstMatch
+        let earn = app.descendants(matching: .any)["Start earning"].firstMatch
+        if studio.waitForExistence(timeout: 5) { studio.tap() } else if earn.exists { earn.tap() }
+        sleep(3); snap("creator-mode")
         app.tabBars.buttons["Chats"].tap()
         sleep(2); snap("chats")
         let chat = app.descendants(matching: .any)["chat-conv_sarah"].firstMatch

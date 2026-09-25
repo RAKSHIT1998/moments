@@ -181,13 +181,14 @@ struct SuggestedCreatorsRow: View {
                 HStack(spacing: MSpacing.m) {
                     ForEach(creators, id: \.id) { c in
                         NavigationLink(value: SocialRoute.storefront(c.id)) {
-                            VStack(spacing: 6) {
-                                AvatarView(userID: c.id, name: c.name, size: 62)
-                                    .overlay(Circle().strokeBorder(MColor.accent, lineWidth: 2).padding(-3))
-                                Text(c.name.split(separator: " ").first.map(String.init) ?? c.name).font(MFont.caption).foregroundStyle(MColor.textPrimary).lineLimit(1)
-                                if let p = c.price { Text(p).font(.caption2).foregroundStyle(MColor.accent) }
+                            VStack(spacing: 4) {
+                                AvatarView(userID: c.id, name: c.name, size: 50)
+                                    .overlay(Circle().strokeBorder(MColor.accent, lineWidth: 2).padding(-2.5))
+                                Text(c.name.split(separator: " ").first.map(String.init) ?? c.name)
+                                    .font(.caption2.weight(.medium)).foregroundStyle(MColor.textPrimary).lineLimit(1)
+                                if let p = c.price { Text(p).font(.system(size: 10, weight: .semibold)).foregroundStyle(MColor.accent) }
                             }
-                            .frame(width: 78)
+                            .frame(width: 66)
                         }
                         .buttonStyle(.plain)
                     }
