@@ -52,6 +52,7 @@ struct SocialHomeView: View {
         HStack(spacing: MSpacing.m) {
             Wordmark(size: 17)
             Spacer(minLength: MSpacing.m)
+            headerButton("magnifyingglass", "Find creators", id: "discoverLink", route: .discover)
             headerButton(MSymbol.reels, "Reels", id: "reelsLink", route: .reels(nil))
             if env.social.isCreator {
                 Button { showNew = true } label: { headerGlyph(MSymbol.photoSet) }
@@ -105,6 +106,7 @@ enum SocialRoute: Hashable {
     case vaultSet(String)
     case studio
     case bookings
+    case discover
     case call(String)
     case reels(String?)
     case subscriptions

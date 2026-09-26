@@ -41,7 +41,15 @@ final class DiagnosticsUITests: XCTestCase {
     }
 
     /// Screens for eyeballing a redesign. Not assertions — pictures.
-    func testCaptureRedesign() {
+    ///
+    /// Off by default. It walks most of the app, types into a search field and writes a dozen PNGs,
+    /// which takes minutes and times out on a loaded machine — and a tool that turns the suite red
+    /// without anything being wrong is worse than no tool. Run it when you want to look at something:
+    ///
+    ///     CAPTURE=1 xcodebuild test -only-testing:MomentUITests/DiagnosticsUITests/testCaptureRedesign …
+    func testCaptureRedesign() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["CAPTURE"] != nil,
+                          "set CAPTURE=1 to write screenshots")
         let app = XCUIApplication()
         app.launchArguments = ["-uitest", "-demo", "-reset"]
         app.launch()
@@ -53,6 +61,15 @@ final class DiagnosticsUITests: XCTestCase {
             try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/redesign-\(name).png"))
         }
         sleep(2); snap("home")
+        let discover = app.descendants(matching: .any)["discoverLink"].firstMatch
+        if discover.waitForExistence(timeout: 8) {
+            discover.tap(); sleep(3); snap("discover")
+            let field = app.searchFields.firstMatch
+            if field.waitForExistence(timeout: 5) {
+                field.tap(); field.typeText("sar"); sleep(2); snap("discover-search")
+            }
+            app.navigationBars.buttons.element(boundBy: 0).tap(); sleep(1)
+        }
         app.swipeUp(); sleep(1); snap("home-scrolled")
         app.tabBars.buttons["Profile"].tap()
         sleep(3); snap("profile")
